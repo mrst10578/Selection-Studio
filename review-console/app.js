@@ -3,6 +3,7 @@ import {createLocalReviewApi} from './api.js';
 import {difficultyLabel,subjectLabel,gradeLabel} from '../studio/store.js';
 import {mountBiologyCombinationEditor} from '../studio/biology-combination.js';
 import {installAdaptiveDensity,installDensityToggle,isTypingTarget,createCommandPalette,toast} from '../studio/ui-runtime.js';
+import {installThemeToggle} from '../studio/appearance.js';
 import {installWindowsMetadataShortcuts} from '../studio/windows-shortcuts.js';
 import {TAXONOMY,taxonomySummary,filterTaxonomyEntries} from '../studio/taxonomy-data.js';
 
