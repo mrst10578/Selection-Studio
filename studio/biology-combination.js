@@ -32,8 +32,8 @@ export function biologyIssues({subject,combination,primaryGrade,primaryChapter,p
 }
 export function mountBiologyCombinationEditor({host,subjectEl,gradeEl,chapterEl,unitEl,onChange=()=>{},onGateChange=()=>{}}){
   let value=null;
-  const chapterOpts=(grade,selected)=>'<option value="">انتخاب</option>'+Object.entries(BIO_CFG.grades?.[String(grade)]?.chapters||{}).map(([id,item])=>`<option value="${id}" ${id===selected?"selected":""}>${Number(id)} — ${item.name_fa}</option>`).join("");
-  const unitOpts=(grade,chapter,selected)=>'<option value="">انتخاب</option>'+Object.entries(BIO_CFG.grades?.[String(grade)]?.chapters?.[chapter]?.units||{}).map(([id,item])=>`<option value="${id}" ${id===selected?"selected":""}>${Number(id)} — ${item.name_fa}</option>`).join("");
+  const chapterOpts=(grade,selected)=>'<option value="">انتخاب</option>'+Object.entries(BIO_CFG.grades?.[String(grade)]?.chapters||{}).sort((a,b)=>Number(a[0])-Number(b[0])).map(([id,item])=>`<option value="${id}" ${id===selected?"selected":""}>${Number(id)} — ${item.name_fa}</option>`).join("");
+  const unitOpts=(grade,chapter,selected)=>'<option value="">انتخاب</option>'+Object.entries(BIO_CFG.grades?.[String(grade)]?.chapters?.[chapter]?.units||{}).sort((a,b)=>Number(a[0])-Number(b[0])).map(([id,item])=>`<option value="${id}" ${id===selected?"selected":""}>${Number(id)} — ${item.name_fa}</option>`).join("");
   function issues(){return biologyIssues({subject:subjectEl.value,combination:value,primaryGrade:gradeEl.value,primaryChapter:chapterEl.value,primaryUnit:unitEl.value})}
   function set(next,emit=true){value=normalizeBioCombination(next);render();if(emit)onChange(structuredClone(value))}
   function render(){
