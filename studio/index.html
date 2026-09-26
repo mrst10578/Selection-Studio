@@ -10,7 +10,10 @@
     html{background:#F4F3F0}html[data-theme="dark"]{background:#1B1F23}
     body.booting{overflow:hidden}
     body.booting>*:not(#bootSplash){visibility:hidden!important}
-    #bootSplash{position:fixed;inset:0;z-index:1000}
+    #bootSplash{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;gap:12px;padding:20px;background:#F4F3F0;color:#242A31;font-family:Tahoma,"Segoe UI",system-ui,sans-serif}
+    html[data-theme="dark"] #bootSplash{background:#1B1F23;color:#E7EBEF}
+    #bootSplash .boot-mark{width:44px;height:44px;display:grid;place-items:center;border:1px solid #828D99;border-radius:12px;font-weight:800}
+    #bootSplash>div:last-child{display:grid;gap:2px}#bootSplash span{font-size:12px;opacity:.72}
   </style>
   <link rel="stylesheet" href="./design-system.css" />
   <link rel="stylesheet" href="./styles.css" />
