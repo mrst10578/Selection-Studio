@@ -59,10 +59,10 @@ function missing(record){
   if(![10,11,12].includes(Number(record.grade)))out.push("پایه");
   if(!record.chapter)out.push("فصل");
   if(!record.unit)out.push(record.subject==="BIO"?"گفتار":"مبحث");
-  if(!["level_1","level_2","level_3","level_4","level_5"].includes(record.difficulty))out.push("Level");
+  if(!["level_1","level_2","level_3","level_4","level_5"].includes(record.difficulty))out.push("سطح سؤال");
   if(![1,2,3,4].includes(Number(record.correct_option)))out.push("کلید");
-  if(!validRegion(record.question_regions?.[0]))out.push("Crop سوال");
-  if(!validRegion(record.answer_regions?.[0]))out.push("Crop پاسخ");
+  if(!validRegion(record.question_regions?.[0]))out.push("برش سؤال");
+  if(!validRegion(record.answer_regions?.[0]))out.push("برش پاسخ");
   if(record.subject==="BIO"){
     out.push(...biologyIssues({
       subject:"BIO",
