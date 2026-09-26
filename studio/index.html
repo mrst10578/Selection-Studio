@@ -46,12 +46,12 @@
       <div class="section-head compact"><div><span class="eyebrow">INSPECTOR</span><h2>شناسنامه سوال</h2><p id="questionIdentity">سوال -</p></div><span id="gateBadge" class="gate-badge blocked">0/8</span></div>
       <form id="questionForm">
         <label>شماره سوال<input id="sourceNumber" type="number" min="1" inputmode="numeric" required /></label>
-        <div class="two">
+        <div class="two" id="subjectGradeRow">
           <label>درس<select id="subject"><option value="BIO">زیست‌شناسی</option><option value="MATH">ریاضی</option><option value="PHY">فیزیک</option><option value="CHEM">شیمی</option></select></label>
-          <label>پایه<select id="grade"><option value="10">دهم</option><option value="11">یازدهم</option><option value="12">دوازدهم</option></select></label>
+          <label id="gradeField">پایه<select id="grade"><option value="10">دهم</option><option value="11">یازدهم</option><option value="12">دوازدهم</option></select></label>
         </div>
         <div class="two">
-          <label>فصل<select id="chapter"><option value="">انتخاب</option></select></label>
+          <label><span id="chapterLabel">فصل</span><select id="chapter"><option value="">انتخاب</option></select></label>
           <label><span id="unitLabel">گفتار</span><select id="unit"><option value="">انتخاب</option></select></label>
         </div>
 
@@ -69,7 +69,7 @@
         </section>
         <button id="saveQuestion" class="primary large" type="submit" disabled>ثبت سوال و رفتن به بعدی</button>
       </form>
-      <div class="shortcut-card"><strong>میانبر دسکتاپ ویندوز</strong><span>Numpad 1–4 کلید</span><span>F1–F5 Level</span><span>Ctrl+عدد فصل</span><span>Alt+عدد گفتار/مبحث</span><span>Shift+1/2/3 پایه</span></div>
+      <div class="shortcut-card"><strong>میانبر دسکتاپ ویندوز</strong><span>Numpad 1–4 کلید</span><span>F1–F5 Level</span><span>Ctrl+عدد فصل</span><span>Alt+عدد گفتار/مبحث</span><span>Shift+1/2/3 پایه (غیرریاضی)</span></div>
     </aside>
   </section>
 
