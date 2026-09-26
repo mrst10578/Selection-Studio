@@ -10,11 +10,17 @@ async function expectNoHorizontalOverflow(page){
   const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(2);
 }
+async function waitForStudioBoot(page){
+  await expect(page.locator("#bootSplash")).toBeVisible();
+  await expect(page.locator(".topbar")).toBeHidden();
+  await expect(page.locator("#bootSplash")).toBeHidden({timeout:4500});
+  await expect(page.locator("#operatorLogin")).toBeVisible();
+}
 
 test.describe("Selection Studio",()=>{
   test("operator workbench requires temporary operator login",async({page})=>{
     await page.goto("/studio/");
-    await expect(page.locator("#operatorLogin")).toBeVisible();
+    await waitForStudioBoot(page);
     await page.locator("#operatorUsername").fill("admin");
     await page.locator("#operatorPassword").fill("admin");
     await page.locator("#operatorLoginForm").press("Enter");
@@ -26,6 +32,11 @@ test.describe("Selection Studio",()=>{
     await expect(page.locator("#saveQuestion")).toBeDisabled();
     await expect(page.locator(".date-separator")).toHaveCount(2);
     await expect(page.locator("#provider")).toHaveAttribute("placeholder","قلمچی");
+    await page.locator("#provider").fill("MAZ");
+    await expect(page.locator("#providerWarning")).toBeVisible();
+    await expect(page.locator("#providerWarning")).toHaveText("(اسم حتما باید فارسی باشه)");
+    await page.locator("#provider").fill("قلمچی");
+    await expect(page.locator("#providerWarning")).toBeHidden();
     await expect(page.locator("#examYear")).toHaveValue("1405");
     await expect(page.locator("#examYear")).toHaveAttribute("readonly","");
     await expect(page.locator("#examMonth")).toHaveAttribute("inputmode","numeric");
@@ -40,6 +51,7 @@ test.describe("Selection Studio",()=>{
   });
   test("exam date starts at month, keeps 1405 fixed, and jumps to day after two digits",async({page})=>{
     await page.goto("/studio/");
+    await waitForStudioBoot(page);
     await page.locator("#operatorUsername").fill("admin");
     await page.locator("#operatorPassword").fill("admin");
     await page.locator("#operatorLoginForm").press("Enter");
@@ -59,6 +71,7 @@ test.describe("Selection Studio",()=>{
   test("mobile PDF player exposes crop lock without overflowing",async({page})=>{
     await page.setViewportSize({width:390,height:844});
     await page.goto("/studio/");
+    await waitForStudioBoot(page);
     await page.locator("#operatorUsername").fill("admin");
     await page.locator("#operatorPassword").fill("admin");
     await page.locator("#operatorLoginForm").press("Enter");
@@ -69,6 +82,7 @@ test.describe("Selection Studio",()=>{
   });
   test("Windows Hotkeys panel replaces inline shortcut guide",async({page})=>{
     await page.goto("/studio/");
+    await waitForStudioBoot(page);
     await page.locator("#operatorUsername").fill("admin");
     await page.locator("#operatorPassword").fill("admin");
     await page.locator("#operatorLoginForm").press("Enter");
