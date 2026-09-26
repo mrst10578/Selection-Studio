@@ -16,16 +16,45 @@ let activePane="question";
 let biologyGate={ready:false,issues:["مشخص کن سوال زیست ترکیبی هست یا نه"]};
 
 
-const qCrop=new PdfCropper({canvas:$("qCanvas"),stage:$("qStage"),pageLabel:$("qPage"),prevBtn:$("qPrev"),nextBtn:$("qNext"),onChange:region=>{renderGate();if(region&&$("answerPdf").files[0])switchPane("answer")}});
-const aCrop=new PdfCropper({canvas:$("aCanvas"),stage:$("aStage"),pageLabel:$("aPage"),prevBtn:$("aPrev"),nextBtn:$("aNext"),onChange:()=>renderGate()});
+const qCrop=new PdfCropper({canvas:$("qCanvas"),stage:$("qStage"),pageLabel:$("qPage"),prevBtn:$("qPrev"),nextBtn:$("qNext"),modeBtn:$("qCropLock"),onChange:region=>{renderGate();if(region&&$("answerPdf").files[0])switchPane("answer")}});
+const aCrop=new PdfCropper({canvas:$("aCanvas"),stage:$("aStage"),pageLabel:$("aPage"),prevBtn:$("aPrev"),nextBtn:$("aNext"),modeBtn:$("aCropLock"),onChange:()=>renderGate()});
 $("qClear").onclick=()=>qCrop.clearRegion();
 $("aClear").onclick=()=>aCrop.clearRegion();
 
 function providerSlug(value){return String(value||"").trim().toUpperCase().replace(/[^A-Z0-9_-]+/g,"-").replace(/^-+|-+$/g,"")}
-function normalizedDate(value){return String(value||"").replace(/[^0-9]/g,"")}
+function asciiDigits(value){return String(value||"").replace(/[۰-۹]/g,ch=>"۰۱۲۳۴۵۶۷۸۹".indexOf(ch)).replace(/[٠-٩]/g,ch=>"٠١٢٣٤٥٦٧٨٩".indexOf(ch))}
+function normalizedDate(value){return asciiDigits(value).replace(/[^0-9]/g,"")}
+function syncExamDate(){
+  const year=normalizedDate($("examYear").value).slice(0,4);
+  const month=normalizedDate($("examMonth").value).slice(0,2);
+  const day=normalizedDate($("examDay").value).slice(0,2);
+  $("examYear").value=year;$("examMonth").value=month;$("examDay").value=day;
+  $("examDate").value=`${year}/${month}/${day}`;
+}
+function setDateParts(value){
+  const d=normalizedDate(value);
+  $("examYear").value=d.slice(0,4);
+  $("examMonth").value=d.slice(4,6);
+  $("examDay").value=d.slice(6,8);
+  syncExamDate();
+}
+function installDateField(){
+  const parts=[["examYear",4],["examMonth",2],["examDay",2]];
+  parts.forEach(([id,max],index)=>{
+    const el=$(id);
+    el.addEventListener("input",()=>{
+      el.value=normalizedDate(el.value).slice(0,max);
+      syncExamDate();renderGate();
+      if(el.value.length===max&&index<parts.length-1)$(parts[index+1][0]).focus();
+    });
+    el.addEventListener("keydown",e=>{
+      if(e.key==="Backspace"&&!el.value&&index>0){e.preventDefault();const prev=$(parts[index-1][0]);prev.focus();prev.setSelectionRange(prev.value.length,prev.value.length)}
+    });
+  });
+}
 function examId(){
   const provider=providerSlug($("provider").value),date=normalizedDate($("examDate").value);
-  if(!provider||date.length<6) return null;
+  if(!provider||date.length!==8) return null;
   return `${provider}-${date}`;
 }
 function humanDate(value){
@@ -57,6 +86,7 @@ function switchPane(name){
   $("answerPane").classList.toggle("hidden",name!=="answer");
   $("questionTab").classList.toggle("active",name==="question");
   $("answerTab").classList.toggle("active",name==="answer");
+  requestAnimationFrame(()=>{(name==="question"?qCrop:aCrop).refresh()});
 }
 $("questionTab").onclick=()=>switchPane("question");
 $("answerTab").onclick=()=>switchPane("answer");
@@ -154,7 +184,7 @@ function renderRecent(){
 }
 function persistSticky(){saveSticky({subject:$("subject").value,grade:$("grade").value,chapter:$("chapter").value,unit:$("unit").value})}
 function restore(){
-  if(exam){$("provider").value=exam.provider||"";$("examDate").value=exam.date||"";$("operator").value=exam.entered_by||""}
+  if(exam){$("provider").value=exam.provider||"";setDateParts(exam.date||"");$("operator").value=exam.entered_by||""}else setDateParts("");
   const sticky=loadSticky();
   if(sticky.subject)$("subject").value=sticky.subject;
   if(sticky.grade)$("grade").value=sticky.grade;
@@ -166,7 +196,7 @@ $("grade").addEventListener("change",()=>{if(!isMath())renderTaxonomy();persistS
 $("chapter").addEventListener("change",()=>{renderUnits();persistSticky();renderGate()});
 $("unit").addEventListener("change",()=>{syncMathGradeFromUnit();persistSticky();renderGate()});
 $("sourceNumber").addEventListener("input",renderGate);
-["provider","examDate","operator"].forEach(id=>$(id).addEventListener("input",renderGate));
+["provider","operator"].forEach(id=>$(id).addEventListener("input",renderGate));
 
 $("questionForm").addEventListener("submit",async e=>{
   e.preventDefault(); const gate=gateState(); if(gate.missing.length){toast("سوال ناقص است: "+gate.missing.join("، "),"error");return}
@@ -214,4 +244,4 @@ document.addEventListener("keydown",e=>{
   if(e.key.toLowerCase()==="q")switchPane("question");if(e.key.toLowerCase()==="w")switchPane("answer");if(e.key.toLowerCase()==="n")$("sourceNumber").focus();if(e.key.toLowerCase()==="l")location.href="./selected.html";
 });
 
-restore();renderSession();renderRecent();renderGate();
+installDateField();restore();renderSession();renderRecent();renderGate();

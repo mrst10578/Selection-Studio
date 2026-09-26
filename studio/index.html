@@ -17,7 +17,7 @@
     <div class="section-head"><div><span class="eyebrow">EXAM SESSION</span><h2>آزمون فعلی</h2><p id="sessionSummary">هنوز تنظیم نشده</p></div><button id="toggleSession" type="button" class="secondary">تنظیم آزمون</button></div>
     <div id="sessionEditor" class="session-editor">
       <label>موسسه<input id="provider" autocomplete="off" placeholder="MAZ" /></label>
-      <label>تاریخ آزمون<input id="examDate" inputmode="numeric" placeholder="1405/07/18" /></label>
+      <div class="session-field"><span class="field-label">تاریخ آزمون</span><div class="date-field" dir="ltr"><input id="examYear" inputmode="numeric" pattern="[0-9۰-۹]*" maxlength="4" placeholder="1405" aria-label="سال آزمون" /><span class="date-separator" aria-hidden="true">/</span><input id="examMonth" inputmode="numeric" pattern="[0-9۰-۹]*" maxlength="2" placeholder="07" aria-label="ماه آزمون" /><span class="date-separator" aria-hidden="true">/</span><input id="examDay" inputmode="numeric" pattern="[0-9۰-۹]*" maxlength="2" placeholder="18" aria-label="روز آزمون" /></div><input id="examDate" type="hidden" /></div>
       <label>اپراتور<input id="operator" autocomplete="name" /></label>
       <label class="file-label">PDF سوال<input id="questionPdf" type="file" accept="application/pdf" /></label>
       <label class="file-label">PDF پاسخ<input id="answerPdf" type="file" accept="application/pdf" /></label>
@@ -34,11 +34,11 @@
       <div class="viewer-tabs"><button id="questionTab" class="active" type="button">سوال <span id="questionCropState">بدون Crop</span></button><button id="answerTab" type="button">پاسخ <span id="answerCropState">بدون Crop</span></button></div>
       <div id="questionPane" class="pdf-pane">
         <div class="pdf-toolbar"><button id="qPrev" type="button">قبلی</button><span id="qPage">-</span><button id="qNext" type="button">بعدی</button><button id="qClear" type="button" class="secondary">پاک کردن Crop</button></div>
-        <div class="pdf-stage" id="qStage"><canvas id="qCanvas"></canvas><div class="pdf-empty">PDF سوال را انتخاب کن و روی صفحه Drag کن.</div></div>
+        <div class="pdf-stage" id="qStage"><button id="qCropLock" class="mobile-crop-lock" type="button" aria-label="قفل کردن PDF و فعال کردن کراپ" aria-pressed="false"></button><canvas id="qCanvas"></canvas><div class="pdf-empty">PDF سوال را انتخاب کن.</div></div>
       </div>
       <div id="answerPane" class="pdf-pane hidden">
         <div class="pdf-toolbar"><button id="aPrev" type="button">قبلی</button><span id="aPage">-</span><button id="aNext" type="button">بعدی</button><button id="aClear" type="button" class="secondary">پاک کردن Crop</button></div>
-        <div class="pdf-stage" id="aStage"><canvas id="aCanvas"></canvas><div class="pdf-empty">PDF پاسخ را انتخاب کن و پاسخ همین سوال را Crop کن.</div></div>
+        <div class="pdf-stage" id="aStage"><button id="aCropLock" class="mobile-crop-lock" type="button" aria-label="قفل کردن PDF و فعال کردن کراپ" aria-pressed="false"></button><canvas id="aCanvas"></canvas><div class="pdf-empty">PDF پاسخ را انتخاب کن.</div></div>
       </div>
     </div>
 

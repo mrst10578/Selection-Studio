@@ -16,8 +16,20 @@ test.describe("Selection Studio",()=>{
     await page.goto("/studio/");
     await expect(page.locator("h1")).toHaveText("Selection Studio");
     await expect(page.locator("#saveQuestion")).toBeDisabled();
+    await expect(page.locator(".date-separator")).toHaveCount(2);
+    await expect(page.locator("#examYear")).toHaveAttribute("inputmode","numeric");
+    await expect(page.locator("#examMonth")).toHaveAttribute("inputmode","numeric");
+    await expect(page.locator("#examDay")).toHaveAttribute("inputmode","numeric");
     await expect(page.locator("html")).toHaveAttribute("dir","rtl");
     await expectNoSeriousA11y(page);
+    await expectNoHorizontalOverflow(page);
+  });
+  test("mobile PDF player exposes crop lock without overflowing",async({page})=>{
+    await page.setViewportSize({width:390,height:844});
+    await page.goto("/studio/");
+    await expect(page.locator("#qCropLock")).toBeVisible();
+    await expect(page.locator("#qCropLock")).toHaveAttribute("aria-pressed","false");
+    await expect(page.locator("#qStage")).toHaveClass(/mobile-browse-mode/);
     await expectNoHorizontalOverflow(page);
   });
   test("selected batch surface keeps exports and submit gate",async({page})=>{
