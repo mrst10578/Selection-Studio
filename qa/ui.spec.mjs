@@ -66,11 +66,18 @@ test.describe("Selection Studio",()=>{
 });
 
 test.describe("Review Console",()=>{
-  test("independent admin login surface boots",async({page})=>{
+  test("local admin login opens management console",async({page})=>{
     await page.goto("/review-console/");
     await expect(page.locator("#loginView h1")).toHaveText("مدیریت بانک تست");
-    await expect(page.locator("#adminKey")).toHaveAttribute("type","password");
-    await expect(page.locator("#appView")).toHaveClass(/hidden/);
+    await expect(page.locator("#adminPassword")).toHaveAttribute("type","password");
+    await page.locator("#adminUsername").fill("admin");
+    await page.locator("#adminPassword").fill("admin");
+    await page.locator("#adminLoginForm").press("Enter");
+    await expect(page.locator("#loginView")).toHaveClass(/auth-success/);
+    await expect(page.locator("#loginBtn")).toHaveText("ورود موفق");
+    await expect(page.locator("#loginView")).toBeHidden({timeout:2500});
+    await expect(page.locator("#appView")).toBeVisible();
+    await expect(page.locator(".queue-tabs")).toBeVisible();
     await expectNoSeriousA11y(page);
     await expectNoHorizontalOverflow(page);
   });

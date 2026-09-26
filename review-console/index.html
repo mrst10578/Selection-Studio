@@ -3,16 +3,16 @@
 <head><meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /><meta name="theme-color" content="#0a0d12" /><title>Selection Studio — Review</title><link rel="stylesheet" href="./console.css" /></head>
 <body>
 <section id="loginView" class="login-view">
-  <div class="login-card"><span class="eyebrow">REVIEW CONSOLE</span><h1>مدیریت بانک تست</h1><p>ورود مستقل از پنل گزینشگر</p>
-    <label>Worker URL<input id="workerUrl" placeholder="https://...workers.dev" /></label>
-    <label>کلید مدیر<input id="adminKey" type="password" /></label>
-    <label>نام بازبین<input id="reviewer" /></label>
-    <button id="loginBtn" class="primary" type="button">ورود</button>
-  </div>
+  <form id="adminLoginForm" class="login-card" autocomplete="off"><span class="eyebrow">REVIEW CONSOLE</span><h1>مدیریت بانک تست</h1>
+    <label>Username<input id="adminUsername" autocomplete="username" autocapitalize="none" spellcheck="false" /></label>
+    <label>Password<input id="adminPassword" type="password" autocomplete="current-password" /></label>
+    <p id="adminLoginError" class="login-error" role="alert" aria-live="polite"></p>
+    <button id="loginBtn" class="primary" type="submit">ورود</button>
+  </form>
 </section>
 
 <div id="appView" class="hidden">
-<header class="review-header"><div><span class="eyebrow">TESTBANK / REVIEW</span><h1>Review Console</h1></div><div class="header-actions"><span id="autosaveState" class="status-pill">ذخیره شد</span><button id="commandLauncher" type="button">فرمان‌ها <kbd>Ctrl K</kbd></button><button id="refreshBtn" type="button">بروزرسانی</button><button id="logoutBtn" type="button">خروج</button></div></header>
+<header class="review-header"><div><span class="eyebrow">TESTBANK / REVIEW</span><h1>Review Console</h1></div><div class="header-actions"><a class="back-link" href="../">پنل گزینشگر</a><span id="autosaveState" class="status-pill">ذخیره شد</span><button id="commandLauncher" type="button">فرمان‌ها <kbd>Ctrl K</kbd></button><button id="refreshBtn" type="button">بروزرسانی</button><button id="logoutBtn" type="button">خروج</button></div></header>
 <main class="review-layout">
   <aside class="review-sidebar" aria-label="صف‌های بررسی">
     <div class="queue-tabs"><button data-queue="pending" class="active">در حال بررسی</button><button data-queue="completed">تکمیل‌شده</button><button data-queue="rejected">ردشده</button></div>

@@ -1,23 +1,21 @@
 import {ReviewModel,questionIssues,reviewStatusLabel} from './model.js';
-import {createReviewApi} from './api.js';
+import {createLocalReviewApi} from './api.js';
 import {difficultyLabel,subjectLabel,gradeLabel} from '../studio/store.js';
 import {mountBiologyCombinationEditor} from '../studio/biology-combination.js';
 import {installAdaptiveDensity,isTypingTarget,createCommandPalette,toast} from '../studio/ui-runtime.js';
 import {installWindowsMetadataShortcuts} from '../studio/windows-shortcuts.js';
 import {TAXONOMY,taxonomySummary} from '../studio/taxonomy-data.js';
 
-const $=id=>document.getElementById(id);
-const SETTINGS_KEY='selection-review-settings-v1';
-const ADMIN_SESSION='selection-review-admin-key-v1';
+const $=value=>String(value).startsWith("#")?document.querySelector(value):document.getElementById(value);
+const ADMIN_SESSION='selection-review-admin-user-v1';
+const ADMIN_USERNAME='admin';
+const ADMIN_PASSWORD='admin';
 let queueStatus='pending', queueItems=[], quickIndex=-1, autosaveTimer=null, currentReason='';
 
-function loadSettings(){try{return JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}')}catch{return {}}}
-function saveSettings(){localStorage.setItem(SETTINGS_KEY,JSON.stringify({workerUrl:$('#workerUrl').value.trim().replace(/\/$/,''),reviewer:$('#reviewer').value.trim()}));if($('#adminKey').value)sessionStorage.setItem(ADMIN_SESSION,$('#adminKey').value)}
-function workerUrl(){return (loadSettings().workerUrl||'').replace(/\/$/,'')}
-function adminKey(){return sessionStorage.getItem(ADMIN_SESSION)||''}
-function reviewer(){return loadSettings().reviewer||''}
+function adminUser(){return sessionStorage.getItem(ADMIN_SESSION)||''}
+function reviewer(){return adminUser()||ADMIN_USERNAME}
 
-const api=createReviewApi({getWorkerUrl:workerUrl,getAdminKey:adminKey});
+const api=createLocalReviewApi();
 const model=new ReviewModel(()=>scheduleSave());
 
 function fillQuickSelect(el,items,selected=""){
@@ -48,22 +46,42 @@ function renderQuickTaxonomy({chapter="",unit=""}={}){
   renderQuickUnits(unit);
 }
 
-
 const quickBio=mountBiologyCombinationEditor({
   host:$('#quickBioPanel'),subjectEl:$('#quickSubject'),gradeEl:$('#quickGrade'),chapterEl:$('#quickChapter'),unitEl:$('#quickUnit'),
   onChange:value=>{if(quickIndex>=0)model.patch(quickIndex,{biology_combination:value},reviewer())},
   onGateChange:()=>renderQuickIssues()
 });
 
-function syncLogin(){const s=loadSettings();$('#workerUrl').value=s.workerUrl||'';$('#reviewer').value=s.reviewer||'';$('#adminKey').value=adminKey()}
+async function showAdmin(){
+  try{
+    await loadQueue('pending');
+    $('#loginView').classList.add('hidden');
+    $('#appView').classList.remove('hidden');
+  }catch(e){toast('باز کردن پنل ناموفق: '+e.message,'error')}
+}
+function login(event){
+  event?.preventDefault();
+  const user=$('#adminUsername').value.trim(),pass=$('#adminPassword').value;
+  if(user!==ADMIN_USERNAME||pass!==ADMIN_PASSWORD){
+    $('#adminLoginError').textContent='Username یا Password اشتباه است.';
+    $('#adminPassword').value='';
+    $('#adminPassword').focus();
+    return;
+  }
+  sessionStorage.setItem(ADMIN_SESSION,user);
+  $('#adminLoginError').textContent='';
+  $('#loginView').classList.add('auth-success');
+  document.querySelector('.login-card')?.classList.add('auth-success');
+  $('#adminUsername').disabled=true;
+  $('#adminPassword').disabled=true;
+  $('#loginBtn').disabled=true;
+  $('#loginBtn').textContent='ورود موفق';
+  setTimeout(showAdmin,1500);
+}
+$('#adminLoginForm').addEventListener('submit',login);
+
 function statusClass(s){return s||'pending'}
 
-async function login(){
-  saveSettings();
-  if(!workerUrl()||!adminKey()||!reviewer()){toast('Worker، کلید مدیر و نام بازبین لازم است.','error');return}
-  try{await loadQueue('pending');$('#loginView').classList.add('hidden');$('#appView').classList.remove('hidden')}catch(e){toast('ورود ناموفق: '+e.message,'error')}
-}
-$('#loginBtn').onclick=login;
 $('#logoutBtn').onclick=()=>{sessionStorage.removeItem(ADMIN_SESSION);location.reload()};
 $('#refreshBtn').onclick=()=>loadQueue(queueStatus).catch(e=>toast(e.message,'error'));
 
@@ -188,5 +206,6 @@ const palette=createCommandPalette({dialog:$('#commandPalette'),input:$('#comman
 },onQuery:q=>{const m=q.match(/(?:سوال|q|question)?\s*(\d{1,4})/i);if(!m||!model.batch)return[];const n=Number(m[1]),i=model.batch.questions.findIndex(x=>Number(x.source_question_number)===n&&!x.trashed_at);return i<0?[]:[{label:`باز کردن سوال ${n}`,run:()=>openQuick(i)}]}});
 $('#commandLauncher').onclick=()=>palette.open();
 
-installAdaptiveDensity();syncLogin();
-if(workerUrl()&&adminKey()&&reviewer())login();
+installAdaptiveDensity();
+if(adminUser())showAdmin();
+else requestAnimationFrame(()=>$('#adminUsername').focus());
