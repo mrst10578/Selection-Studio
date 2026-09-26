@@ -7,6 +7,7 @@ import {validRegion} from "./pdf-crop.js";
 import {biologyIssues,mountBiologyCombinationEditor} from "./biology-combination.js";
 import {installAdaptiveDensity,toast} from "./ui-runtime.js";
 import {TAXONOMY,taxonomySummary} from "./taxonomy-data.js";
+import "./operator-auth.js";
 
 const $=id=>document.getElementById(id);
 let records=loadRecords(),exam=loadExamDraft(),editIndex=-1;
