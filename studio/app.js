@@ -25,40 +25,67 @@ installPageJump("qPageJump",qCrop);installPageJump("aPageJump",aCrop);
 $("qClear").onclick=()=>qCrop.clearRegion();
 $("aClear").onclick=()=>aCrop.clearRegion();
 
-function providerSlug(value){return String(value||"").trim().toUpperCase().replace(/[^A-Z0-9_-]+/g,"-").replace(/^-+|-+$/g,"")}
+const FIXED_EXAM_YEAR="1405";
+const PERSIAN_EXAM_NAME=/^[\u0600-\u06FF\u200c\s]+$/u;
+function providerName(value){return String(value||"").replace(/\s+/g," ").trim()}
+function validProviderName(value){const name=providerName(value);return Boolean(name)&&PERSIAN_EXAM_NAME.test(name)}
+function providerSlug(value){return providerName(value).replace(/[\s\u200c]+/g,"-")}
 function asciiDigits(value){return String(value||"").replace(/[۰-۹]/g,ch=>"۰۱۲۳۴۵۶۷۸۹".indexOf(ch)).replace(/[٠-٩]/g,ch=>"٠١٢٣٤٥٦٧٨٩".indexOf(ch))}
 function normalizedDate(value){return asciiDigits(value).replace(/[^0-9]/g,"")}
+function validExamDateParts(){
+  const month=normalizedDate($("examMonth").value),day=normalizedDate($("examDay").value);
+  return /^(0[1-9]|1[0-2])$/.test(month)&&/^(0[1-9]|[12][0-9]|3[01])$/.test(day);
+}
 function syncExamDate(){
-  const year=normalizedDate($("examYear").value).slice(0,4);
   const month=normalizedDate($("examMonth").value).slice(0,2);
   const day=normalizedDate($("examDay").value).slice(0,2);
-  $("examYear").value=year;$("examMonth").value=month;$("examDay").value=day;
-  $("examDate").value=`${year}/${month}/${day}`;
+  $("examYear").value=FIXED_EXAM_YEAR;$("examMonth").value=month;$("examDay").value=day;
+  $("examDate").value=`${FIXED_EXAM_YEAR}/${month}/${day}`;
 }
 function setDateParts(value){
   const d=normalizedDate(value);
-  $("examYear").value=d.slice(0,4);
-  $("examMonth").value=d.slice(4,6);
-  $("examDay").value=d.slice(6,8);
+  $("examYear").value=FIXED_EXAM_YEAR;
+  $("examMonth").value=d.length>=6?d.slice(4,6):"";
+  $("examDay").value=d.length>=8?d.slice(6,8):"";
   syncExamDate();
 }
+function focusExamMonth(){
+  const month=$("examMonth");
+  month.focus();
+  requestAnimationFrame(()=>month.select());
+}
 function installDateField(){
-  const parts=[["examYear",4],["examMonth",2],["examDay",2]];
-  parts.forEach(([id,max],index)=>{
-    const el=$(id);
-    el.addEventListener("input",()=>{
-      el.value=normalizedDate(el.value).slice(0,max);
-      syncExamDate();renderGate();
-      if(el.value.length===max&&index<parts.length-1)$(parts[index+1][0]).focus();
-    });
-    el.addEventListener("keydown",e=>{
-      if(e.key==="Backspace"&&!el.value&&index>0){e.preventDefault();const prev=$(parts[index-1][0]);prev.focus();prev.setSelectionRange(prev.value.length,prev.value.length)}
-    });
+  const field=$("examDateField"),month=$("examMonth"),day=$("examDay");
+  $("examYear").value=FIXED_EXAM_YEAR;
+  field.addEventListener("pointerdown",e=>{
+    if(document.activeElement!==month&&document.activeElement!==day){
+      e.preventDefault();
+      focusExamMonth();
+    }
+  });
+  month.addEventListener("input",()=>{
+    month.value=normalizedDate(month.value).slice(0,2);
+    syncExamDate();renderGate();
+    if(month.value.length===2){
+      day.focus();
+      requestAnimationFrame(()=>day.select());
+    }
+  });
+  day.addEventListener("input",()=>{
+    day.value=normalizedDate(day.value).slice(0,2);
+    syncExamDate();renderGate();
+  });
+  day.addEventListener("keydown",e=>{
+    if(e.key==="Backspace"&&!day.value){
+      e.preventDefault();
+      month.focus();
+      month.setSelectionRange(month.value.length,month.value.length);
+    }
   });
 }
 function examId(){
   const provider=providerSlug($("provider").value),date=normalizedDate($("examDate").value);
-  if(!provider||date.length!==8) return null;
+  if(!validProviderName($("provider").value)||!validExamDateParts()||date.length!==8) return null;
   return `${provider}-${date}`;
 }
 function humanDate(value){
@@ -75,10 +102,13 @@ function renderSession(){
 }
 $("toggleSession").onclick=()=>$("sessionCard").classList.toggle("collapsed");
 $("saveSession").onclick=async()=>{
-  const id=examId(); const operator=$("operator").value.trim();
-  if(!id||!operator){toast("موسسه، تاریخ و اپراتور لازم است.","error");return}
+  const provider=providerName($("provider").value),operator=$("operator").value.trim();
+  if(!validProviderName(provider)){toast("نام آزمون را فقط با حروف فارسی وارد کن؛ مثل قلمچی.","error");$("provider").focus();return}
+  if(!validExamDateParts()){toast("ماه و روز آزمون را دو رقمی و معتبر وارد کن؛ مثل 03/07.","error");focusExamMonth();return}
+  const id=examId();
+  if(!id||!operator){toast("نام آزمون، تاریخ و اپراتور لازم است.","error");return}
   if(!$("questionPdf").files[0]||!$("answerPdf").files[0]){toast("هر دو PDF را انتخاب کن.","error");return}
-  exam={id,provider:providerSlug($("provider").value),date:humanDate($("examDate").value),entered_by:operator,question_pdf_name:$("questionPdf").files[0].name,answer_pdf_name:$("answerPdf").files[0].name};
+  exam={id,provider,date:humanDate($("examDate").value),entered_by:operator,question_pdf_name:$("questionPdf").files[0].name,answer_pdf_name:$("answerPdf").files[0].name};
   saveExamDraft(exam); renderSession(); toast("آزمون آماده شد","ok");
 };
 $("questionPdf").onchange=async()=>{await qCrop.loadFile($("questionPdf").files[0]);renderSession()};
@@ -173,7 +203,6 @@ function renderGate(){
   document.querySelectorAll("[data-check]").forEach(el=>el.classList.toggle("done",Boolean(checks[el.dataset.check])));
   $("gateBadge").textContent=missing.length?`${complete}/8`:"آماده"; $("gateBadge").classList.toggle("ready",!missing.length);$("gateBadge").classList.toggle("blocked",!!missing.length);
   $("saveQuestion").disabled=!!missing.length;
-  $("gateHint").textContent=missing.length?"موارد باقی‌مانده: "+missing.join(" • "):"همه موارد کامل است؛ سؤال آمادهٔ ثبت است.";
   const msg={exam:"مرحلهٔ بعد: آزمون و دو فایل",question:"مرحلهٔ بعد: برش سؤال",answer:"مرحلهٔ بعد: برش پاسخ",meta:"مرحلهٔ بعد: تکمیل شناسنامه",ready:"آمادهٔ ثبت"}[s];
   $("nextAction").textContent=msg;
   const order=["exam","question","answer","meta","ready"],idx=order.indexOf(s);
@@ -260,4 +289,4 @@ document.addEventListener("keydown",e=>{
   if(key==="l")location.href="./selected.html";
 });
 
-restore();renderSession();renderRecent();renderGate();
+installDateField();restore();renderSession();renderRecent();renderGate();
