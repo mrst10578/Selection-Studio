@@ -6,7 +6,7 @@ import {installAdaptiveDensity,isTypingTarget,createCommandPalette,toast} from '
 import {installWindowsMetadataShortcuts} from '../studio/windows-shortcuts.js';
 import {TAXONOMY,taxonomySummary} from '../studio/taxonomy-data.js';
 
-const $=id=>document.getElementById(id);
+const $=value=>String(value).startsWith("#")?document.querySelector(value):document.getElementById(value);
 const ADMIN_SESSION='selection-review-admin-user-v1';
 const ADMIN_USERNAME='admin';
 const ADMIN_PASSWORD='admin';
