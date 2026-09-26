@@ -1,5 +1,5 @@
 import {batchIssues,publishableQuestions,questionIssues,normalizePublishedQuestion} from "./quality.js";
-import {getBatch,putBatch,putSource,getSource,listBatches,lockBatch,unlockBatch,publishCanonical} from "./storage.js";
+import {getBatch,putBatch,putSource,getSource,listBatches,getLock,lockBatch,unlockBatch,publishCanonical} from "./storage.js";
 
 const json=(data,status=200,headers={})=>new Response(JSON.stringify(data),{status,headers:{"content-type":"application/json; charset=utf-8",...headers}});
 const fail=(message,status=400,headers={})=>json({error:message},status,headers);
@@ -32,7 +32,7 @@ async function intake(request,env){
   if(!type.includes("multipart/form-data"))throw Object.assign(new Error("Intake باید multipart/form-data باشد."),{status:415});
   const form=await request.formData(),raw=form.get("batch");
   if(!raw)throw Object.assign(new Error("فیلد batch وجود ندارد."),{status:400});
-  const batch=JSON.parse(typeof raw==="string"?raw:await raw.text());
+  let batch;try{batch=JSON.parse(typeof raw==="string"?raw:await raw.text())}catch{throw Object.assign(new Error("فیلد batch JSON معتبر نیست."),{status:400})}
   const issues=batchIssues(batch);if(issues.length)throw Object.assign(new Error(issues.join(" | ")),{status:422});
   if(await getBatch(env,batch.id))throw Object.assign(new Error("این Batch قبلاً ثبت شده است."),{status:409});
   const sources=new Map();
@@ -75,6 +75,7 @@ async function admin(request,env,url){
     const headers=new Headers();source.writeHttpMetadata(headers);headers.set("etag",source.httpEtag);
     return new Response(source.body,{headers});
   }
+  if(request.method!=="POST")throw Object.assign(new Error("Method not allowed"),{status:405});
   const payload=await bodyJson(request);
   if(request.method==="POST"&&path==="/studio/admin/save"){
     const incoming=payload.batch;if(!incoming?.id)throw Object.assign(new Error("Batch نامعتبر است."),{status:400});
@@ -99,6 +100,7 @@ async function admin(request,env,url){
   }
   if(path==="/studio/admin/publish"){
     if(current.status!=="pending")throw Object.assign(new Error("فقط Batch در حال بررسی قابل انتشار است."),{status:409});
+    const lock=await getLock(env,id);if(lock&&lock.reviewer!==reviewer)throw Object.assign(new Error("Batch توسط بازبین دیگری قفل شده است."),{status:409});
     const candidates=publishableQuestions(current);
     if(!candidates.length)throw Object.assign(new Error("هیچ سوال تاییدشده‌ی منتشرنشده‌ای وجود ندارد."),{status:409});
     const bad=candidates.map(q=>({q,issues:questionIssues(q)})).filter(x=>x.issues.length);
