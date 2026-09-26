@@ -1,6 +1,6 @@
+import {TAXONOMY} from "./taxonomy-data.js";
 export const BIO_GRADES=[10,11,12];
-export const BIO_CHAPTERS=Array.from({length:12},(_,i)=>String(i+1).padStart(2,"0"));
-export const BIO_UNITS=Array.from({length:8},(_,i)=>String(i+1).padStart(2,"0"));
+const BIO_CFG=TAXONOMY.subjects.BIO;
 
 const code=v=>{const s=String(v??"").trim();return s&&/^\d+$/.test(s)?s.padStart(2,"0"):s||null};
 export function normalizeBioCombination(value){
@@ -9,7 +9,10 @@ export function normalizeBioCombination(value){
   return {is_combined:value.is_combined,topics:value.is_combined?topics:[]};
 }
 function key(t){return `${Number(t?.grade)||""}:${code(t?.chapter)||""}:${code(t?.unit)||""}`}
-function valid(t){return BIO_GRADES.includes(Number(t?.grade))&&BIO_CHAPTERS.includes(code(t?.chapter))&&BIO_UNITS.includes(code(t?.unit))}
+function valid(t){
+  const grade=Number(t?.grade),chapter=code(t?.chapter),unit=code(t?.unit);
+  return BIO_GRADES.includes(grade)&&Boolean(BIO_CFG.grades?.[String(grade)]?.chapters?.[chapter]?.units?.[unit]);
+}
 export function biologyIssues({subject,combination,primaryGrade,primaryChapter,primaryUnit}){
   if(subject!=="BIO")return [];
   const c=normalizeBioCombination(combination);
@@ -29,7 +32,8 @@ export function biologyIssues({subject,combination,primaryGrade,primaryChapter,p
 }
 export function mountBiologyCombinationEditor({host,subjectEl,gradeEl,chapterEl,unitEl,onChange=()=>{},onGateChange=()=>{}}){
   let value=null;
-  const opts=(max,selected)=>'<option value="">انتخاب</option>'+Array.from({length:max},(_,i)=>{const v=String(i+1).padStart(2,"0");return `<option value="${v}" ${v===selected?"selected":""}>${i+1}</option>`}).join("");
+  const chapterOpts=(grade,selected)=>'<option value="">انتخاب</option>'+Object.entries(BIO_CFG.grades?.[String(grade)]?.chapters||{}).map(([id,item])=>`<option value="${id}" ${id===selected?"selected":""}>${Number(id)} — ${item.name_fa}</option>`).join("");
+  const unitOpts=(grade,chapter,selected)=>'<option value="">انتخاب</option>'+Object.entries(BIO_CFG.grades?.[String(grade)]?.chapters?.[chapter]?.units||{}).map(([id,item])=>`<option value="${id}" ${id===selected?"selected":""}>${Number(id)} — ${item.name_fa}</option>`).join("");
   function issues(){return biologyIssues({subject:subjectEl.value,combination:value,primaryGrade:gradeEl.value,primaryChapter:chapterEl.value,primaryUnit:unitEl.value})}
   function set(next,emit=true){value=normalizeBioCombination(next);render();if(emit)onChange(structuredClone(value))}
   function render(){
@@ -40,13 +44,19 @@ export function mountBiologyCombinationEditor({host,subjectEl,gradeEl,chapterEl,
     <div class="bio-toggle" role="group" aria-label="ترکیبی بودن سوال"><button type="button" data-combined="false" class="${decided&&!combined?"active":""}">غیرترکیبی</button><button type="button" data-combined="true" class="${combined?"active":""}">ترکیبی</button></div>
     ${combined?`<div class="bio-topics">${(value.topics||[]).map((t,i)=>`<article class="bio-topic" data-index="${i}"><div class="bio-topic-head"><strong>مبحث ترکیبی ${i+1}</strong><button type="button" class="danger-ghost" data-remove="${i}">حذف</button></div>
       <label>پایه<select data-field="grade" data-index="${i}"><option value="">انتخاب</option><option value="10" ${Number(t.grade)===10?"selected":""}>دهم</option><option value="11" ${Number(t.grade)===11?"selected":""}>یازدهم</option><option value="12" ${Number(t.grade)===12?"selected":""}>دوازدهم</option></select></label>
-      <label>فصل<select data-field="chapter" data-index="${i}">${opts(12,t.chapter)}</select></label>
-      <label>گفتار<select data-field="unit" data-index="${i}">${opts(8,t.unit)}</select></label></article>`).join("")}</div><button type="button" class="add-topic" data-add>+ اضافه کردن مبحث جدید</button>`:""}
+      <label>فصل<select data-field="chapter" data-index="${i}">${chapterOpts(t.grade,t.chapter)}</select></label>
+      <label>گفتار<select data-field="unit" data-index="${i}">${unitOpts(t.grade,t.chapter,t.unit)}</select></label></article>`).join("")}</div><button type="button" class="add-topic" data-add>+ اضافه کردن مبحث جدید</button>`:""}
     <div class="bio-gate ${ready?"ready":""}"><strong>${ready?(combined?`ترکیبی با ${value.topics.length} مبحث`:"غیرترکیبی ثبت شد"):"UX Check ناقص است"}</strong><span>${ready?"اطلاعات زیست آماده ثبت است.":errs.join(" • ")}</span></div>`;
     host.querySelectorAll("[data-combined]").forEach(b=>b.onclick=()=>set({is_combined:b.dataset.combined==="true",topics:b.dataset.combined==="true"?(value?.topics||[]):[]}));
     host.querySelector("[data-add]")?.addEventListener("click",()=>set({is_combined:true,topics:[...(value?.topics||[]),{grade:null,chapter:null,unit:null}]}));
     host.querySelectorAll("[data-remove]").forEach(b=>b.onclick=()=>{const topics=[...(value?.topics||[])];topics.splice(Number(b.dataset.remove),1);set({is_combined:true,topics})});
-    host.querySelectorAll("[data-field]").forEach(el=>el.onchange=()=>{const i=Number(el.dataset.index),topics=[...(value?.topics||[])],t={...(topics[i]||{})};t[el.dataset.field]=el.dataset.field==="grade"?(el.value?Number(el.value):null):(el.value||null);topics[i]=t;set({is_combined:true,topics})});
+    host.querySelectorAll("[data-field]").forEach(el=>el.onchange=()=>{
+      const i=Number(el.dataset.index),topics=[...(value?.topics||[])],t={...(topics[i]||{})};
+      t[el.dataset.field]=el.dataset.field==="grade"?(el.value?Number(el.value):null):(el.value||null);
+      if(el.dataset.field==="grade"){t.chapter=null;t.unit=null}
+      if(el.dataset.field==="chapter")t.unit=null;
+      topics[i]=t;set({is_combined:true,topics});
+    });
     onGateChange({ready,issues:errs});
   }
   [subjectEl,gradeEl,chapterEl,unitEl].forEach(el=>el.addEventListener("change",render));
