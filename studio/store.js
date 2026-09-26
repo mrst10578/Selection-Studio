@@ -13,7 +13,7 @@ export function normalizeDifficulty(value){
 }
 export function difficultyLabel(value){
   const v=normalizeDifficulty(value);
-  return {level_1:"Level 1",level_2:"Level 2",level_3:"Level 3",level_4:"Level 4",level_5:"Level 5"}[v] || "ثبت نشده";
+  return {level_1:"سطح ۱",level_2:"سطح ۲",level_3:"سطح ۳",level_4:"سطح ۴",level_5:"سطح ۵"}[v] || "ثبت نشده";
 }
 export function subjectLabel(code){
   return {BIO:"زیست‌شناسی",MATH:"ریاضی",PHY:"فیزیک",CHEM:"شیمی"}[code] || code;
