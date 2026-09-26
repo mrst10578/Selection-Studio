@@ -348,7 +348,7 @@ body{overflow-x:hidden}
 .auth-locked{overflow:hidden}
 .operator-login-card.auth-success{border-color:var(--success)}
 html[data-focus-mode="true"] .recent{display:none}
-html[data-focus-mode="true"] #sessionCard .session-editor{display:none}
+html[data-focus-mode="true"] #sessionCard.ready .session-editor{display:none}
 html[data-focus-mode="true"] .shell{margin-bottom:24px}
 html[data-density="dense"] .shell{gap:9px}
 html[data-density="dense"] .session,
