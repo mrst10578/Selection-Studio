@@ -73,7 +73,7 @@ export function installOperatorAuth(){
       setTimeout(unlock,180);
       return;
     }
-    error.textContent="Username یا Password اشتباه است.";
+    error.textContent="نام کاربری یا رمز عبور اشتباه است.";
     password.value="";
     password.focus();
   });
