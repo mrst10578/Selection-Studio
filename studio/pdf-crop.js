@@ -1,5 +1,27 @@
-import * as pdfjsLib from "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min.mjs";
-pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs";
+const PDFJS_SOURCES=[
+  "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38",
+  "https://unpkg.com/pdfjs-dist@4.10.38"
+];
+let pdfjsLoader=null;
+
+async function loadPdfJs(){
+  if(pdfjsLoader)return pdfjsLoader;
+  pdfjsLoader=(async()=>{
+    let lastError=null;
+    for(const base of PDFJS_SOURCES){
+      try{
+        const lib=await import(base+"/build/pdf.min.mjs");
+        lib.GlobalWorkerOptions.workerSrc=base+"/build/pdf.worker.min.mjs";
+        return {lib,base};
+      }catch(error){
+        lastError=error;
+      }
+    }
+    pdfjsLoader=null;
+    throw lastError||new Error("PDF.js load failed");
+  })();
+  return pdfjsLoader;
+}
 
 const LOCKED_ICON='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3h1.2A1.8 1.8 0 0 1 20 11.8v8.4a1.8 1.8 0 0 1-1.8 1.8H5.8A1.8 1.8 0 0 1 4 20.2v-8.4A1.8 1.8 0 0 1 5.8 10H7Zm2 0h6V7a3 3 0 0 0-6 0v3Zm3 4a2 2 0 0 0-1 3.73V20h2v-2.27A2 2 0 0 0 12 14Z"/></svg>';
 const UNLOCKED_ICON='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 8h-2V7a3 3 0 0 0-5.83-1H7.1A5 5 0 0 1 17 7v1Zm1.2 2A1.8 1.8 0 0 1 20 11.8v8.4a1.8 1.8 0 0 1-1.8 1.8H5.8A1.8 1.8 0 0 1 4 20.2v-8.4A1.8 1.8 0 0 1 5.8 10h12.4ZM12 14a2 2 0 0 0-1 3.73V20h2v-2.27A2 2 0 0 0 12 14Z"/></svg>';
@@ -92,12 +114,13 @@ export class PdfCropper{
       return;
     }
     const bytes=await file.arrayBuffer();
-    this.pdf=await pdfjsLib.getDocument({
+    const {lib,base}=await loadPdfJs();
+    this.pdf=await lib.getDocument({
       data:bytes,
-      cMapUrl:"https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/cmaps/",
+      cMapUrl:base+"/cmaps/",
       cMapPacked:true,
-      standardFontDataUrl:"https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/standard_fonts/",
-      wasmUrl:"https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/wasm/",
+      standardFontDataUrl:base+"/standard_fonts/",
+      wasmUrl:base+"/wasm/",
       useSystemFonts:true,
       disableFontFace:false,
       useWorkerFetch:true
