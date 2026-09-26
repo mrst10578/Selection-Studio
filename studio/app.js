@@ -7,6 +7,7 @@ import {PdfCropper,validRegion} from "./pdf-crop.js";
 import {installAdaptiveDensity,isTypingTarget,createCommandPalette,toast} from "./ui-runtime.js";
 import {installWindowsMetadataShortcuts} from "./windows-shortcuts.js";
 import {mountBiologyCombinationEditor,biologyIssues} from "./biology-combination.js";
+import {TAXONOMY,taxonomySummary} from "./taxonomy-data.js";
 
 const $=id=>document.getElementById(id);
 let records=loadRecords();
@@ -14,8 +15,6 @@ let exam=loadExamDraft();
 let activePane="question";
 let biologyGate={ready:false,issues:["مشخص کن سوال زیست ترکیبی هست یا نه"]};
 
-for(let i=1;i<=12;i++) $("chapter").insertAdjacentHTML("beforeend",`<option value="${String(i).padStart(2,"0")}">${i}</option>`);
-for(let i=1;i<=8;i++) $("unit").insertAdjacentHTML("beforeend",`<option value="${String(i).padStart(2,"0")}">${i}</option>`);
 
 const qCrop=new PdfCropper({canvas:$("qCanvas"),stage:$("qStage"),pageLabel:$("qPage"),prevBtn:$("qPrev"),nextBtn:$("qNext"),onChange:region=>{renderGate();if(region&&$("answerPdf").files[0])switchPane("answer")}});
 const aCrop=new PdfCropper({canvas:$("aCanvas"),stage:$("aStage"),pageLabel:$("aPage"),prevBtn:$("aPrev"),nextBtn:$("aNext"),onChange:()=>renderGate()});
@@ -69,8 +68,43 @@ function setSegmented(target,value){
 }
 document.querySelectorAll("[data-target] button").forEach(b=>b.onclick=()=>setSegmented(b.closest("[data-target]").dataset.target,b.dataset.value));
 
+function fillSelect(el,items,selected=""){
+  el.innerHTML='<option value="">انتخاب</option>'+items.map(([value,label])=>`<option value="${value}">${label}</option>`).join("");
+  el.value=items.some(([value])=>value===selected)?selected:"";
+}
+function subjectCfg(){return TAXONOMY.subjects[$("subject").value]||{}}
+function isMath(){return $("subject").value==="MATH"}
 function updateUnitLabel(){
-  $("unitLabel").textContent=$("subject").value==="BIO"?"گفتار":"مبحث";
+  const cfg=subjectCfg();
+  $("unitLabel").textContent=cfg.unit_name_fa||($("subject").value==="BIO"?"گفتار":"مبحث");
+  $("chapterLabel").textContent=cfg.chapter_name_fa||"فصل";
+}
+function mathUnitConfig(){
+  return subjectCfg().topics?.[$("chapter").value]?.units?.[$("unit").value]||null;
+}
+function syncMathGradeFromUnit(){
+  if(!isMath())return;
+  const unit=mathUnitConfig();
+  if(unit?.grade)$("grade").value=String(unit.grade);
+}
+function renderUnits(selected=""){
+  const cfg=subjectCfg(),chapter=$("chapter").value;
+  const units=isMath()?cfg.topics?.[chapter]?.units:cfg.grades?.[$("grade").value]?.chapters?.[chapter]?.units;
+  const items=Object.entries(units||{}).map(([id,item])=>[
+    id,
+    isMath()?(item.label_fa||`${item.name_fa} (${gradeLabel(item.grade)})`):`${Number(id)} — ${item.name_fa}`
+  ]);
+  fillSelect($("unit"),items,selected);
+  syncMathGradeFromUnit();
+}
+function renderTaxonomy({chapter="",unit=""}={}){
+  const cfg=subjectCfg(),math=isMath();
+  $("gradeField").hidden=math;
+  $("subjectGradeRow").classList.toggle("single",math);
+  updateUnitLabel();
+  const chapters=math?cfg.topics:cfg.grades?.[$("grade").value]?.chapters;
+  fillSelect($("chapter"),Object.entries(chapters||{}).map(([id,item])=>[id,`${Number(id)} — ${item.name_fa}`]),chapter);
+  renderUnits(unit);
 }
 const biologyEditor=mountBiologyCombinationEditor({
   host:$("bioCombinationPanel"),subjectEl:$("subject"),gradeEl:$("grade"),chapterEl:$("chapter"),unitEl:$("unit"),
@@ -87,12 +121,12 @@ function gateState(){
     number:Boolean(Number.isInteger(source)&&source>0&&unique),
     question:validRegion(qCrop.region),
     answer:validRegion(aCrop.region),
-    taxonomy:Boolean($("chapter").value&&$("unit").value),
+    taxonomy:Boolean($("chapter").value&&$("unit").value&&[10,11,12].includes(Number($("grade").value))),
     difficulty:["level_1","level_2","level_3","level_4","level_5"].includes($("difficulty").value),
     key:[1,2,3,4].includes(Number($("correctOption").value)),
     biology:$("subject").value!=="BIO"||biologyGate.ready
   };
-  const labels={exam:"آزمون و PDFها",number:unique?"شماره سوال":"شماره معتبر و غیرتکراری",question:"Crop سوال",answer:"Crop پاسخ",taxonomy:"فصل و گفتار/مبحث",difficulty:"Level",key:"کلید صحیح",biology:"UX ترکیبی زیست"};
+  const labels={exam:"آزمون و PDFها",number:unique?"شماره سوال":"شماره معتبر و غیرتکراری",question:"Crop سوال",answer:"Crop پاسخ",taxonomy:"طبقه‌بندی",difficulty:"Level",key:"کلید صحیح",biology:"UX ترکیبی زیست"};
   const missing=Object.keys(checks).filter(k=>!checks[k]).map(k=>labels[k]);
   return {checks,missing};
 }
@@ -116,15 +150,21 @@ function renderGate(){
 function renderRecent(){
   const active=activeRecords(); $("recordCount").textContent=String(active.length);$("navCount").textContent=String(active.length);
   const host=$("recentList"); if(!active.length){host.innerHTML='<div class="empty-box">هنوز سوالی ثبت نشده.</div>';return}
-  host.innerHTML=active.slice(-8).reverse().map(r=>`<article class="recent-item"><strong>سوال ${r.source_question_number}</strong><span>${subjectLabel(r.subject)} · ${gradeLabel(r.grade)} · فصل ${Number(r.chapter)} · ${difficultyLabel(r.difficulty)}</span></article>`).join("");
+  host.innerHTML=active.slice(-8).reverse().map(r=>`<article class="recent-item"><strong>سوال ${r.source_question_number}</strong><span>${subjectLabel(r.subject)} · ${taxonomySummary(r)} · ${difficultyLabel(r.difficulty)}</span></article>`).join("");
 }
 function persistSticky(){saveSticky({subject:$("subject").value,grade:$("grade").value,chapter:$("chapter").value,unit:$("unit").value})}
 function restore(){
   if(exam){$("provider").value=exam.provider||"";$("examDate").value=exam.date||"";$("operator").value=exam.entered_by||""}
-  const s=loadSticky(); if(s.subject)$("subject").value=s.subject;if(s.grade)$("grade").value=s.grade;if(s.chapter)$("chapter").value=s.chapter;if(s.unit)$("unit").value=s.unit;
-  const last=activeRecords().at(-1);$("sourceNumber").value=String((Number(last?.source_question_number)||0)+1||1); updateUnitLabel();
+  const sticky=loadSticky();
+  if(sticky.subject)$("subject").value=sticky.subject;
+  if(sticky.grade)$("grade").value=sticky.grade;
+  renderTaxonomy({chapter:sticky.chapter||"",unit:sticky.unit||""});
+  const last=activeRecords().at(-1);$("sourceNumber").value=String((Number(last?.source_question_number)||0)+1||1);
 }
-["subject","grade","chapter","unit"].forEach(id=>$(id).addEventListener("change",()=>{updateUnitLabel();persistSticky();renderGate()}));
+$("subject").addEventListener("change",()=>{renderTaxonomy();persistSticky();renderGate()});
+$("grade").addEventListener("change",()=>{if(!isMath())renderTaxonomy();persistSticky();renderGate()});
+$("chapter").addEventListener("change",()=>{renderUnits();persistSticky();renderGate()});
+$("unit").addEventListener("change",()=>{syncMathGradeFromUnit();persistSticky();renderGate()});
 $("sourceNumber").addEventListener("input",renderGate);
 ["provider","examDate","operator"].forEach(id=>$(id).addEventListener("input",renderGate));
 
@@ -151,6 +191,7 @@ installWindowsMetadataShortcuts({
   enabled:()=>matchMedia("(pointer:fine)").matches&&innerWidth>=900&&!$("commandPalette").open,
   setCorrectOption:n=>setSegmented("correctOption",n),
   setLevel:n=>setSegmented("difficulty","level_"+n),
+  gradeEnabled:()=>!isMath(),
   setGrade:g=>{$("grade").value=String(g);dispatchChange($("grade"))},
   setChapter:n=>{$("chapter").value=String(n).padStart(2,"0");dispatchChange($("chapter"))},
   setUnit:n=>{$("unit").value=String(n).padStart(2,"0");dispatchChange($("unit"))}
