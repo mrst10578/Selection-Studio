@@ -132,6 +132,8 @@ fieldset{
 }
 legend{padding:0 6px;color:var(--text);font-size:.8125rem;font-weight:750}
 .hidden,[hidden]{display:none!important}
+body.auth-pending{overflow:hidden}
+body.auth-pending>*:not(.operator-login){visibility:hidden!important}
 .panel{
   border:1px solid var(--line);
   border-radius:var(--radius-md);
