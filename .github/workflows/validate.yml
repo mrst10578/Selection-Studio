@@ -37,6 +37,8 @@ jobs:
               [ -e "$file" ] && node --check "$file"
             done
           fi
+      - name: Test Worker core
+        run: node --test worker/test/*.test.mjs
       - name: Validate canonical bank
         run: python engine/validate_bank.py
       - name: Build runtime catalog candidate

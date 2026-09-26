@@ -1,0 +1,12 @@
+name = "selection-studio-api"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+[vars]
+GITHUB_REPO = "mrst10578/Selection-Studio"
+GITHUB_BRANCH = "main"
+ALLOWED_ORIGINS = "https://example.invalid"
+
+[[r2_buckets]]
+binding = "BATCH_BUCKET"
+bucket_name = "selection-studio-batches"
