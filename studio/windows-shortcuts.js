@@ -1,7 +1,7 @@
 import {isTypingTarget,toast} from "./ui-runtime.js";
 
 export function installWindowsMetadataShortcuts({
-  enabled=()=>true,setCorrectOption,setLevel,setGrade,setChapter,setUnit,chapterMax=12,unitMax=8
+  enabled=()=>true,gradeEnabled=()=>true,setCorrectOption,setLevel,setGrade,setChapter,setUnit,chapterMax=13,unitMax=14
 }={}){
   let timer=null,prefix="";
   const clear=()=>{if(timer)clearTimeout(timer);timer=null;prefix=""};
@@ -28,7 +28,11 @@ export function installWindowsMetadataShortcuts({
     const f=e.code.match(/^F([1-5])$/);
     if(f&&!e.ctrlKey&&!e.altKey&&!e.shiftKey&&!e.metaKey){e.preventDefault();setLevel?.(Number(f[1]));toast("Level "+f[1],"shortcut");return}
     const grade=e.shiftKey&&!e.ctrlKey&&!e.altKey&&!e.metaKey?e.code.match(/^Digit([1-3])$/):null;
-    if(grade){e.preventDefault();const g={1:10,2:11,3:12}[Number(grade[1])];setGrade?.(g);toast("پایه "+g,"shortcut");return}
+    if(grade){
+      e.preventDefault();
+      if(!gradeEnabled()){toast("پایه ریاضی از زیرعنوان تعیین می‌شود","shortcut");return}
+      const g={1:10,2:11,3:12}[Number(grade[1])];setGrade?.(g);toast("پایه "+g,"shortcut");return
+    }
     const unit=e.altKey&&!e.ctrlKey&&!e.shiftKey&&!e.metaKey?e.code.match(/^Digit([1-8])$/):null;
     if(unit){e.preventDefault();const n=Number(unit[1]);if(n<=unitMax){setUnit?.(n);toast("گفتار/مبحث "+n,"shortcut")}return}
     const chapter=e.ctrlKey&&!e.altKey&&!e.shiftKey&&!e.metaKey?e.code.match(/^Digit([0-9])$/):null;
