@@ -57,3 +57,21 @@ label{display:grid;gap:5px;color:#9aa5b3;font-size:10px;font-weight:650}input,se
 @media(max-width:1050px){.session-editor{grid-template-columns:1fr 1fr 1fr}.workbench{grid-template-columns:1fr}.inspector{position:static;max-height:none}.pdf-stage{min-height:480px}.recent-list{grid-template-columns:1fr 1fr}}
 @media(max-width:700px){.topbar{position:static;display:grid}.topbar nav{overflow:auto}.shell{width:min(100% - 12px,1600px);margin-top:7px}.session-editor{grid-template-columns:1fr}.workflow-rail{display:flex;overflow:auto}.workflow-rail>span{flex:0 0 112px}.pdf-stage{min-height:360px;max-height:62vh}.two{grid-template-columns:1fr}.segmented.five{grid-template-columns:repeat(5,minmax(48px,1fr));overflow:auto}.check-grid{grid-template-columns:1fr}.bio-topic{grid-template-columns:1fr}.bio-topic-head{grid-column:1}.recent-list{grid-template-columns:1fr}.shortcut-card{grid-template-columns:1fr}.command-launcher span{display:none}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+
+/* Selected Questions */
+.batch-summary,.batch-gate,.list-panel{padding:12px}
+.summary-actions{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
+.batch-gate p{margin:8px 0;color:var(--muted);font-size:10px;line-height:1.7}
+.issue-chips,.question-missing{display:flex;flex-wrap:wrap;gap:5px}
+.issue-chips span,.question-missing span{padding:4px 7px;border:1px solid #665127;border-radius:999px;background:#221d12;color:#e6c775;font-size:8px}
+.question-list{display:grid;gap:9px;margin-top:10px}
+.question-card{display:grid;grid-template-columns:220px minmax(0,1fr);gap:11px;padding:10px;border:1px solid #2b3540;border-radius:12px;background:#0c1117}
+.question-card[data-quality="warn"]{border-color:#544326}.question-card[data-quality="ok"]{border-color:#294b39}
+.previews{display:grid;grid-template-columns:1fr 1fr;gap:6px}.previews>div{display:grid;gap:4px}.previews span{color:#7f8a98;font-size:8px}.previews img{width:100%;height:100px;object-fit:contain;border:1px solid #29333e;border-radius:8px;background:#080c11}.previews img.missing{min-height:100px}
+.question-main{display:grid;align-content:start;gap:7px}.question-title{display:flex;justify-content:space-between;gap:8px;align-items:center}.question-title strong{font-size:13px}.quality-badge{padding:4px 8px;border:1px solid #5f4e28;border-radius:999px;background:#221d12;color:#e2c36f;font-size:8px}.quality-badge.ok{border-color:#2f6749;background:#102019;color:#9ce3bb}
+.question-meta{color:#a9b3bf;font-size:10px;line-height:1.7}.question-actions{display:flex;gap:6px;margin-top:3px}
+.settings-dialog{width:min(620px,calc(100vw - 18px));max-width:none;padding:0;border:1px solid #394653;border-radius:14px;background:#0b1016;color:#fff;box-shadow:0 30px 100px rgba(0,0,0,.6)}.settings-dialog::backdrop{background:rgba(3,5,8,.74);backdrop-filter:blur(6px)}.dialog-card{display:grid;gap:10px;padding:13px}.dialog-card.wide{width:min(760px,100%);max-height:86vh;overflow:auto}.dialog-card form{display:grid;gap:9px}
+.guide-card{padding:14px}.guide-card h2{margin:0 0 10px;font-size:15px}.guide-card p{color:#9aa5b3;font-size:10px;line-height:1.9}.guide-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}.guide-grid>div{padding:10px;border:1px solid #29343f;border-radius:10px;background:#0c1117}.guide-grid b{display:grid;place-items:center;width:24px;height:24px;border-radius:7px;background:#27171b;color:#e89299;font-size:9px}.guide-grid strong{display:block;margin-top:7px;font-size:11px}.guide-grid p{margin:4px 0 0;font-size:9px}.shortcut-table{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px}.shortcut-table span{display:grid;gap:5px;padding:9px;border:1px solid #2b3540;border-radius:9px;color:#aeb7c2;font-size:9px}
+@media(max-width:850px){.question-card{grid-template-columns:1fr}.guide-grid,.shortcut-table{grid-template-columns:1fr 1fr}.previews img{height:120px}}
+@media(max-width:520px){.guide-grid,.shortcut-table{grid-template-columns:1fr}.previews{grid-template-columns:1fr}.summary-actions{display:grid;width:100%}.summary-actions>*{width:100%;text-align:center}}
