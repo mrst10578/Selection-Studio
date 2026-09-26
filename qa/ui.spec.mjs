@@ -18,7 +18,9 @@ test.describe("Selection Studio",()=>{
     await page.locator("#operatorUsername").fill("admin");
     await page.locator("#operatorPassword").fill("admin");
     await page.locator("#operatorLoginForm").press("Enter");
-    await expect(page.locator("#operatorLogin")).toBeHidden();
+    await expect(page.locator("#operatorLogin")).toHaveClass(/auth-success/);
+    await expect(page.locator("#operatorLoginSubmit")).toHaveText("ورود موفق");
+    await expect(page.locator("#operatorLogin")).toBeHidden({timeout:2500});
     await expect(page.locator(".topbar h1")).toHaveText("Selection Studio");
     await expect(page.locator("#saveQuestion")).toBeDisabled();
     await expect(page.locator(".date-separator")).toHaveCount(2);
