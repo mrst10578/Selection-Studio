@@ -69,15 +69,31 @@
         </section>
         <button id="saveQuestion" class="primary large" type="submit" disabled>ثبت سوال و رفتن به بعدی</button>
       </form>
-      <div class="shortcut-card"><strong>میانبر دسکتاپ ویندوز</strong><span>Numpad 1–4 کلید</span><span>F1–F5 Level</span><span>Ctrl+عدد فصل</span><span>Alt+عدد گفتار/مبحث</span><span>Shift+1/2/3 پایه (غیرریاضی)</span></div>
+
     </aside>
   </section>
 
   <section class="panel recent"><div class="section-head compact"><div><h2>آخرین سوال‌ها</h2><p><b id="recordCount">0</b> سوال ذخیره محلی</p></div><a class="button-link" href="./selected.html">مشاهده لیست</a></div><div id="recentList" class="recent-list"><div class="empty-box">هنوز سوالی ثبت نشده.</div></div></section>
 </main>
 
-<button id="commandLauncher" class="command-launcher" type="button"><span>فرمان‌ها</span><kbd>Ctrl K</kbd></button>
-<dialog id="commandPalette" class="command-palette"><div class="command-shell"><div class="command-search"><span>⌕</span><input id="commandInput" type="search" placeholder="فرمان…" /><kbd>Esc</kbd></div><div id="commandList" class="command-list"></div></div></dialog>
+<button id="hotkeysLauncher" class="command-launcher hotkeys-launcher" type="button">Windows Hotkeys</button>
+<dialog id="hotkeysDialog" class="hotkeys-dialog">
+  <div class="hotkeys-shell">
+    <div class="hotkeys-head"><div><span class="eyebrow">WINDOWS HOTKEYS</span><h2>میانبرهای دسکتاپ</h2></div><button id="hotkeysClose" type="button">بستن</button></div>
+    <div class="hotkeys-grid">
+      <span><kbd>Numpad 1–4</kbd><b>کلید صحیح</b></span>
+      <span><kbd>F1–F5</kbd><b>Level</b></span>
+      <span><kbd>Ctrl + عدد</kbd><b>فصل / مبحث اصلی</b></span>
+      <span><kbd>Alt + عدد</kbd><b>گفتار / مبحث / زیرعنوان</b></span>
+      <span><kbd>Shift + 1/2/3</kbd><b>پایه، به‌جز ریاضی</b></span>
+      <span><kbd>Q / W</kbd><b>PDF سوال / پاسخ</b></span>
+      <span><kbd>N</kbd><b>شماره سوال</b></span>
+      <span><kbd>L</kbd><b>لیست سوالات</b></span>
+      <span><kbd>Ctrl + K</kbd><b>باز کردن همین پنل</b></span>
+    </div>
+    <p class="hotkeys-note">برای فصل‌های دو رقمی، رقم‌ها را سریع پشت‌سرهم وارد کن.</p>
+  </div>
+</dialog>
 <script type="module" src="./app.js"></script>
 </body>
 </html>
