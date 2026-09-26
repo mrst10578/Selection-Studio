@@ -25,12 +25,36 @@ test.describe("Selection Studio",()=>{
     await expect(page.locator('.topbar nav a[href*="admin"]')).toHaveCount(0);
     await expect(page.locator("#saveQuestion")).toBeDisabled();
     await expect(page.locator(".date-separator")).toHaveCount(2);
-    await expect(page.locator("#examYear")).toHaveAttribute("inputmode","numeric");
+    await expect(page.locator("#provider")).toHaveAttribute("placeholder","قلمچی");
+    await expect(page.locator("#examYear")).toHaveValue("1405");
+    await expect(page.locator("#examYear")).toHaveAttribute("readonly","");
     await expect(page.locator("#examMonth")).toHaveAttribute("inputmode","numeric");
     await expect(page.locator("#examDay")).toHaveAttribute("inputmode","numeric");
+    await expect(page.locator(".field-hint")).toHaveCount(0);
+    await expect(page.locator("#gateHint")).toHaveCount(0);
+    await expect(page.locator("body")).not.toContainText("موارد باقی‌مانده:");
+    await expect(page.locator("body")).not.toContainText("۱ یادآوری ساده، ۳ حل چندمرحله‌ای و ۵ دشوار و ترکیبی است");
     await expect(page.locator("html")).toHaveAttribute("dir","rtl");
     await expectNoSeriousA11y(page);
     await expectNoHorizontalOverflow(page);
+  });
+  test("exam date starts at month, keeps 1405 fixed, and jumps to day after two digits",async({page})=>{
+    await page.goto("/studio/");
+    await page.locator("#operatorUsername").fill("admin");
+    await page.locator("#operatorPassword").fill("admin");
+    await page.locator("#operatorLoginForm").press("Enter");
+    await expect(page.locator("#operatorLogin")).toBeHidden({timeout:2500});
+
+    await page.locator("#examDateField").click({position:{x:8,y:8}});
+    await expect(page.locator("#examMonth")).toBeFocused();
+    await page.locator("#examMonth").fill("03");
+    await expect(page.locator("#examDay")).toBeFocused();
+    await page.locator("#examDay").fill("07");
+
+    await expect(page.locator("#examYear")).toHaveValue("1405");
+    await expect(page.locator("#examMonth")).toHaveValue("03");
+    await expect(page.locator("#examDay")).toHaveValue("07");
+    await expect(page.locator("#examDate")).toHaveValue("1405/03/07");
   });
   test("mobile PDF player exposes crop lock without overflowing",async({page})=>{
     await page.setViewportSize({width:390,height:844});
