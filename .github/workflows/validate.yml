@@ -39,6 +39,18 @@ jobs:
           fi
       - name: Test Worker core
         run: node --test worker/test/*.test.mjs
+      - name: Install QA dependencies
+        run: npm install --no-audit --no-fund
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Validate HTML
+        run: npm run qa:html
+      - name: Validate CSS
+        run: npm run qa:css
+      - name: Test responsive and accessibility UI
+        run: npm run qa:ui
+      - name: Run Lighthouse gates
+        run: npm run qa:lighthouse
       - name: Validate canonical bank
         run: python engine/validate_bank.py
       - name: Build runtime catalog candidate
@@ -53,3 +65,13 @@ jobs:
           assert actual == expected, "runtime/catalog.json does not match generated catalog"
           print("runtime catalog matches generated catalog")
           PY
+
+      - name: Build recovery archive
+        run: python tools/build_recovery.py
+      - name: Upload recovery archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: selection-studio-recovery
+          path: dist/selection-studio-recovery.zip
+          if-no-files-found: error
+          retention-days: 30
