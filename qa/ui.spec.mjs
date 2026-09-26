@@ -140,7 +140,7 @@ test.describe("Selection Studio",()=>{
     await expect(page.locator(".question-card")).toHaveCount(2);
     await page.locator("#questionSearch").fill("2");
     await expect(page.locator(".question-card")).toHaveCount(1);
-    await expect(page.locator(".question-title strong")).toHaveText("سوال 2");
+    await expect(page.locator(".question-title strong")).toHaveText("سؤال 2");
     await page.locator("#questionSearch").fill("");
     await page.locator(".question-card").first().getByRole("button",{name:"انتقال به حذف‌شده‌ها"}).click();
     await expect(page.locator("#trashSection")).toBeVisible();
