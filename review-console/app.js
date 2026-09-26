@@ -82,11 +82,6 @@ $('#adminLoginForm').addEventListener('submit',login);
 
 function statusClass(s){return s||'pending'}
 
-async function login(){
-  saveSettings();
-  if(!workerUrl()||!adminKey()||!reviewer()){toast('Worker، کلید مدیر و نام بازبین لازم است.','error');return}
-  try{await loadQueue('pending');$('#loginView').classList.add('hidden');$('#appView').classList.remove('hidden')}catch(e){toast('ورود ناموفق: '+e.message,'error')}
-}
 $('#logoutBtn').onclick=()=>{sessionStorage.removeItem(ADMIN_SESSION);location.reload()};
 $('#refreshBtn').onclick=()=>loadQueue(queueStatus).catch(e=>toast(e.message,'error'));
 
