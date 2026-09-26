@@ -39,8 +39,8 @@ export function questionIssues(question){
   if(!Number.isInteger(Number(question?.source_question_number))||Number(question.source_question_number)<1)issues.push("شماره سوال");
   if(!SUBJECTS.includes(question?.subject))issues.push("درس");
   if(![10,11,12].includes(Number(question?.grade)))issues.push("پایه");
-  if(!/^(0[1-9]|1[0-2])$/.test(String(question?.chapter||"")))issues.push("فصل");
-  if(!/^0[1-8]$/.test(String(question?.unit||"")))issues.push(question?.subject==="BIO"?"گفتار":"مبحث");
+  if(!/^(0[1-9]|1[0-3])$/.test(String(question?.chapter||"")))issues.push(question?.subject==="MATH"?"مبحث اصلی":"فصل");
+  if(!/^(0[1-9]|1[0-4])$/.test(String(question?.unit||"")))issues.push(question?.subject==="BIO"?"گفتار":question?.subject==="MATH"?"زیرعنوان":"مبحث");
   if(!DIFFICULTIES.includes(question?.difficulty))issues.push("Level");
   if(![1,2,3,4].includes(Number(question?.correct_option)))issues.push("کلید");
   if(!validRegion(question?.question_regions?.[0]))issues.push("Crop سوال");
