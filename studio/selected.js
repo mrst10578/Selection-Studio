@@ -177,14 +177,22 @@ $("submitBatch").onclick=async()=>{
   const s=settingsState(),batch=createBatch(active(),exam,s.submittedBy);
   $("submitBatch").disabled=true;
   try{
+    const form=new FormData();
+    form.append("batch",new Blob([JSON.stringify(batch)],{type:"application/json"}),"batch.json");
+    for(const question of batch.questions){
+      const [qBlob,aBlob]=await Promise.all([getPreview(question.id+":question"),getPreview(question.id+":answer")]);
+      if(!qBlob||!aBlob)throw new Error("Crop محلی برای "+question.id+" کامل نیست.");
+      form.append("question__"+encodeURIComponent(question.id),qBlob,question.id+"-question.webp");
+      form.append("answer__"+encodeURIComponent(question.id),aBlob,question.id+"-answer.webp");
+    }
     const response=await fetch(s.workerUrl+"/studio/intake",{
       method:"POST",
-      headers:{"content-type":"application/json","x-testbank-submit-key":s.key},
-      body:JSON.stringify(batch)
+      headers:{"x-testbank-submit-key":s.key},
+      body:form
     });
     if(!response.ok)throw new Error((await response.text())||("HTTP "+response.status));
     rememberLastBatch(batch);
-    toast("Batch برای بررسی ارسال شد","ok");
+    toast("Batch و Cropها برای بررسی ارسال شد","ok");
   }catch(err){
     toast("ارسال ناموفق: "+err.message,"error");
   }finally{
