@@ -15,7 +15,7 @@ const $=id=>document.getElementById(id);
 let records=loadRecords();
 let exam=loadExamDraft();
 let activePane="question";
-let biologyGate={ready:false,issues:["مشخص کن سوال زیست ترکیبی هست یا نه"]};
+let biologyGate={ready:false,issues:["مشخص کن سؤال زیست ترکیبی هست یا نه"]};
 
 
 const qCrop=new PdfCropper({canvas:$("qCanvas"),stage:$("qStage"),pageLabel:$("qPage"),prevBtn:$("qPrev"),nextBtn:$("qNext"),modeBtn:$("qCropLock"),onChange:()=>renderGate(),onPageChange:(page,total)=>updatePageJump("qPageJump",page,total)});
@@ -214,7 +214,7 @@ function renderGate(){
   const order=["exam","question","answer","meta","ready"],idx=order.indexOf(s);
   document.querySelectorAll("[data-step]").forEach(el=>{const i=order.indexOf(el.dataset.step);el.classList.toggle("done",i>=0&&i<idx);el.classList.toggle("active",i===idx)});
   $("questionCropState").textContent=qCrop.region?"ثبت شد":"بدون Crop"; $("answerCropState").textContent=aCrop.region?"ثبت شد":"بدون Crop";
-  $("questionIdentity").textContent="سوال "+($("sourceNumber").value||"-");
+  $("questionIdentity").textContent="سؤال "+($("sourceNumber").value||"-");
 }
 document.querySelectorAll("[data-check]").forEach(button=>button.addEventListener("click",()=>{
   const target=button.dataset.check;
@@ -232,7 +232,7 @@ document.querySelectorAll("[data-check]").forEach(button=>button.addEventListene
 function renderRecent(){
   const active=activeRecords(); $("recordCount").textContent=String(active.length);$("navCount").textContent=String(active.length);
   const host=$("recentList"); if(!active.length){host.innerHTML='<div class="empty-box">هنوز سوالی ثبت نشده.</div>';return}
-  host.innerHTML=active.slice(-8).reverse().map(r=>`<article class="recent-item"><strong>سوال ${r.source_question_number}</strong><span>${subjectLabel(r.subject)} · ${taxonomySummary(r)} · ${difficultyLabel(r.difficulty)}</span></article>`).join("");
+  host.innerHTML=active.slice(-8).reverse().map(r=>`<article class="recent-item"><strong>سؤال ${r.source_question_number}</strong><span>${subjectLabel(r.subject)} · ${taxonomySummary(r)} · ${difficultyLabel(r.difficulty)}</span></article>`).join("");
 }
 function persistSticky(){saveSticky({subject:$("subject").value,grade:$("grade").value,chapter:$("chapter").value,unit:$("unit").value})}
 function restore(){
@@ -253,7 +253,7 @@ $("provider").addEventListener("input",()=>{renderProviderWarning();renderGate()
 $("operator").addEventListener("input",renderGate);
 
 $("questionForm").addEventListener("submit",async e=>{
-  e.preventDefault(); const gate=gateState(); if(gate.missing.length){toast("سوال ناقص است: "+gate.missing.join("، "),"error");return}
+  e.preventDefault(); const gate=gateState(); if(gate.missing.length){toast("سؤال ناقص است: "+gate.missing.join("، "),"error");return}
   const source=Number($("sourceNumber").value),id=buildQuestionId(exam.id,source);
   const visualHash=await qCrop.visualHash();
   const record={
