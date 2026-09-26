@@ -4,7 +4,8 @@ import {
 } from "./store.js";
 import {putPreview} from "./preview-db.js";
 import {PdfCropper,validRegion} from "./pdf-crop.js";
-import {installAdaptiveDensity,isTypingTarget,createCommandPalette,toast} from "./ui-runtime.js";
+import {installAdaptiveDensity,isTypingTarget,toast} from "./ui-runtime.js";
+import "./operator-auth.js";
 import {installWindowsMetadataShortcuts} from "./windows-shortcuts.js";
 import {mountBiologyCombinationEditor,biologyIssues} from "./biology-combination.js";
 import {TAXONOMY,taxonomySummary} from "./taxonomy-data.js";
@@ -16,7 +17,7 @@ let activePane="question";
 let biologyGate={ready:false,issues:["مشخص کن سوال زیست ترکیبی هست یا نه"]};
 
 
-const qCrop=new PdfCropper({canvas:$("qCanvas"),stage:$("qStage"),pageLabel:$("qPage"),prevBtn:$("qPrev"),nextBtn:$("qNext"),modeBtn:$("qCropLock"),onChange:region=>{renderGate();if(region&&$("answerPdf").files[0])switchPane("answer")}});
+const qCrop=new PdfCropper({canvas:$("qCanvas"),stage:$("qStage"),pageLabel:$("qPage"),prevBtn:$("qPrev"),nextBtn:$("qNext"),modeBtn:$("qCropLock"),onChange:()=>renderGate()});
 const aCrop=new PdfCropper({canvas:$("aCanvas"),stage:$("aStage"),pageLabel:$("aPage"),prevBtn:$("aPrev"),nextBtn:$("aNext"),modeBtn:$("aCropLock"),onChange:()=>renderGate()});
 $("qClear").onclick=()=>qCrop.clearRegion();
 $("aClear").onclick=()=>aCrop.clearRegion();
@@ -218,7 +219,7 @@ $("questionForm").addEventListener("submit",async e=>{
 
 installAdaptiveDensity();
 installWindowsMetadataShortcuts({
-  enabled:()=>matchMedia("(pointer:fine)").matches&&innerWidth>=900&&!$("commandPalette").open,
+  enabled:()=>matchMedia("(pointer:fine)").matches&&innerWidth>=900&&!hotkeysDialog.open,
   setCorrectOption:n=>setSegmented("correctOption",n),
   setLevel:n=>setSegmented("difficulty","level_"+n),
   gradeEnabled:()=>!isMath(),
@@ -226,22 +227,19 @@ installWindowsMetadataShortcuts({
   setChapter:n=>{$("chapter").value=String(n).padStart(2,"0");dispatchChange($("chapter"))},
   setUnit:n=>{$("unit").value=String(n).padStart(2,"0");dispatchChange($("unit"))}
 });
-const palette=createCommandPalette({
-  dialog:$("commandPalette"),input:$("commandInput"),list:$("commandList"),
-  getCommands:()=>[
-    {label:"نمایش سوال",hint:"PDF سوال",shortcut:"Q",run:()=>switchPane("question")},
-    {label:"نمایش پاسخ",hint:"PDF پاسخ",shortcut:"W",run:()=>switchPane("answer")},
-    {label:"شماره سوال",hint:"تمرکز روی شماره",shortcut:"N",run:()=>$("sourceNumber").focus()},
-    {label:"ثبت سوال",hint:$("saveQuestion").disabled?"Gate هنوز کامل نیست":"ثبت سوال کامل",shortcut:"Enter",run:()=>{if(!$("saveQuestion").disabled)$("questionForm").requestSubmit()}},
-    {label:"لیست سوالات",shortcut:"L",run:()=>location.href="./selected.html"},
-    {label:"راهنما",run:()=>location.href="./guide.html"}
-  ]
-});
-$("commandLauncher").onclick=()=>palette.open();
+const hotkeysDialog=$("hotkeysDialog");
+function openHotkeys(){if(!hotkeysDialog.open)hotkeysDialog.showModal()}
+$("hotkeysLauncher").onclick=openHotkeys;
+$("hotkeysClose").onclick=()=>hotkeysDialog.close();
+hotkeysDialog.addEventListener("click",e=>{if(e.target===hotkeysDialog)hotkeysDialog.close()});
 document.addEventListener("keydown",e=>{
-  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="k"){e.preventDefault();palette.open();return}
-  if(isTypingTarget(e.target)||$("commandPalette").open)return;
-  if(e.key.toLowerCase()==="q")switchPane("question");if(e.key.toLowerCase()==="w")switchPane("answer");if(e.key.toLowerCase()==="n")$("sourceNumber").focus();if(e.key.toLowerCase()==="l")location.href="./selected.html";
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="k"){e.preventDefault();openHotkeys();return}
+  if(isTypingTarget(e.target)||hotkeysDialog.open)return;
+  const key=e.key.toLowerCase();
+  if(key==="q")switchPane("question");
+  if(key==="w")switchPane("answer");
+  if(key==="n")$("sourceNumber").focus();
+  if(key==="l")location.href="./selected.html";
 });
 
-installDateField();restore();renderSession();renderRecent();renderGate();
+restore();renderSession();renderRecent();renderGate();
