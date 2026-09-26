@@ -16,8 +16,8 @@
   <section class="panel session" id="sessionCard">
     <div class="section-head"><div><span class="eyebrow">EXAM SESSION</span><h2>آزمون فعلی</h2><p id="sessionSummary">هنوز تنظیم نشده</p></div><button id="toggleSession" type="button" class="secondary">تنظیم آزمون</button></div>
     <div id="sessionEditor" class="session-editor">
-      <label>موسسه<input id="provider" autocomplete="off" placeholder="MAZ" /></label>
-      <div class="session-field"><span class="field-label">تاریخ آزمون</span><div class="date-field" dir="ltr"><input id="examYear" inputmode="numeric" pattern="[0-9۰-۹]*" maxlength="4" placeholder="1405" aria-label="سال آزمون" /><span class="date-separator" aria-hidden="true">/</span><input id="examMonth" inputmode="numeric" pattern="[0-9۰-۹]*" maxlength="2" placeholder="07" aria-label="ماه آزمون" /><span class="date-separator" aria-hidden="true">/</span><input id="examDay" inputmode="numeric" pattern="[0-9۰-۹]*" maxlength="2" placeholder="18" aria-label="روز آزمون" /></div><input id="examDate" type="hidden" /></div>
+      <label>نام آزمون<input id="provider" autocomplete="off" placeholder="قلمچی" lang="fa" dir="rtl" /></label>
+      <div class="session-field"><span class="field-label">تاریخ آزمون</span><div class="date-field" id="examDateField" dir="ltr"><input id="examYear" value="1405" readonly tabindex="-1" aria-label="سال آزمون، ثابت ۱۴۰۵" /><span class="date-separator" aria-hidden="true">/</span><input id="examMonth" inputmode="numeric" pattern="[0-9۰-۹]*" maxlength="2" placeholder="03" aria-label="ماه آزمون، دو رقمی" /><span class="date-separator" aria-hidden="true">/</span><input id="examDay" inputmode="numeric" pattern="[0-9۰-۹]*" maxlength="2" placeholder="07" aria-label="روز آزمون، دو رقمی" /></div><input id="examDate" type="hidden" /></div>
       <label>اپراتور<input id="operator" autocomplete="name" /></label>
       <label class="file-label">PDF سوال<input id="questionPdf" type="file" accept="application/pdf" /></label>
       <label class="file-label">PDF پاسخ<input id="answerPdf" type="file" accept="application/pdf" /></label>
@@ -56,7 +56,7 @@
           <label><span id="unitLabel">گفتار</span><select id="unit"><option value="">انتخاب</option></select></label>
         </div>
 
-        <fieldset class="choice"><legend>سطح سؤال</legend><input id="difficulty" type="hidden" value="" /><div class="segmented five" data-target="difficulty"><button type="button" data-value="level_1" aria-label="سطح ۱، یادآوری ساده">Level 1</button><button type="button" data-value="level_2" aria-label="سطح ۲، کاربرد کوتاه">Level 2</button><button type="button" data-value="level_3" aria-label="سطح ۳، حل چندمرحله‌ای">Level 3</button><button type="button" data-value="level_4" aria-label="سطح ۴، ترکیب چند مفهوم">Level 4</button><button type="button" data-value="level_5" aria-label="سطح ۵، دشوار و ترکیبی">Level 5</button></div><p class="field-hint">۱ یادآوری ساده، ۳ حل چندمرحله‌ای و ۵ دشوار و ترکیبی است؛ ۲ و ۴ بین این سطح‌ها هستند.</p></fieldset>
+        <fieldset class="choice"><legend>سطح سؤال</legend><input id="difficulty" type="hidden" value="" /><div class="segmented five" data-target="difficulty"><button type="button" data-value="level_1" aria-label="سطح ۱، یادآوری ساده">Level 1</button><button type="button" data-value="level_2" aria-label="سطح ۲، کاربرد کوتاه">Level 2</button><button type="button" data-value="level_3" aria-label="سطح ۳، حل چندمرحله‌ای">Level 3</button><button type="button" data-value="level_4" aria-label="سطح ۴، ترکیب چند مفهوم">Level 4</button><button type="button" data-value="level_5" aria-label="سطح ۵، دشوار و ترکیبی">Level 5</button></div></fieldset>
         <fieldset class="choice"><legend>کلید صحیح</legend><input id="correctOption" type="hidden" value="" /><div class="segmented four" data-target="correctOption"><button type="button" data-value="1">1</button><button type="button" data-value="2">2</button><button type="button" data-value="3">3</button><button type="button" data-value="4">4</button></div></fieldset>
 
         <section id="bioCombinationPanel" class="bio-panel hidden" hidden></section>
@@ -66,7 +66,6 @@
           <div class="check-grid">
             <button type="button" data-check="exam"><i></i>آزمون و فایل‌ها</button><button type="button" data-check="number"><i></i>شمارهٔ سؤال</button><button type="button" data-check="question"><i></i>برش سؤال</button><button type="button" data-check="answer"><i></i>برش پاسخ</button><button type="button" data-check="taxonomy"><i></i>درس و مبحث</button><button type="button" data-check="difficulty"><i></i>سطح سؤال</button><button type="button" data-check="key"><i></i>گزینهٔ درست</button><button type="button" data-check="biology"><i></i>ترکیبی‌بودن زیست</button>
           </div>
-          <p id="gateHint">موارد ناقص را کامل کن.</p>
         </section>
         <button id="saveQuestion" class="primary large" type="submit" disabled>ثبت سوال و رفتن به بعدی</button>
       </form>
