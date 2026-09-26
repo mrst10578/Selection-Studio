@@ -91,7 +91,7 @@ body{overflow-x:hidden}
 .completion span{font-size:.75rem}
 .tools{
   display:grid;
-  grid-template-columns:minmax(180px,1.2fr) repeat(3,minmax(145px,.75fr)) auto auto auto;
+  grid-template-columns:minmax(180px,1.2fr) repeat(3,minmax(145px,.75fr)) auto auto auto auto;
   gap:7px;
   padding:9px;
   align-items:end;
@@ -136,7 +136,7 @@ body{overflow-x:hidden}
   border-radius:999px;
   background:var(--warning-bg);
   color:var(--warning);
-  font-size:.72rem;
+  font-size:.75rem;
 }
 .open-review{grid-column:2;grid-row:1/4;align-self:stretch;min-width:88px}
 .status-badge{border-color:var(--line-strong)}
@@ -173,7 +173,7 @@ body{overflow-x:hidden}
 }
 .quick-head>div:first-child{display:grid;gap:1px}
 .quick-head strong{font-size:.92rem}
-.quick-head small{color:var(--text-muted);font-size:.74rem}
+.quick-head small{color:var(--text-muted);font-size:.75rem}
 .quick-head-actions{display:flex;gap:6px}
 .quick-viewers{
   min-width:0;
@@ -199,7 +199,7 @@ body{overflow-x:hidden}
   background:var(--surface);
 }
 .quick-viewers figcaption{font-size:.78rem;font-weight:750}
-.image-expand{justify-self:start;min-height:34px;padding-block:5px;font-size:.74rem}
+.image-expand{justify-self:start;min-height:34px;padding-block:5px;font-size:.75rem}
 .quick-viewers img{
   width:100%;
   height:100%;
@@ -236,7 +236,7 @@ body{overflow-x:hidden}
   border-inline-start:2px solid var(--line-strong);
   background:var(--surface-subtle);
   color:var(--text-muted);
-  font-size:.72rem;
+  font-size:.75rem;
 }
 .shortcut-legend{display:flex;flex-wrap:wrap;gap:5px}
 .shortcut-legend span{
@@ -244,7 +244,7 @@ body{overflow-x:hidden}
   align-items:center;
   gap:5px;
   color:var(--text-muted);
-  font-size:.72rem;
+  font-size:.75rem;
 }
 .correction{
   grid-column:1/-1;
