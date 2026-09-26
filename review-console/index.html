@@ -14,7 +14,7 @@
 <div id="appView" class="hidden">
 <header class="review-header"><div><span class="eyebrow">TESTBANK / REVIEW</span><h1>Review Console</h1></div><div class="header-actions"><span id="autosaveState" class="status-pill">ذخیره شد</span><button id="commandLauncher" type="button">فرمان‌ها <kbd>Ctrl K</kbd></button><button id="refreshBtn" type="button">بروزرسانی</button><button id="logoutBtn" type="button">خروج</button></div></header>
 <main class="review-layout">
-  <aside class="review-sidebar">
+  <aside class="review-sidebar" aria-label="صف‌های بررسی">
     <div class="queue-tabs"><button data-queue="pending" class="active">در حال بررسی</button><button data-queue="completed">تکمیل‌شده</button><button data-queue="rejected">ردشده</button></div>
     <div id="batchList" class="batch-list"><div class="empty-box">صف خالی است.</div></div>
   </aside>
@@ -38,7 +38,7 @@
   <div class="quick-shell">
     <div class="quick-head"><div><span class="eyebrow">QUICK REVIEW</span><strong id="quickId">-</strong><small id="quickPosition">-</small></div><button id="quickClose">بستن</button></div>
     <div class="quick-viewers"><figure><figcaption>سوال</figcaption><img id="quickQuestionImage" alt="Crop سوال" /></figure><figure><figcaption>پاسخ</figcaption><img id="quickAnswerImage" alt="Crop پاسخ" /></figure></div>
-    <aside class="quick-inspector">
+    <aside class="quick-inspector" aria-label="بازبینی و شناسنامه سوال">
       <div class="inspector-title"><span class="eyebrow">INSPECTOR</span><strong>شناسنامه و تصمیم</strong></div>
       <div class="two"><label>درس<select id="quickSubject"><option value="BIO">زیست‌شناسی</option><option value="MATH">ریاضی</option><option value="PHY">فیزیک</option><option value="CHEM">شیمی</option></select></label><label>پایه<select id="quickGrade"><option value="10">دهم</option><option value="11">یازدهم</option><option value="12">دوازدهم</option></select></label></div>
       <div class="two"><label>فصل<select id="quickChapter"><option value="">-</option></select></label><label><span id="quickUnitLabel">گفتار</span><select id="quickUnit"><option value="">-</option></select></label></div>
@@ -54,7 +54,7 @@
 </dialog>
 
 <dialog id="commandPalette" class="command-palette"><div class="command-shell"><div class="command-search"><span>⌕</span><input id="commandInput" type="search" placeholder="فرمان یا شماره سوال…" /><kbd>Esc</kbd></div><div id="commandList" class="command-list"></div></div></dialog>
-<template id="batchItem"><button class="batch-item" type="button"><strong></strong><span></span><small></small></button></template>
+<template id="batchItem"><button class="batch-item" type="button" aria-label="باز کردن Batch"><strong></strong><span></span><small></small></button></template>
 <template id="questionItem"><article class="review-question"><div><strong class="q-title"></strong><span class="status-badge"></span></div><p class="q-meta"></p><div class="q-issues"></div><button class="open-review" type="button">باز کردن</button></article></template>
 <script type="module" src="./app.js"></script>
 </body></html>
