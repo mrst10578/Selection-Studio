@@ -15,11 +15,39 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
       - name: Compile Python
         run: python -m compileall engine
+      - name: Check JavaScript syntax
+        run: |
+          if [ -d studio ]; then
+            for file in studio/*.js; do
+              [ -e "$file" ] && node --check "$file"
+            done
+          fi
+          if [ -d review-console ]; then
+            for file in review-console/*.js; do
+              [ -e "$file" ] && node --check "$file"
+            done
+          fi
+          if [ -d worker/src ]; then
+            for file in worker/src/*.js; do
+              [ -e "$file" ] && node --check "$file"
+            done
+          fi
       - name: Validate canonical bank
         run: python engine/validate_bank.py
-      - name: Build runtime catalog
-        run: python engine/build_catalog.py
-      - name: Verify generated catalog
-        run: git diff --exit-code runtime/catalog.json
+      - name: Build runtime catalog candidate
+        run: python engine/build_catalog.py --output /tmp/catalog.json
+      - name: Verify runtime catalog semantics
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          expected=json.loads(Path("/tmp/catalog.json").read_text(encoding="utf-8"))
+          actual=json.loads(Path("runtime/catalog.json").read_text(encoding="utf-8"))
+          assert actual == expected, "runtime/catalog.json does not match generated catalog"
+          print("runtime catalog matches generated catalog")
+          PY
