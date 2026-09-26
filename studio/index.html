@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0d12" />
+  <title>Selection Studio</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+<header class="topbar">
+  <div><span class="eyebrow">TESTBANK / OPERATOR</span><h1>Selection Studio</h1><p>سوال را Crop کن، شناسنامه بزن، کامل تحویل بده.</p></div>
+  <nav><a class="active" href="./">گزینش</a><a href="./selected.html">لیست <b id="navCount">0</b></a><a href="./guide.html">راهنما</a></nav>
+</header>
+<main class="shell">
+  <section class="panel session" id="sessionCard">
+    <div class="section-head"><div><span class="eyebrow">EXAM SESSION</span><h2>آزمون فعلی</h2><p id="sessionSummary">هنوز تنظیم نشده</p></div><button id="toggleSession" type="button" class="secondary">تنظیم آزمون</button></div>
+    <div id="sessionEditor" class="session-editor">
+      <label>موسسه<input id="provider" autocomplete="off" placeholder="MAZ" /></label>
+      <label>تاریخ آزمون<input id="examDate" inputmode="numeric" placeholder="1405/07/18" /></label>
+      <label>اپراتور<input id="operator" autocomplete="name" /></label>
+      <label class="file-label">PDF سوال<input id="questionPdf" type="file" accept="application/pdf" /></label>
+      <label class="file-label">PDF پاسخ<input id="answerPdf" type="file" accept="application/pdf" /></label>
+      <button id="saveSession" class="primary" type="button">ثبت آزمون</button>
+    </div>
+  </section>
+
+  <section class="workflow-rail" aria-label="وضعیت فرایند" tabindex="0">
+    <span data-step="exam"><i>1</i><b>آزمون</b></span><span data-step="question"><i>2</i><b>Crop سوال</b></span><span data-step="answer"><i>3</i><b>Crop پاسخ</b></span><span data-step="meta"><i>4</i><b>شناسنامه</b></span><span data-step="ready"><i>5</i><b>آماده</b></span>
+  </section>
+
+  <section class="workbench">
+    <div class="viewer panel">
+      <div class="viewer-tabs"><button id="questionTab" class="active" type="button">سوال <span id="questionCropState">بدون Crop</span></button><button id="answerTab" type="button">پاسخ <span id="answerCropState">بدون Crop</span></button></div>
+      <div id="questionPane" class="pdf-pane">
+        <div class="pdf-toolbar"><button id="qPrev" type="button">قبلی</button><span id="qPage">-</span><button id="qNext" type="button">بعدی</button><button id="qClear" type="button" class="secondary">پاک کردن Crop</button></div>
+        <div class="pdf-stage" id="qStage"><canvas id="qCanvas"></canvas><div class="pdf-empty">PDF سوال را انتخاب کن و روی صفحه Drag کن.</div></div>
+      </div>
+      <div id="answerPane" class="pdf-pane hidden">
+        <div class="pdf-toolbar"><button id="aPrev" type="button">قبلی</button><span id="aPage">-</span><button id="aNext" type="button">بعدی</button><button id="aClear" type="button" class="secondary">پاک کردن Crop</button></div>
+        <div class="pdf-stage" id="aStage"><canvas id="aCanvas"></canvas><div class="pdf-empty">PDF پاسخ را انتخاب کن و پاسخ همین سوال را Crop کن.</div></div>
+      </div>
+    </div>
+
+    <aside class="panel inspector">
+      <div class="section-head compact"><div><span class="eyebrow">INSPECTOR</span><h2>شناسنامه سوال</h2><p id="questionIdentity">سوال -</p></div><span id="gateBadge" class="gate-badge blocked">0/8</span></div>
+      <form id="questionForm">
+        <label>شماره سوال<input id="sourceNumber" type="number" min="1" inputmode="numeric" required /></label>
+        <div class="two">
+          <label>درس<select id="subject"><option value="BIO">زیست‌شناسی</option><option value="MATH">ریاضی</option><option value="PHY">فیزیک</option><option value="CHEM">شیمی</option></select></label>
+          <label>پایه<select id="grade"><option value="10">دهم</option><option value="11">یازدهم</option><option value="12">دوازدهم</option></select></label>
+        </div>
+        <div class="two">
+          <label>فصل<select id="chapter"><option value="">انتخاب</option></select></label>
+          <label><span id="unitLabel">گفتار</span><select id="unit"><option value="">انتخاب</option></select></label>
+        </div>
+
+        <fieldset class="choice"><legend>سطح سوال</legend><input id="difficulty" type="hidden" value="" /><div class="segmented five" data-target="difficulty"><button type="button" data-value="level_1">Level 1</button><button type="button" data-value="level_2">Level 2</button><button type="button" data-value="level_3">Level 3</button><button type="button" data-value="level_4">Level 4</button><button type="button" data-value="level_5">Level 5</button></div></fieldset>
+        <fieldset class="choice"><legend>کلید صحیح</legend><input id="correctOption" type="hidden" value="" /><div class="segmented four" data-target="correctOption"><button type="button" data-value="1">1</button><button type="button" data-value="2">2</button><button type="button" data-value="3">3</button><button type="button" data-value="4">4</button></div></fieldset>
+
+        <section id="bioCombinationPanel" class="bio-panel hidden" hidden></section>
+
+        <section class="readiness" aria-live="polite">
+          <div class="readiness-head"><strong>آمادگی ثبت سوال</strong><small id="nextAction">مرحله بعد: تنظیم آزمون</small></div>
+          <div class="check-grid">
+            <span data-check="exam"><i></i>آزمون/PDF</span><span data-check="number"><i></i>شماره سوال</span><span data-check="question"><i></i>Crop سوال</span><span data-check="answer"><i></i>Crop پاسخ</span><span data-check="taxonomy"><i></i>طبقه‌بندی</span><span data-check="difficulty"><i></i>Level</span><span data-check="key"><i></i>کلید</span><span data-check="biology"><i></i>UX زیست</span>
+          </div>
+          <p id="gateHint">موارد ناقص را کامل کن.</p>
+        </section>
+        <button id="saveQuestion" class="primary large" type="submit" disabled>ثبت سوال و رفتن به بعدی</button>
+      </form>
+      <div class="shortcut-card"><strong>میانبر دسکتاپ ویندوز</strong><span>Numpad 1–4 کلید</span><span>F1–F5 Level</span><span>Ctrl+عدد فصل</span><span>Alt+عدد گفتار/مبحث</span><span>Shift+1/2/3 پایه</span></div>
+    </aside>
+  </section>
+
+  <section class="panel recent"><div class="section-head compact"><div><h2>آخرین سوال‌ها</h2><p><b id="recordCount">0</b> سوال ذخیره محلی</p></div><a class="button-link" href="./selected.html">مشاهده لیست</a></div><div id="recentList" class="recent-list"><div class="empty-box">هنوز سوالی ثبت نشده.</div></div></section>
+</main>
+
+<button id="commandLauncher" class="command-launcher" type="button"><span>فرمان‌ها</span><kbd>Ctrl K</kbd></button>
+<dialog id="commandPalette" class="command-palette"><div class="command-shell"><div class="command-search"><span>⌕</span><input id="commandInput" type="search" placeholder="فرمان…" /><kbd>Esc</kbd></div><div id="commandList" class="command-list"></div></div></dialog>
+<script type="module" src="./app.js"></script>
+</body>
+</html>
