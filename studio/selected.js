@@ -25,7 +25,7 @@ function syncEditMathGrade(){
 function renderEditUnits(selected=""){
   const cfg=editCfg(),chapter=$("editChapter").value;
   const units=editIsMath()?cfg.topics?.[chapter]?.units:cfg.grades?.[$("editGrade").value]?.chapters?.[chapter]?.units;
-  fillEditSelect($("editUnit"),Object.entries(units||{}).map(([id,item])=>[id,editIsMath()?(item.label_fa||item.name_fa):`${Number(id)} — ${item.name_fa}`]),selected);
+  fillEditSelect($("editUnit"),Object.entries(units||{}).sort((a,b)=>Number(a[0])-Number(b[0])).map(([id,item])=>[id,editIsMath()?(item.label_fa||item.name_fa):`${Number(id)} — ${item.name_fa}`]),selected);
   syncEditMathGrade();
 }
 function renderEditTaxonomy({chapter="",unit=""}={}){
@@ -35,7 +35,7 @@ function renderEditTaxonomy({chapter="",unit=""}={}){
   $("editChapterLabel").textContent=cfg.chapter_name_fa||"فصل";
   $("editUnitLabel").textContent=cfg.unit_name_fa||($("editSubject").value==="BIO"?"گفتار":"مبحث");
   const chapters=math?cfg.topics:cfg.grades?.[$("editGrade").value]?.chapters;
-  fillEditSelect($("editChapter"),Object.entries(chapters||{}).map(([id,item])=>[id,`${Number(id)} — ${item.name_fa}`]),chapter);
+  fillEditSelect($("editChapter"),Object.entries(chapters||{}).sort((a,b)=>Number(a[0])-Number(b[0])).map(([id,item])=>[id,`${Number(id)} — ${item.name_fa}`]),chapter);
   renderEditUnits(unit);
 }
 
