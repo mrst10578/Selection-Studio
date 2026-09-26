@@ -5,6 +5,7 @@ on:
     branches: ["main"]
     paths:
       - "studio/**"
+      - "review-console/**"
       - ".github/workflows/deploy-studio-pages.yml"
   workflow_dispatch:
 
@@ -29,8 +30,10 @@ jobs:
 
       - name: Prepare static preview
         run: |
-          mkdir -p _site
+          mkdir -p _site _site/studio _site/admin
           cp -R studio/. _site/
+          cp -R studio/. _site/studio/
+          cp -R review-console/. _site/admin/
           touch _site/.nojekyll
 
       - name: Configure GitHub Pages
