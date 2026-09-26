@@ -137,8 +137,9 @@ export class PdfCropper{
     if(!this.pdf)return;
     const seq=++this.renderSeq;
     if(this.renderTask){
-      try{this.renderTask.cancel()}catch{}
+      const previous=this.renderTask;
       this.renderTask=null;
+      try{previous.cancel();await previous.promise}catch{}
     }
     const page=await this.pdf.getPage(this.page);
     if(seq!==this.renderSeq)return;
