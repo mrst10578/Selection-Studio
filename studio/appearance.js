@@ -13,22 +13,24 @@ export function applyTheme(theme){
   return next;
 }
 
-export function installThemeToggle(button){
-  if(!button)return;
-  const sync=()=>{
-    const dark=document.documentElement.dataset.theme==="dark";
+function syncThemeToggles(){
+  const dark=document.documentElement.dataset.theme==="dark";
+  document.querySelectorAll(".theme-toggle").forEach(button=>{
     button.textContent=dark?"تم روشن":"تم تیره";
     button.setAttribute("aria-pressed",String(dark));
     button.setAttribute("aria-label",dark?"فعال‌کردن تم روشن":"فعال‌کردن تم تیره");
-  };
+  });
+}
+export function installThemeToggle(button){
+  if(!button)return;
   applyTheme(preferredTheme());
   button.addEventListener("click",()=>{
     const next=document.documentElement.dataset.theme==="dark"?"light":"dark";
     localStorage.setItem(THEME_KEY,next);
     applyTheme(next);
-    sync();
+    syncThemeToggles();
   });
-  sync();
+  syncThemeToggles();
 }
 
 export function installFocusMode(button){
