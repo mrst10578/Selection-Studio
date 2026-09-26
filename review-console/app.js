@@ -71,7 +71,7 @@ function login(event){
   sessionStorage.setItem(ADMIN_SESSION,user);
   $('#adminLoginError').textContent='';
   $('#loginView').classList.add('auth-success');
-  $('.login-card')?.classList?.add?.('auth-success');
+  document.querySelector('.login-card')?.classList.add('auth-success');
   $('#adminUsername').disabled=true;
   $('#adminPassword').disabled=true;
   $('#loginBtn').disabled=true;
