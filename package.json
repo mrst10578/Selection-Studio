@@ -7,7 +7,8 @@
     "qa:css": "stylelint \"studio/*.css\" \"review-console/*.css\"",
     "qa:ui": "playwright test",
     "qa:lighthouse": "lhci autorun --config=lighthouserc.json",
-    "qa:full": "npm run qa:html && npm run qa:css && npm run qa:ui && npm run qa:lighthouse"
+    "qa:full": "npm run qa:html && npm run qa:css && npm run qa:worker && npm run qa:ui && npm run qa:lighthouse",
+    "qa:worker": "node --test worker/test/*.test.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",
