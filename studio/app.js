@@ -100,6 +100,7 @@ function dispatchChange(el){el.dispatchEvent(new Event("change",{bubbles:true}))
 
 function renderSession(){
   const ready=Boolean(exam?.id&&qCrop.file&&aCrop.file);
+  $("sessionCard").classList.toggle("ready",ready);
   $("sessionCard").classList.toggle("collapsed",ready);
   $("toggleSession").textContent=ready?"ویرایش آزمون":"تنظیم آزمون";
   $("sessionSummary").textContent=exam?.id?`${exam.provider} — ${exam.date} | اپراتور: ${exam.entered_by||"-"}`:"هنوز تنظیم نشده";
