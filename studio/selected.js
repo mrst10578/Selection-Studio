@@ -6,6 +6,7 @@ import {getPreview} from "./preview-db.js";
 import {validRegion} from "./pdf-crop.js";
 import {biologyIssues,mountBiologyCombinationEditor} from "./biology-combination.js";
 import {installAdaptiveDensity,installDensityToggle,toast} from "./ui-runtime.js";
+import {installThemeToggle} from "./appearance.js";
 import {TAXONOMY,taxonomySummary,filterTaxonomyEntries} from "./taxonomy-data.js";
 import "./operator-auth.js";
 
@@ -111,7 +112,7 @@ async function render(){
   $("batchBadge").textContent=gate.ready?"آمادهٔ ارسال":gate.alreadySent?"ارسال‌شده":"نیاز به تکمیل";
   $("batchBadge").classList.toggle("ready",gate.ready);
   $("submitBatch").disabled=!gate.ready;
-  $("batchGateText").textContent=gate.ready?`${qs.length} سوال کامل است و Batch آماده ارسال است.`:gate.blockers.join(" ");
+  $("batchGateText").textContent=gate.ready?`${qs.length} سوال کامل است و مجموعه آمادهٔ ارسال است.`:gate.blockers.join(" ");
   $("lastSubmission").textContent=lastBatch?.sent_at?`آخرین ارسال موفق: ${lastBatch.question_count} سؤال · ${new Date(lastBatch.sent_at).toLocaleString("fa-IR")} · شناسه ${lastBatch.id}`:"هنوز ارسالی ثبت نشده است.";
   $("batchIssues").innerHTML=gate.incomplete.slice(0,8).map(x=>`<span>سوال ${x.r.source_question_number}: ${x.issues.join("، ")}</span>`).join("");
 
@@ -239,7 +240,7 @@ $("submitBatch").onclick=async()=>{
     form.append("batch",new Blob([JSON.stringify(batch)],{type:"application/json"}),"batch.json");
     for(const question of batch.questions){
       const [qBlob,aBlob]=await Promise.all([getPreview(question.id+":question"),getPreview(question.id+":answer")]);
-      if(!qBlob||!aBlob)throw new Error("Crop محلی برای "+question.id+" کامل نیست.");
+      if(!qBlob||!aBlob)throw new Error("برش محلی برای "+question.id+" کامل نیست.");
       form.append("question__"+encodeURIComponent(question.id),qBlob,question.id+"-question.webp");
       form.append("answer__"+encodeURIComponent(question.id),aBlob,question.id+"-answer.webp");
     }
@@ -250,7 +251,7 @@ $("submitBatch").onclick=async()=>{
     });
     if(!response.ok)throw new Error((await response.text())||("HTTP "+response.status));
     rememberLastBatch(batch,gate.fingerprint);lastBatch=loadLastBatch();
-    toast("Batch و Cropها برای بررسی ارسال شد","ok");
+    toast("مجموعه و برش‌ها برای بررسی ارسال شد","ok");
   }catch(err){
     toast("ارسال ناموفق: "+err.message,"error");
   }finally{
@@ -270,5 +271,6 @@ $("exportExam").onclick=()=>downloadText(
 );
 
 installAdaptiveDensity();
+installThemeToggle($("themeToggle"));
 installDensityToggle($("densityToggle"));
 render();
