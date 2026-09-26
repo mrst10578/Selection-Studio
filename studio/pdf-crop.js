@@ -100,7 +100,7 @@ export class PdfCropper{
       wasmUrl:"https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/wasm/",
       useSystemFonts:true,
       disableFontFace:false,
-      fontExtraProperties:true
+      useWorkerFetch:true
     }).promise;
     this.page=1;
     this.syncInteractionMode();
