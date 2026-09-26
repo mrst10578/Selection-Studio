@@ -62,7 +62,7 @@ test.describe("Selection Studio",()=>{
     await page.locator("#focusToggle").click();
     await expect(page.locator("html")).toHaveAttribute("data-focus-mode","true");
     await expect(page.locator(".recent")).toBeHidden();
-    await expect(page.locator("#sessionEditor")).toBeHidden();
+    await expect(page.locator("#sessionEditor")).toBeVisible();
     await expect(page.locator("#saveQuestion")).toBeVisible();
 
     await page.reload();
