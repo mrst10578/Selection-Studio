@@ -1463,3 +1463,13 @@ export function taxonomySummary(record){
   const u=unit?.name_fa?cfg.unit_name_fa+" "+Number(record.unit)+" ("+unit.name_fa+")":cfg.unit_name_fa+" "+(Number(record?.unit)||"-");
   return g+" · "+c+" · "+u;
 }
+
+export function filterTaxonomyEntries(entries,query="",selected=""){
+  const needle=String(query||"").trim().toLocaleLowerCase("fa-IR");
+  return entries.filter(([id,item])=>{
+    if(String(id)===String(selected))return true;
+    if(!needle)return true;
+    const nested=Object.values(item?.units||{}).flatMap(unit=>[unit?.name_fa,unit?.label_fa]);
+    return [id,item?.name_fa,item?.label_fa,...nested].filter(Boolean).join(" ").toLocaleLowerCase("fa-IR").includes(needle);
+  });
+}

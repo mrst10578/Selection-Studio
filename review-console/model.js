@@ -19,14 +19,19 @@ export class ReviewModel{
   load(batch){this.batch=clone(batch);this.selected.clear();this.undoStack=[];this.batch.questions=(this.batch.questions||[]).map(q=>({...q,review_status:q.review_status||"pending",revision_history:q.revision_history||[]}))}
   snapshot(label){if(!this.batch)return;this.undoStack.push({label,batch:clone(this.batch)});if(this.undoStack.length>30)this.undoStack.shift()}
   mutate(label,fn,reviewer=null){if(!this.batch)return;this.snapshot(label);fn(this.batch);this.batch.updated_at=new Date().toISOString();this.batch.revisions=[...(this.batch.revisions||[]),{at:new Date().toISOString(),reviewer,action:label}].slice(-100);this.onChange(label)}
-  mutateQuestion(index,label,fn,reviewer=null){this.mutate(label,b=>{const before=clone(b.questions[index]);const after=fn(clone(before));after.revision_history=[...(after.revision_history||[]),{at:new Date().toISOString(),reviewer,action:label,before_id:before.id}].slice(-50);b.questions[index]=after},reviewer)}
+  mutateQuestion(index,label,fn,reviewer=null){this.mutate(label,b=>{const before=clone(b.questions[index]);const after=fn(clone(before));const changes=Object.fromEntries(Object.keys(after).filter(key=>key!=="revision_history"&&JSON.stringify(before[key])!==JSON.stringify(after[key])).map(key=>[key,{before:clone(before[key]??null),after:clone(after[key]??null)}]));after.revision_history=[...(after.revision_history||[]),{at:new Date().toISOString(),reviewer,action:label,before_id:before.id,changes}].slice(-50);b.questions[index]=after},reviewer)}
   setStatus(index,status,reviewer,note=null,reason=null){this.mutateQuestion(index,"وضعیت "+reviewStatusLabel(status),q=>({...q,review_status:status,review_note:note??q.review_note??null,review_reason:reason??q.review_reason??null,reviewed_by:reviewer,reviewed_at:new Date().toISOString()}),reviewer)}
   patch(index,values,reviewer){this.mutateQuestion(index,"ویرایش شناسنامه",q=>({...q,...values}),reviewer)}
   counts(){const c={pending:0,approved:0,needs_changes:0,rejected:0};for(const q of this.batch?.questions||[]){if(q.trashed_at)continue;const k=q.review_status||"pending";c[k]=(c[k]||0)+1}return c}
-  firstPending(){return (this.batch?.questions||[]).findIndex(q=>!q.trashed_at&&(q.review_status||"pending")==="pending")}
-  visibleIndexes({status="",difficulty="",search="",incomplete=false}={}){
+  firstPending(filters={}){return this.visibleIndexes(filters).find(i=>(this.batch.questions[i].review_status||"pending")==="pending")??-1}
+  nextVisibleIndex(currentIndex,direction,filters={}){
+    if(![-1,1].includes(Math.sign(direction)))return -1;
+    const candidates=this.visibleIndexes(filters);
+    return candidates.find(index=>direction>0?index>currentIndex:index<currentIndex)??-1;
+  }
+  visibleIndexes({status="",difficulty="",search="",incomplete=false,exam=""}={}){
     search=String(search).trim().toLowerCase();
-    return (this.batch?.questions||[]).map((q,i)=>{if(q.trashed_at)return -1;if(status&&(q.review_status||"pending")!==status)return -1;if(difficulty&&q.difficulty!==difficulty)return -1;if(search&&!String(q.id+" "+q.source_question_number).toLowerCase().includes(search))return -1;if(incomplete&&!questionIssues(q).length)return -1;return i}).filter(i=>i>=0)
+    return (this.batch?.questions||[]).map((q,i)=>{if(q.trashed_at)return -1;if(status&&(q.review_status||"pending")!==status)return -1;if(difficulty&&q.difficulty!==difficulty)return -1;if(exam&&q.exam_id!==exam)return -1;if(search&&!String(q.id+" "+q.source_question_number).toLowerCase().includes(search))return -1;if(incomplete&&!questionIssues(q).length)return -1;return i}).filter(i=>i>=0)
   }
   undo(){const prev=this.undoStack.pop();if(!prev)return false;this.batch=prev.batch;this.onChange("Undo");return true}
 }

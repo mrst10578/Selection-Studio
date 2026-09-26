@@ -6,8 +6,9 @@
     "qa:html": "html-validate \"studio/*.html\" \"review-console/*.html\"",
     "qa:css": "stylelint \"studio/*.css\" \"review-console/*.css\"",
     "qa:ui": "playwright test",
+    "qa:model": "node --test review-console/model.test.mjs",
     "qa:lighthouse": "lhci autorun --config=lighthouserc.json",
-    "qa:full": "npm run qa:html && npm run qa:css && npm run qa:worker && npm run qa:ui && npm run qa:lighthouse && npm run qa:recovery",
+    "qa:full": "npm run qa:html && npm run qa:css && npm run qa:model && npm run qa:worker && npm run qa:ui && npm run qa:lighthouse && npm run qa:recovery",
     "qa:worker": "node --test worker/test/*.test.mjs",
     "qa:recovery": "python tools/build_recovery.py"
   },

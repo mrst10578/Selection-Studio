@@ -88,9 +88,10 @@ export function createBatch(records,exam,submittedBy){
     revisions:[]
   };
 }
-export function rememberLastBatch(batch){
-  localStorage.setItem(LAST_BATCH_KEY,JSON.stringify({id:batch.id,created_at:batch.created_at,question_count:batch.questions?.length||0}));
+export function rememberLastBatch(batch,fingerprint=""){
+  localStorage.setItem(LAST_BATCH_KEY,JSON.stringify({id:batch.id,created_at:batch.created_at,sent_at:new Date().toISOString(),exam_id:batch.exam?.id||"",question_count:batch.questions?.length||0,fingerprint}));
 }
+export function loadLastBatch(){try{return JSON.parse(localStorage.getItem(LAST_BATCH_KEY)||"null")}catch{return null}}
 export function downloadText(name,text,type="application/json"){
   const blob=new Blob([text],{type:type+";charset=utf-8"});
   const url=URL.createObjectURL(blob);

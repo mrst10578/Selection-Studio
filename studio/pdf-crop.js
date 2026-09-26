@@ -27,7 +27,7 @@ const LOCKED_ICON='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a
 const UNLOCKED_ICON='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 8h-2V7a3 3 0 0 0-5.83-1H7.1A5 5 0 0 1 17 7v1Zm1.2 2A1.8 1.8 0 0 1 20 11.8v8.4a1.8 1.8 0 0 1-1.8 1.8H5.8A1.8 1.8 0 0 1 4 20.2v-8.4A1.8 1.8 0 0 1 5.8 10h12.4ZM12 14a2 2 0 0 0-1 3.73V20h2v-2.27A2 2 0 0 0 12 14Z"/></svg>';
 
 export class PdfCropper{
-  constructor({canvas,stage,pageLabel,prevBtn,nextBtn,modeBtn=null,onChange=()=>{}}){
+  constructor({canvas,stage,pageLabel,prevBtn,nextBtn,modeBtn=null,onChange=()=>{},onPageChange=()=>{}}){
     this.canvas=canvas;
     this.stage=stage;
     this.pageLabel=pageLabel;
@@ -35,11 +35,13 @@ export class PdfCropper{
     this.nextBtn=nextBtn;
     this.modeBtn=modeBtn;
     this.onChange=onChange;
+    this.onPageChange=onPageChange;
     this.ctx=canvas.getContext("2d",{alpha:false});
     this.pdf=null;
     this.file=null;
     this.page=1;
     this.region=null;
+    this.regionsByPage=new Map();
     this.drag=null;
     this.renderTask=null;
     this.renderSeq=0;
@@ -81,9 +83,11 @@ export class PdfCropper{
       this.modeBtn.disabled=!this.pdf;
       this.modeBtn.innerHTML=this.mobileCropMode?LOCKED_ICON:UNLOCKED_ICON;
       this.modeBtn.setAttribute("aria-pressed",this.mobileCropMode?"true":"false");
-      this.modeBtn.setAttribute("aria-label",this.mobileCropMode?"خروج از حالت کراپ و فعال کردن حرکت PDF":"قفل کردن PDF و فعال کردن کراپ");
-      this.modeBtn.title=this.mobileCropMode?"حالت کراپ فعال است":"حالت حرکت PDF فعال است";
+      this.modeBtn.setAttribute("aria-label",this.mobileCropMode?"خاموش کردن حالت برش و فعال‌کردن حرکت سند":"فعال‌کردن حالت برش" );
+      this.modeBtn.title=this.mobileCropMode?"حالت برش فعال است":"فعال‌کردن انتخاب برش";
     }
+    const help=document.getElementById(this.stage.id==="qStage"?"qCropHelp":"aCropHelp");
+    if(help)help.textContent=this.mobileCropMode?"حالت برش فعال است؛ محدوده را روی صفحه بکش. برای حرکت سند، این حالت را خاموش کن.":"برای جابه‌جایی صفحه، سند را بکش؛ برای برش، حالت انتخاب برش را فعال کن.";
   }
 
   async toggleMobileCrop(){
@@ -98,6 +102,7 @@ export class PdfCropper{
   async loadFile(file){
     this.file=file||null;
     this.region=null;
+    this.regionsByPage.clear();
     this.drag=null;
     this.box.classList.add("hidden");
     this.mobileCropMode=false;
@@ -109,6 +114,7 @@ export class PdfCropper{
       this.canvas.style.width="";
       this.canvas.style.height="";
       this.pageLabel.textContent="-";
+      this.onPageChange(0,0);
       this.syncInteractionMode();
       this.onChange();
       return;
@@ -135,8 +141,9 @@ export class PdfCropper{
     if(!this.pdf)return;
     n=Math.max(1,Math.min(this.pdf.numPages,n));
     if(n===this.page)return;
+    if(this.region)this.regionsByPage.set(this.page,structuredClone(this.region));
     this.page=n;
-    this.region=null;
+    this.region=structuredClone(this.regionsByPage.get(n)||null);
     this.drag=null;
     this.box.classList.add("hidden");
     this.stage.scrollTo({left:0,top:0,behavior:"auto"});
@@ -198,6 +205,7 @@ export class PdfCropper{
     if(seq!==this.renderSeq)return;
 
     this.pageLabel.textContent=`${this.page}/${this.pdf.numPages}`;
+    this.onPageChange(this.page,this.pdf.numPages);
     this.prevBtn.disabled=this.page<=1;
     this.nextBtn.disabled=this.page>=this.pdf.numPages;
     this.paintRegion();
@@ -261,6 +269,7 @@ export class PdfCropper{
       page:this.page,
       bbox_norm:[x1/start.w,y1/start.h,x2/start.w,y2/start.h].map(v=>Math.max(0,Math.min(1,Number(v.toFixed(6)))))
     };
+    this.regionsByPage.set(this.page,structuredClone(this.region));
     this.paintRegion();
     this.onChange(this.region);
   }
@@ -300,16 +309,18 @@ export class PdfCropper{
 
   clearRegion(){
     this.region=null;
+    this.regionsByPage.delete(this.page);
     this.box.classList.add("hidden");
     this.onChange(null);
   }
 
   async setRegion(region){
-    this.region=region||null;
     if(region?.page&&Number(region.page)!==this.page){
       this.page=Number(region.page);
       await this.render();
     }
+    this.region=region||null;
+    if(region)this.regionsByPage.set(Number(region.page)||this.page,structuredClone(region));
     this.paintRegion();
     this.onChange(this.region);
   }

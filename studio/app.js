@@ -4,11 +4,11 @@ import {
 } from "./store.js";
 import {putPreview} from "./preview-db.js";
 import {PdfCropper,validRegion} from "./pdf-crop.js";
-import {installAdaptiveDensity,isTypingTarget,toast} from "./ui-runtime.js";
+import {installAdaptiveDensity,installDensityToggle,isTypingTarget,toast} from "./ui-runtime.js";
 import "./operator-auth.js";
 import {installWindowsMetadataShortcuts} from "./windows-shortcuts.js";
 import {mountBiologyCombinationEditor,biologyIssues} from "./biology-combination.js";
-import {TAXONOMY,taxonomySummary} from "./taxonomy-data.js";
+import {TAXONOMY,taxonomySummary,filterTaxonomyEntries} from "./taxonomy-data.js";
 
 const $=id=>document.getElementById(id);
 let records=loadRecords();
@@ -17,8 +17,11 @@ let activePane="question";
 let biologyGate={ready:false,issues:["مشخص کن سوال زیست ترکیبی هست یا نه"]};
 
 
-const qCrop=new PdfCropper({canvas:$("qCanvas"),stage:$("qStage"),pageLabel:$("qPage"),prevBtn:$("qPrev"),nextBtn:$("qNext"),modeBtn:$("qCropLock"),onChange:()=>renderGate()});
-const aCrop=new PdfCropper({canvas:$("aCanvas"),stage:$("aStage"),pageLabel:$("aPage"),prevBtn:$("aPrev"),nextBtn:$("aNext"),modeBtn:$("aCropLock"),onChange:()=>renderGate()});
+const qCrop=new PdfCropper({canvas:$("qCanvas"),stage:$("qStage"),pageLabel:$("qPage"),prevBtn:$("qPrev"),nextBtn:$("qNext"),modeBtn:$("qCropLock"),onChange:()=>renderGate(),onPageChange:(page,total)=>updatePageJump("qPageJump",page,total)});
+const aCrop=new PdfCropper({canvas:$("aCanvas"),stage:$("aStage"),pageLabel:$("aPage"),prevBtn:$("aPrev"),nextBtn:$("aNext"),modeBtn:$("aCropLock"),onChange:()=>renderGate(),onPageChange:(page,total)=>updatePageJump("aPageJump",page,total)});
+function updatePageJump(id,page,total){const input=$(id);if(!input)return;input.value=page||"";input.max=total||"";input.disabled=!total}
+function installPageJump(id,crop){const input=$(id);input.addEventListener("change",()=>{const page=Number(input.value);if(Number.isInteger(page)&&page>=1&&page<=crop.pdf?.numPages)crop.go(page);else input.value=crop.page||""})}
+installPageJump("qPageJump",qCrop);installPageJump("aPageJump",aCrop);
 $("qClear").onclick=()=>qCrop.clearRegion();
 $("aClear").onclick=()=>aCrop.clearRegion();
 
@@ -121,7 +124,7 @@ function syncMathGradeFromUnit(){
 function renderUnits(selected=""){
   const cfg=subjectCfg(),chapter=$("chapter").value;
   const units=isMath()?cfg.topics?.[chapter]?.units:cfg.grades?.[$("grade").value]?.chapters?.[chapter]?.units;
-  const items=Object.entries(units||{}).sort((a,b)=>Number(a[0])-Number(b[0])).map(([id,item])=>[
+  const items=filterTaxonomyEntries(Object.entries(units||{}).sort((a,b)=>Number(a[0])-Number(b[0])),$("taxonomySearch").value,$("unit").value).map(([id,item])=>[
     id,
     isMath()?(item.label_fa||`${item.name_fa} (${gradeLabel(item.grade)})`):`${Number(id)} — ${item.name_fa}`
   ]);
@@ -134,7 +137,7 @@ function renderTaxonomy({chapter="",unit=""}={}){
   $("subjectGradeRow").classList.toggle("single",math);
   updateUnitLabel();
   const chapters=math?cfg.topics:cfg.grades?.[$("grade").value]?.chapters;
-  fillSelect($("chapter"),Object.entries(chapters||{}).sort((a,b)=>Number(a[0])-Number(b[0])).map(([id,item])=>[id,`${Number(id)} — ${item.name_fa}`]),chapter);
+  fillSelect($("chapter"),filterTaxonomyEntries(Object.entries(chapters||{}).sort((a,b)=>Number(a[0])-Number(b[0])),$("taxonomySearch").value,chapter).map(([id,item])=>[id,`${Number(id)} — ${item.name_fa}`]),chapter);
   renderUnits(unit);
 }
 const biologyEditor=mountBiologyCombinationEditor({
@@ -157,7 +160,7 @@ function gateState(){
     key:[1,2,3,4].includes(Number($("correctOption").value)),
     biology:$("subject").value!=="BIO"||biologyGate.ready
   };
-  const labels={exam:"آزمون و PDFها",number:unique?"شماره سوال":"شماره معتبر و غیرتکراری",question:"Crop سوال",answer:"Crop پاسخ",taxonomy:"طبقه‌بندی",difficulty:"Level",key:"کلید صحیح",biology:"UX ترکیبی زیست"};
+  const labels={exam:"آزمون و فایل‌ها",number:unique?"شمارهٔ سؤال":"شمارهٔ معتبر و غیرتکراری",question:"برش سؤال",answer:"برش پاسخ",taxonomy:"درس و مبحث",difficulty:"سطح سؤال",key:"گزینهٔ درست",biology:"ترکیبی‌بودن زیست"};
   const missing=Object.keys(checks).filter(k=>!checks[k]).map(k=>labels[k]);
   return {checks,missing};
 }
@@ -170,14 +173,27 @@ function renderGate(){
   document.querySelectorAll("[data-check]").forEach(el=>el.classList.toggle("done",Boolean(checks[el.dataset.check])));
   $("gateBadge").textContent=missing.length?`${complete}/8`:"آماده"; $("gateBadge").classList.toggle("ready",!missing.length);$("gateBadge").classList.toggle("blocked",!!missing.length);
   $("saveQuestion").disabled=!!missing.length;
-  $("gateHint").textContent=missing.length?"مانده: "+missing.join(" • "):"همه موارد کامل است؛ سوال آماده ثبت است.";
-  const msg={exam:"مرحله بعد: آزمون و هر دو PDF",question:"مرحله بعد: Crop سوال",answer:"مرحله بعد: Crop پاسخ",meta:"مرحله بعد: شناسنامه را کامل کن",ready:"آماده ثبت"}[s];
+  $("gateHint").textContent=missing.length?"موارد باقی‌مانده: "+missing.join(" • "):"همه موارد کامل است؛ سؤال آمادهٔ ثبت است.";
+  const msg={exam:"مرحلهٔ بعد: آزمون و دو فایل",question:"مرحلهٔ بعد: برش سؤال",answer:"مرحلهٔ بعد: برش پاسخ",meta:"مرحلهٔ بعد: تکمیل شناسنامه",ready:"آمادهٔ ثبت"}[s];
   $("nextAction").textContent=msg;
   const order=["exam","question","answer","meta","ready"],idx=order.indexOf(s);
   document.querySelectorAll("[data-step]").forEach(el=>{const i=order.indexOf(el.dataset.step);el.classList.toggle("done",i>=0&&i<idx);el.classList.toggle("active",i===idx)});
   $("questionCropState").textContent=qCrop.region?"ثبت شد":"بدون Crop"; $("answerCropState").textContent=aCrop.region?"ثبت شد":"بدون Crop";
   $("questionIdentity").textContent="سوال "+($("sourceNumber").value||"-");
 }
+document.querySelectorAll("[data-check]").forEach(button=>button.addEventListener("click",()=>{
+  const target=button.dataset.check;
+  if(target==="exam"){
+    $("sessionCard").classList.remove("collapsed");$("provider").focus();$("sessionCard").scrollIntoView({behavior:"smooth",block:"start"});return;
+  }
+  if(target==="question"||target==="answer"){
+    switchPane(target);$(target+"Tab").scrollIntoView({behavior:"smooth",block:"center"});return;
+  }
+  const focusTarget={number:"sourceNumber",taxonomy:"chapter",difficulty:"difficulty",key:"correctOption",biology:"bioCombinationPanel"}[target];
+  if(target==="difficulty"||target==="key")$("questionForm").querySelector(`[data-target="${focusTarget}"] button`)?.focus();
+  else if(target==="biology")$("bioCombinationPanel").querySelector("button:not([disabled])")?.focus();
+  else $(focusTarget)?.focus();
+}));
 function renderRecent(){
   const active=activeRecords(); $("recordCount").textContent=String(active.length);$("navCount").textContent=String(active.length);
   const host=$("recentList"); if(!active.length){host.innerHTML='<div class="empty-box">هنوز سوالی ثبت نشده.</div>';return}
@@ -193,6 +209,7 @@ function restore(){
   const last=activeRecords().at(-1);$("sourceNumber").value=String((Number(last?.source_question_number)||0)+1||1);
 }
 $("subject").addEventListener("change",()=>{renderTaxonomy();persistSticky();renderGate()});
+$("taxonomySearch").addEventListener("input",()=>renderTaxonomy({chapter:$("chapter").value,unit:$("unit").value}));
 $("grade").addEventListener("change",()=>{if(!isMath())renderTaxonomy();persistSticky();renderGate()});
 $("chapter").addEventListener("change",()=>{renderUnits();persistSticky();renderGate()});
 $("unit").addEventListener("change",()=>{syncMathGradeFromUnit();persistSticky();renderGate()});
@@ -218,6 +235,7 @@ $("questionForm").addEventListener("submit",async e=>{
 });
 
 installAdaptiveDensity();
+installDensityToggle($("densityToggle"));
 installWindowsMetadataShortcuts({
   enabled:()=>matchMedia("(pointer:fine)").matches&&innerWidth>=900&&!hotkeysDialog.open,
   setCorrectOption:n=>setSegmented("correctOption",n),
