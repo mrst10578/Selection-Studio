@@ -40,13 +40,13 @@ export function mountBiologyCombinationEditor({host,subjectEl,gradeEl,chapterEl,
     const bio=subjectEl.value==="BIO"; host.hidden=!bio; host.classList.toggle("hidden",!bio);
     if(!bio){onGateChange({ready:true,issues:[]});return}
     const errs=issues(),ready=!errs.length,decided=value!==null,combined=value?.is_combined===true;
-    host.innerHTML=`<div class="bio-head"><div><span class="eyebrow">BIOLOGY UX CHECK</span><strong>سوال ترکیبی زیست</strong><small>ترکیبی بودن را مشخص کن؛ در حالت ترکیبی همه مباحث اضافه باید کامل باشند.</small></div><span class="gate-badge ${ready?"ready":"blocked"}">${ready?"آماده":"قفل"}</span></div>
+    host.innerHTML=`<div class="bio-head"><div><span class="eyebrow">زیست ترکیبی</span><strong>سؤال ترکیبی زیست</strong><small>ترکیبی بودن را مشخص کن؛ در حالت ترکیبی همه مباحث اضافه باید کامل باشند.</small></div><span class="gate-badge ${ready?"ready":"blocked"}">${ready?"آماده":"قفل"}</span></div>
     <div class="bio-toggle" role="group" aria-label="ترکیبی بودن سوال"><button type="button" data-combined="false" class="${decided&&!combined?"active":""}">غیرترکیبی</button><button type="button" data-combined="true" class="${combined?"active":""}">ترکیبی</button></div>
     ${combined?`<div class="bio-topics">${(value.topics||[]).map((t,i)=>`<article class="bio-topic" data-index="${i}"><div class="bio-topic-head"><strong>مبحث ترکیبی ${i+1}</strong><button type="button" class="danger-ghost" data-remove="${i}">حذف</button></div>
       <label>پایه<select data-field="grade" data-index="${i}"><option value="">انتخاب</option><option value="10" ${Number(t.grade)===10?"selected":""}>دهم</option><option value="11" ${Number(t.grade)===11?"selected":""}>یازدهم</option><option value="12" ${Number(t.grade)===12?"selected":""}>دوازدهم</option></select></label>
       <label>فصل<select data-field="chapter" data-index="${i}">${chapterOpts(t.grade,t.chapter)}</select></label>
       <label>گفتار<select data-field="unit" data-index="${i}">${unitOpts(t.grade,t.chapter,t.unit)}</select></label></article>`).join("")}</div><button type="button" class="add-topic" data-add>+ اضافه کردن مبحث جدید</button>`:""}
-    <div class="bio-gate ${ready?"ready":""}"><strong>${ready?(combined?`ترکیبی با ${value.topics.length} مبحث`:"غیرترکیبی ثبت شد"):"UX Check ناقص است"}</strong><span>${ready?"اطلاعات زیست آماده ثبت است.":errs.join(" • ")}</span></div>`;
+    <div class="bio-gate ${ready?"ready":""}"><strong>${ready?(combined?`ترکیبی با ${value.topics.length} مبحث`:"غیرترکیبی ثبت شد"):"اطلاعات ترکیبی ناقص است"}</strong><span>${ready?"اطلاعات زیست آماده ثبت است.":errs.join(" • ")}</span></div>`;
     host.querySelectorAll("[data-combined]").forEach(b=>b.onclick=()=>set({is_combined:b.dataset.combined==="true",topics:b.dataset.combined==="true"?(value?.topics||[]):[]}));
     host.querySelector("[data-add]")?.addEventListener("click",()=>set({is_combined:true,topics:[...(value?.topics||[]),{grade:null,chapter:null,unit:null}]}));
     host.querySelectorAll("[data-remove]").forEach(b=>b.onclick=()=>{const topics=[...(value?.topics||[])];topics.splice(Number(b.dataset.remove),1);set({is_combined:true,topics})});
