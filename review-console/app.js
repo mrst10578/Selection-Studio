@@ -75,7 +75,7 @@ function login(event){
   $('#adminPassword').disabled=true;
   $('#loginBtn').disabled=true;
   $('#loginBtn').textContent='ورود موفق';
-  setTimeout(showAdmin,1500);
+  setTimeout(showAdmin,180);
 }
 $('#adminLoginForm').addEventListener('submit',login);
 
@@ -238,7 +238,7 @@ document.querySelectorAll('.image-expand').forEach(button=>button.addEventListen
   $('#reviewImageTitle').textContent=image.alt;$('#reviewImageDialog').showModal();
 }));
 $('#reviewImageClose').onclick=()=>$('#reviewImageDialog').close();
-$('#approveBtn').onclick=()=>{syncQuickMeta();if(questionIssues(model.batch.questions[quickIndex]).length){toast('سوال هنوز Quality Gate را رد نکرده است.','error');return}model.setStatus(quickIndex,'approved',reviewer());nextIndex(1)};
+$('#approveBtn').onclick=()=>{syncQuickMeta();if(questionIssues(model.batch.questions[quickIndex]).length){toast('سؤال هنوز شرط‌های کیفیت را کامل نکرده است.','error');return}model.setStatus(quickIndex,'approved',reviewer());nextIndex(1)};
 $('#rejectBtn').onclick=()=>{syncQuickMeta();model.setStatus(quickIndex,'rejected',reviewer());nextIndex(1)};
 $('#needsBtn').onclick=()=>{$('#correctionSheet').classList.remove('hidden')};
 function resetCorrection(){currentReason='';$('#correctionSheet').classList.add('hidden');$('#correctionNote').value='';document.querySelectorAll('[data-reason]').forEach(b=>b.classList.remove('active'))}
@@ -269,6 +269,8 @@ const palette=createCommandPalette({dialog:$('#commandPalette'),input:$('#comman
 $('#commandLauncher').onclick=()=>palette.open();
 
 installAdaptiveDensity();
+installThemeToggle($('#adminLoginThemeToggle'));
+installThemeToggle($('#themeToggle'));
 installDensityToggle($('#densityToggle'));
 if(adminUser())showAdmin();
 else requestAnimationFrame(()=>$('#adminUsername').focus());
