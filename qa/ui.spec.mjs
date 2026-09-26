@@ -81,6 +81,7 @@ test.describe("Selection Studio",()=>{
     await expectNoHorizontalOverflow(page);
   });
   test("selected batch surface keeps exports and submit gate",async({page})=>{
+    await page.addInitScript(()=>sessionStorage.setItem("selection-studio-operator-auth-v1","admin"));
     await page.goto("/studio/selected.html");
     await expect(page.locator("#exportQuestions")).toBeVisible();
     await expect(page.locator("#exportExam")).toBeVisible();
@@ -171,8 +172,12 @@ test.describe("Review Console",()=>{
     await expect(page.locator("#quickId")).toHaveText("EXAM-Q3");
     await page.locator("#prevBtn").click();
     await expect(page.locator("#quickId")).toHaveText("EXAM-Q1");
-    await page.locator('[data-review-view="answer"]').click();
-    await expect(page.locator("#quickViewers")).toHaveAttribute("data-active-view","answer");
+    if((page.viewportSize()?.width||0)<=650){
+      await page.locator('[data-review-view="answer"]').click();
+      await expect(page.locator("#quickViewers")).toHaveAttribute("data-active-view","answer");
+    }else{
+      await expect(page.locator("#quickAnswerFigure")).toBeVisible();
+    }
     await expectNoHorizontalOverflow(page);
   });
 });
