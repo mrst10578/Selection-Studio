@@ -15,8 +15,16 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
       - name: Compile Python
         run: python -m compileall engine
+      - name: Check Studio JavaScript
+        run: |
+          for file in studio/*.js; do
+            node --check "$file"
+          done
       - name: Validate canonical bank
         run: python engine/validate_bank.py
       - name: Build runtime catalog
