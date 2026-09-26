@@ -16,9 +16,9 @@ function valid(t){
 export function biologyIssues({subject,combination,primaryGrade,primaryChapter,primaryUnit}){
   if(subject!=="BIO")return [];
   const c=normalizeBioCombination(combination);
-  if(!c)return ["مشخص کن سوال زیست ترکیبی هست یا نه"];
+  if(!c)return ["مشخص کن سؤال زیست ترکیبی هست یا نه"];
   if(!c.is_combined)return [];
-  if(!c.topics.length)return ["برای سوال ترکیبی حداقل یک مبحث جدید اضافه کن"];
+  if(!c.topics.length)return ["برای سؤال ترکیبی حداقل یک مبحث جدید اضافه کن"];
   const primary=key({grade:primaryGrade,chapter:primaryChapter,unit:primaryUnit});
   const seen=new Set(),issues=[];
   c.topics.forEach((t,i)=>{
@@ -41,7 +41,7 @@ export function mountBiologyCombinationEditor({host,subjectEl,gradeEl,chapterEl,
     if(!bio){onGateChange({ready:true,issues:[]});return}
     const errs=issues(),ready=!errs.length,decided=value!==null,combined=value?.is_combined===true;
     host.innerHTML=`<div class="bio-head"><div><span class="eyebrow">زیست ترکیبی</span><strong>سؤال ترکیبی زیست</strong><small>ترکیبی بودن را مشخص کن؛ در حالت ترکیبی همه مباحث اضافه باید کامل باشند.</small></div><span class="gate-badge ${ready?"ready":"blocked"}">${ready?"آماده":"قفل"}</span></div>
-    <div class="bio-toggle" role="group" aria-label="ترکیبی بودن سوال"><button type="button" data-combined="false" class="${decided&&!combined?"active":""}">غیرترکیبی</button><button type="button" data-combined="true" class="${combined?"active":""}">ترکیبی</button></div>
+    <div class="bio-toggle" role="group" aria-label="ترکیبی بودن سؤال"><button type="button" data-combined="false" class="${decided&&!combined?"active":""}">غیرترکیبی</button><button type="button" data-combined="true" class="${combined?"active":""}">ترکیبی</button></div>
     ${combined?`<div class="bio-topics">${(value.topics||[]).map((t,i)=>`<article class="bio-topic" data-index="${i}"><div class="bio-topic-head"><strong>مبحث ترکیبی ${i+1}</strong><button type="button" class="danger-ghost" data-remove="${i}">حذف</button></div>
       <label>پایه<select data-field="grade" data-index="${i}"><option value="">انتخاب</option><option value="10" ${Number(t.grade)===10?"selected":""}>دهم</option><option value="11" ${Number(t.grade)===11?"selected":""}>یازدهم</option><option value="12" ${Number(t.grade)===12?"selected":""}>دوازدهم</option></select></label>
       <label>فصل<select data-field="chapter" data-index="${i}">${chapterOpts(t.grade,t.chapter)}</select></label>
