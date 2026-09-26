@@ -12,9 +12,14 @@ async function expectNoHorizontalOverflow(page){
 }
 
 test.describe("Selection Studio",()=>{
-  test("operator workbench boots with hard gate",async({page})=>{
+  test("operator workbench requires temporary operator login",async({page})=>{
     await page.goto("/studio/");
-    await expect(page.locator("h1")).toHaveText("Selection Studio");
+    await expect(page.locator("#operatorLogin")).toBeVisible();
+    await page.locator("#operatorUsername").fill("admin");
+    await page.locator("#operatorPassword").fill("admin");
+    await page.locator("#operatorLoginForm").press("Enter");
+    await expect(page.locator("#operatorLogin")).toBeHidden();
+    await expect(page.locator(".topbar h1")).toHaveText("Selection Studio");
     await expect(page.locator("#saveQuestion")).toBeDisabled();
     await expect(page.locator(".date-separator")).toHaveCount(2);
     await expect(page.locator("#examYear")).toHaveAttribute("inputmode","numeric");
@@ -27,9 +32,25 @@ test.describe("Selection Studio",()=>{
   test("mobile PDF player exposes crop lock without overflowing",async({page})=>{
     await page.setViewportSize({width:390,height:844});
     await page.goto("/studio/");
+    await page.locator("#operatorUsername").fill("admin");
+    await page.locator("#operatorPassword").fill("admin");
+    await page.locator("#operatorLoginForm").press("Enter");
     await expect(page.locator("#qCropLock")).toBeVisible();
     await expect(page.locator("#qCropLock")).toHaveAttribute("aria-pressed","false");
     await expect(page.locator("#qStage")).toHaveClass(/mobile-browse-mode/);
+    await expectNoHorizontalOverflow(page);
+  });
+  test("Windows Hotkeys panel replaces inline shortcut guide",async({page})=>{
+    await page.goto("/studio/");
+    await page.locator("#operatorUsername").fill("admin");
+    await page.locator("#operatorPassword").fill("admin");
+    await page.locator("#operatorLoginForm").press("Enter");
+    await expect(page.locator(".shortcut-card")).toHaveCount(0);
+    await expect(page.locator("#hotkeysLauncher")).toHaveText("Windows Hotkeys");
+    await page.locator("#hotkeysLauncher").click();
+    await expect(page.locator("#hotkeysDialog")).toBeVisible();
+    await expect(page.locator("#hotkeysDialog")).toContainText("Numpad 1–4");
+    await expect(page.locator("#hotkeysDialog")).toContainText("Ctrl + K");
     await expectNoHorizontalOverflow(page);
   });
   test("selected batch surface keeps exports and submit gate",async({page})=>{
