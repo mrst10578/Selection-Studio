@@ -219,7 +219,7 @@ $("questionForm").addEventListener("submit",async e=>{
 
 installAdaptiveDensity();
 installWindowsMetadataShortcuts({
-  enabled:()=>matchMedia("(pointer:fine)").matches&&innerWidth>=900&&!$("commandPalette").open,
+  enabled:()=>matchMedia("(pointer:fine)").matches&&innerWidth>=900&&!hotkeysDialog.open,
   setCorrectOption:n=>setSegmented("correctOption",n),
   setLevel:n=>setSegmented("difficulty","level_"+n),
   gradeEnabled:()=>!isMath(),
