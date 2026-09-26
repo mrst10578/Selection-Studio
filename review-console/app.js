@@ -4,6 +4,7 @@ import {difficultyLabel,subjectLabel,gradeLabel} from '../studio/store.js';
 import {mountBiologyCombinationEditor} from '../studio/biology-combination.js';
 import {installAdaptiveDensity,isTypingTarget,createCommandPalette,toast} from '../studio/ui-runtime.js';
 import {installWindowsMetadataShortcuts} from '../studio/windows-shortcuts.js';
+import {TAXONOMY,taxonomySummary} from '../studio/taxonomy-data.js';
 
 const $=id=>document.getElementById(id);
 const SETTINGS_KEY='selection-review-settings-v1';
@@ -19,8 +20,34 @@ function reviewer(){return loadSettings().reviewer||''}
 const api=createReviewApi({getWorkerUrl:workerUrl,getAdminKey:adminKey});
 const model=new ReviewModel(()=>scheduleSave());
 
-for(let i=1;i<=12;i++)$('#quickChapter').insertAdjacentHTML('beforeend',`<option value="${String(i).padStart(2,'0')}">${i}</option>`);
-for(let i=1;i<=8;i++)$('#quickUnit').insertAdjacentHTML('beforeend',`<option value="${String(i).padStart(2,'0')}">${i}</option>`);
+function fillQuickSelect(el,items,selected=""){
+  el.innerHTML='<option value="">-</option>'+items.map(([value,label])=>`<option value="${value}">${label}</option>`).join("");
+  el.value=items.some(([value])=>value===selected)?selected:"";
+}
+function quickCfg(){return TAXONOMY.subjects[$('#quickSubject').value]||{}}
+function quickIsMath(){return $('#quickSubject').value==='MATH'}
+function syncQuickMathGrade(){
+  if(!quickIsMath())return;
+  const unit=quickCfg().topics?.[$('#quickChapter').value]?.units?.[$('#quickUnit').value];
+  if(unit?.grade)$('#quickGrade').value=String(unit.grade);
+}
+function renderQuickUnits(selected=""){
+  const cfg=quickCfg(),chapter=$('#quickChapter').value;
+  const units=quickIsMath()?cfg.topics?.[chapter]?.units:cfg.grades?.[$('#quickGrade').value]?.chapters?.[chapter]?.units;
+  fillQuickSelect($('#quickUnit'),Object.entries(units||{}).sort((a,b)=>Number(a[0])-Number(b[0])).map(([id,item])=>[id,quickIsMath()?(item.label_fa||item.name_fa):`${Number(id)} — ${item.name_fa}`]),selected);
+  syncQuickMathGrade();
+}
+function renderQuickTaxonomy({chapter="",unit=""}={}){
+  const cfg=quickCfg(),math=quickIsMath();
+  $('#quickGradeField').hidden=math;
+  $('#quickSubjectGradeRow').classList.toggle('single',math);
+  $('#quickChapterLabel').textContent=cfg.chapter_name_fa||'فصل';
+  $('#quickUnitLabel').textContent=cfg.unit_name_fa||($('#quickSubject').value==='BIO'?'گفتار':'مبحث');
+  const chapters=math?cfg.topics:cfg.grades?.[$('#quickGrade').value]?.chapters;
+  fillQuickSelect($('#quickChapter'),Object.entries(chapters||{}).sort((a,b)=>Number(a[0])-Number(b[0])).map(([id,item])=>[id,`${Number(id)} — ${item.name_fa}`]),chapter);
+  renderQuickUnits(unit);
+}
+
 
 const quickBio=mountBiologyCombinationEditor({
   host:$('#quickBioPanel'),subjectEl:$('#quickSubject'),gradeEl:$('#quickGrade'),chapterEl:$('#quickChapter'),unitEl:$('#quickUnit'),
@@ -87,7 +114,7 @@ function renderBatch(){
     const q=model.batch.questions[index],frag=$('#questionItem').content.cloneNode(true),card=frag.querySelector('.review-question');
     card.dataset.status=q.review_status||'pending';frag.querySelector('.q-title').textContent='سوال '+q.source_question_number;
     frag.querySelector('.status-badge').textContent=reviewStatusLabel(q.review_status||'pending');
-    frag.querySelector('.q-meta').textContent=`${subjectLabel(q.subject)} · ${gradeLabel(q.grade)} · فصل ${Number(q.chapter)||'-'} · ${q.subject==='BIO'?'گفتار':'مبحث'} ${Number(q.unit)||'-'} · ${difficultyLabel(q.difficulty)} · کلید ${q.correct_option||'-'}`;
+    frag.querySelector('.q-meta').textContent=`${subjectLabel(q.subject)} · ${taxonomySummary(q)} · ${difficultyLabel(q.difficulty)} · کلید ${q.correct_option||'-'}`;
     frag.querySelector('.q-issues').innerHTML=questionIssues(q).map(x=>`<span>${x}</span>`).join('');
     frag.querySelector('.open-review').onclick=()=>openQuick(index);host.appendChild(frag);
   }
@@ -106,8 +133,10 @@ function setQuickChoice(target,value){
   $('#'+target).value=value?String(value):'';document.querySelectorAll(`[data-target="${target}"] button`).forEach(b=>b.classList.toggle('active',b.dataset.value===String(value||'')));syncQuickMeta();
 }
 document.querySelectorAll('[data-target] button').forEach(b=>b.onclick=()=>setQuickChoice(b.closest('[data-target]').dataset.target,b.dataset.value));
-function updateQuickUnitLabel(){$('#quickUnitLabel').textContent=$('#quickSubject').value==='BIO'?'گفتار':'مبحث'}
-['quickSubject','quickGrade','quickChapter','quickUnit'].forEach(id=>$('#'+id).addEventListener('change',()=>{updateQuickUnitLabel();syncQuickMeta()}));
+$('#quickSubject').addEventListener('change',()=>{renderQuickTaxonomy();syncQuickMeta()});
+$('#quickGrade').addEventListener('change',()=>{if(!quickIsMath())renderQuickTaxonomy();syncQuickMeta()});
+$('#quickChapter').addEventListener('change',()=>{renderQuickUnits();syncQuickMeta()});
+$('#quickUnit').addEventListener('change',()=>{syncQuickMathGrade();syncQuickMeta()});
 
 async function loadSource(img,kind){
   if(!model.batch||quickIndex<0)return;const q=model.batch.questions[quickIndex];
@@ -116,7 +145,7 @@ async function loadSource(img,kind){
 function openQuick(index){
   quickIndex=index;const q=model.batch.questions[index];if(!q)return;
   $('#quickId').textContent=q.id;$('#quickPosition').textContent=`سوال ${q.source_question_number} · ${index+1}/${model.batch.questions.length}`;
-  $('#quickSubject').value=q.subject;$('#quickGrade').value=String(q.grade);$('#quickChapter').value=q.chapter||'';$('#quickUnit').value=q.unit||'';updateQuickUnitLabel();
+  $('#quickSubject').value=q.subject;$('#quickGrade').value=String(q.grade);renderQuickTaxonomy({chapter:q.chapter||'',unit:q.unit||''});
   setQuickChoice('quickDifficulty',q.difficulty||'');setQuickChoice('quickOption',q.correct_option||'');quickBio.setValue(q.subject==='BIO'?q.biology_combination:null,false);
   loadSource($('#quickQuestionImage'),'question');loadSource($('#quickAnswerImage'),'answer');resetCorrection();renderQuickIssues();$('#quickDialog').showModal();
 }
@@ -140,6 +169,7 @@ $('#quickReviewBtn').onclick=()=>{const i=model.firstPending();openQuick(i>=0?i:
 installWindowsMetadataShortcuts({
   enabled:()=>$('#quickDialog').open&&!$('#commandPalette').open&&$('#correctionSheet').classList.contains('hidden')&&matchMedia('(pointer:fine)').matches&&innerWidth>=900,
   setCorrectOption:n=>setQuickChoice('quickOption',n),setLevel:n=>setQuickChoice('quickDifficulty','level_'+n),
+  gradeEnabled:()=>!quickIsMath(),
   setGrade:g=>{$('#quickGrade').value=String(g);$('#quickGrade').dispatchEvent(new Event('change',{bubbles:true}))},
   setChapter:n=>{$('#quickChapter').value=String(n).padStart(2,'0');$('#quickChapter').dispatchEvent(new Event('change',{bubbles:true}))},
   setUnit:n=>{$('#quickUnit').value=String(n).padStart(2,'0');$('#quickUnit').dispatchEvent(new Event('change',{bubbles:true}))}
