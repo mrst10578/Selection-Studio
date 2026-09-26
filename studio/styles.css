@@ -80,3 +80,49 @@ label,.session-field{display:grid;gap:5px;color:#9aa5b3;font-size:10px;font-weig
 .guide-card{padding:14px}.guide-card h2{margin:0 0 10px;font-size:15px}.guide-card p{color:#9aa5b3;font-size:10px;line-height:1.9}.guide-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}.guide-grid>div{padding:10px;border:1px solid #29343f;border-radius:10px;background:#0c1117}.guide-grid b{display:grid;place-items:center;width:24px;height:24px;border-radius:7px;background:#27171b;color:#e89299;font-size:9px}.guide-grid strong{display:block;margin-top:7px;font-size:11px}.guide-grid p{margin:4px 0 0;font-size:9px}.shortcut-table{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px}.shortcut-table span{display:grid;gap:5px;padding:9px;border:1px solid #2b3540;border-radius:9px;color:#aeb7c2;font-size:9px}
 @media(max-width:850px){.question-card{grid-template-columns:1fr}.guide-grid,.shortcut-table{grid-template-columns:1fr 1fr}.previews img{height:120px}}
 @media(max-width:520px){.guide-grid,.shortcut-table{grid-template-columns:1fr}.previews{grid-template-columns:1fr}.summary-actions{display:grid;width:100%}.summary-actions>*{width:100%;text-align:center}}
+
+/* Readability, direct recovery, and mobile operator flow */
+label,.session-field{font-size:12px}
+.topbar p,.section-head p,.question-meta,#gateHint,.batch-gate p{font-size:12px;line-height:1.8}
+.eyebrow{font-size:10px}
+.workflow-rail>span,.viewer-tabs button,.check-grid button,.quality-badge,.question-missing span,.issue-chips span{font-size:11px}
+.check-grid button{display:flex;align-items:center;gap:8px;min-height:42px;padding:7px 9px;border:1px solid #29323c;border-radius:8px;background:#0c1117;color:#aeb8c4;text-align:right}
+.check-grid button:hover{border-color:#596674;background:#141b23}
+.check-grid button.done{border-color:#28513c;background:#0f1c16;color:#b5e4c7}
+.check-grid button i{flex:0 0 9px}
+.pdf-toolbar{flex-wrap:wrap}
+.page-jump{display:flex;align-items:center;gap:5px;font-size:11px}
+.page-jump input{width:62px;min-height:40px;text-align:center}
+.field-hint{margin:2px 0 0;color:#9aa5b3;font-size:11px;line-height:1.7}
+.crop-help{display:none;margin:0 8px 8px;color:#bdc6d0;font-size:12px;line-height:1.7}
+.inspector #saveQuestion{position:sticky;bottom:0;z-index:3;box-shadow:0 -10px 18px rgba(9,13,18,.8)}
+.question-filters{display:grid;grid-template-columns:minmax(180px,1fr) minmax(160px,.55fr);gap:8px;margin-top:10px}
+.question-filters label{display:grid;gap:5px}
+.submission-receipt{max-width:70ch;color:#a9d8bc!important;overflow-wrap:anywhere}
+.trash-panel{padding:12px}
+.trash-list{display:grid;gap:7px;margin-top:8px}
+.trash-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;border:1px solid #3b3132;border-radius:9px;background:#130f12}
+.trash-item strong{font-size:12px}
+.previews img{cursor:zoom-in}
+.preview-dialog{width:min(1000px,calc(100vw - 16px));max-width:none;max-height:94dvh;padding:10px;border:1px solid #394653;border-radius:14px;background:#080d13;color:#fff}
+.preview-dialog::backdrop{background:rgba(2,4,7,.84);backdrop-filter:blur(6px)}
+.preview-dialog-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}
+.preview-dialog>img{display:block;width:100%;max-height:calc(94dvh - 76px);object-fit:contain;background:#05080c}
+@media(max-width:700px){
+  .crop-help{display:block}
+  .pdf-toolbar{justify-content:space-between;gap:5px}
+  .pdf-toolbar button{padding-inline:8px}
+  .page-jump{width:100%;justify-content:center}
+  .question-filters{grid-template-columns:1fr}
+  .question-card{gap:8px}
+  .trash-item{align-items:flex-start;flex-direction:column}
+  .trash-item button{width:100%}
+  .inspector #saveQuestion{bottom:6px}
+}
+html[data-density="comfortable"] .workbench{grid-template-columns:minmax(0,1fr) 400px;gap:16px}
+html[data-density="comfortable"] .shell{gap:16px}
+html[data-density="comfortable"] .panel{border-radius:18px}
+html[data-density="comfortable"] .inspector{padding:16px}
+html[data-density="comfortable"] .session-editor{gap:12px}
+@media(max-width:1179px){html[data-density="comfortable"] .workbench{grid-template-columns:1fr}}
+@media(max-width:760px){#densityToggle{display:none}}

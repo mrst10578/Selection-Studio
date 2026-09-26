@@ -10,7 +10,7 @@
 <body>
 <header class="topbar">
   <div><span class="eyebrow">TESTBANK / OPERATOR</span><h1>Selection Studio</h1><p>سوال را Crop کن، شناسنامه بزن، کامل تحویل بده.</p></div>
-  <nav><a class="active" href="./">گزینش</a><a href="./selected.html">لیست <b id="navCount">0</b></a><a href="./guide.html">راهنما</a></nav>
+  <nav><a class="active" href="./">گزینش</a><a href="./selected.html">فهرست <b id="navCount">0</b></a><a href="./guide.html">راهنما</a><button id="densityToggle" type="button" aria-pressed="true">نمایش راحت</button></nav>
 </header>
 <main class="shell">
   <section class="panel session" id="sessionCard">
@@ -33,11 +33,11 @@
     <div class="viewer panel">
       <div class="viewer-tabs"><button id="questionTab" class="active" type="button">سوال <span id="questionCropState">بدون Crop</span></button><button id="answerTab" type="button">پاسخ <span id="answerCropState">بدون Crop</span></button></div>
       <div id="questionPane" class="pdf-pane">
-        <div class="pdf-toolbar"><button id="qPrev" type="button">قبلی</button><span id="qPage">-</span><button id="qNext" type="button">بعدی</button><button id="qClear" type="button" class="secondary">پاک کردن Crop</button></div>
+        <div class="pdf-toolbar"><button id="qPrev" type="button">قبلی</button><span id="qPage">-</span><label class="page-jump">رفتن به صفحه<input id="qPageJump" type="number" min="1" inputmode="numeric" aria-label="رفتن به صفحهٔ سؤال" /></label><button id="qNext" type="button">بعدی</button><button id="qClear" type="button" class="secondary">پاک‌کردن برش</button></div><p id="qCropHelp" class="crop-help" aria-live="polite">برای جابه‌جایی صفحه، سند را بکش؛ برای برش، حالت انتخاب برش را فعال کن.</p>
         <div class="pdf-stage" id="qStage"><button id="qCropLock" class="mobile-crop-lock" type="button" aria-label="قفل کردن PDF و فعال کردن کراپ" aria-pressed="false"></button><canvas id="qCanvas"></canvas><div class="pdf-empty">PDF سوال را انتخاب کن.</div></div>
       </div>
       <div id="answerPane" class="pdf-pane hidden">
-        <div class="pdf-toolbar"><button id="aPrev" type="button">قبلی</button><span id="aPage">-</span><button id="aNext" type="button">بعدی</button><button id="aClear" type="button" class="secondary">پاک کردن Crop</button></div>
+        <div class="pdf-toolbar"><button id="aPrev" type="button">قبلی</button><span id="aPage">-</span><label class="page-jump">رفتن به صفحه<input id="aPageJump" type="number" min="1" inputmode="numeric" aria-label="رفتن به صفحهٔ پاسخ" /></label><button id="aNext" type="button">بعدی</button><button id="aClear" type="button" class="secondary">پاک‌کردن برش</button></div><p id="aCropHelp" class="crop-help" aria-live="polite">برای جابه‌جایی صفحه، سند را بکش؛ برای برش، حالت انتخاب برش را فعال کن.</p>
         <div class="pdf-stage" id="aStage"><button id="aCropLock" class="mobile-crop-lock" type="button" aria-label="قفل کردن PDF و فعال کردن کراپ" aria-pressed="false"></button><canvas id="aCanvas"></canvas><div class="pdf-empty">PDF پاسخ را انتخاب کن.</div></div>
       </div>
     </div>
@@ -50,12 +50,13 @@
           <label>درس<select id="subject"><option value="BIO">زیست‌شناسی</option><option value="MATH">ریاضی</option><option value="PHY">فیزیک</option><option value="CHEM">شیمی</option></select></label>
           <label id="gradeField">پایه<select id="grade"><option value="10">دهم</option><option value="11">یازدهم</option><option value="12">دوازدهم</option></select></label>
         </div>
+        <label>جست‌وجو در فصل و گفتار<input id="taxonomySearch" type="search" placeholder="نام فصل یا گفتار" autocomplete="off" /></label>
         <div class="two">
           <label><span id="chapterLabel">فصل</span><select id="chapter"><option value="">انتخاب</option></select></label>
           <label><span id="unitLabel">گفتار</span><select id="unit"><option value="">انتخاب</option></select></label>
         </div>
 
-        <fieldset class="choice"><legend>سطح سوال</legend><input id="difficulty" type="hidden" value="" /><div class="segmented five" data-target="difficulty"><button type="button" data-value="level_1">Level 1</button><button type="button" data-value="level_2">Level 2</button><button type="button" data-value="level_3">Level 3</button><button type="button" data-value="level_4">Level 4</button><button type="button" data-value="level_5">Level 5</button></div></fieldset>
+        <fieldset class="choice"><legend>سطح سؤال</legend><input id="difficulty" type="hidden" value="" /><div class="segmented five" data-target="difficulty"><button type="button" data-value="level_1" aria-label="سطح ۱، یادآوری ساده">Level 1</button><button type="button" data-value="level_2" aria-label="سطح ۲، کاربرد کوتاه">Level 2</button><button type="button" data-value="level_3" aria-label="سطح ۳، حل چندمرحله‌ای">Level 3</button><button type="button" data-value="level_4" aria-label="سطح ۴، ترکیب چند مفهوم">Level 4</button><button type="button" data-value="level_5" aria-label="سطح ۵، دشوار و ترکیبی">Level 5</button></div><p class="field-hint">۱ یادآوری ساده، ۳ حل چندمرحله‌ای و ۵ دشوار و ترکیبی است؛ ۲ و ۴ بین این سطح‌ها هستند.</p></fieldset>
         <fieldset class="choice"><legend>کلید صحیح</legend><input id="correctOption" type="hidden" value="" /><div class="segmented four" data-target="correctOption"><button type="button" data-value="1">1</button><button type="button" data-value="2">2</button><button type="button" data-value="3">3</button><button type="button" data-value="4">4</button></div></fieldset>
 
         <section id="bioCombinationPanel" class="bio-panel hidden" hidden></section>
@@ -63,7 +64,7 @@
         <section class="readiness" aria-live="polite">
           <div class="readiness-head"><strong>آمادگی ثبت سوال</strong><small id="nextAction">مرحله بعد: تنظیم آزمون</small></div>
           <div class="check-grid">
-            <span data-check="exam"><i></i>آزمون/PDF</span><span data-check="number"><i></i>شماره سوال</span><span data-check="question"><i></i>Crop سوال</span><span data-check="answer"><i></i>Crop پاسخ</span><span data-check="taxonomy"><i></i>طبقه‌بندی</span><span data-check="difficulty"><i></i>Level</span><span data-check="key"><i></i>کلید</span><span data-check="biology"><i></i>UX زیست</span>
+            <button type="button" data-check="exam"><i></i>آزمون و فایل‌ها</button><button type="button" data-check="number"><i></i>شمارهٔ سؤال</button><button type="button" data-check="question"><i></i>برش سؤال</button><button type="button" data-check="answer"><i></i>برش پاسخ</button><button type="button" data-check="taxonomy"><i></i>درس و مبحث</button><button type="button" data-check="difficulty"><i></i>سطح سؤال</button><button type="button" data-check="key"><i></i>گزینهٔ درست</button><button type="button" data-check="biology"><i></i>ترکیبی‌بودن زیست</button>
           </div>
           <p id="gateHint">موارد ناقص را کامل کن.</p>
         </section>
@@ -76,10 +77,10 @@
   <section class="panel recent"><div class="section-head compact"><div><h2>آخرین سوال‌ها</h2><p><b id="recordCount">0</b> سوال ذخیره محلی</p></div><a class="button-link" href="./selected.html">مشاهده لیست</a></div><div id="recentList" class="recent-list"><div class="empty-box">هنوز سوالی ثبت نشده.</div></div></section>
 </main>
 
-<button id="hotkeysLauncher" class="command-launcher hotkeys-launcher" type="button">Windows Hotkeys</button>
+<button id="hotkeysLauncher" class="command-launcher hotkeys-launcher" type="button">میانبرهای صفحه‌کلید</button>
 <dialog id="hotkeysDialog" class="hotkeys-dialog">
   <div class="hotkeys-shell">
-    <div class="hotkeys-head"><div><span class="eyebrow">WINDOWS HOTKEYS</span><h2>میانبرهای دسکتاپ</h2></div><button id="hotkeysClose" type="button">بستن</button></div>
+    <div class="hotkeys-head"><div><span class="eyebrow">میانبرهای صفحه‌کلید</span><h2>میانبرهای دسکتاپ</h2></div><button id="hotkeysClose" type="button">بستن</button></div>
     <div class="hotkeys-grid">
       <span><kbd>Numpad 1–4</kbd><b>کلید صحیح</b></span>
       <span><kbd>F1–F5</kbd><b>Level</b></span>

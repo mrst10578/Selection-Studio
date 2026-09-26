@@ -49,7 +49,7 @@ test.describe("Selection Studio",()=>{
     await page.locator("#operatorPassword").fill("admin");
     await page.locator("#operatorLoginForm").press("Enter");
     await expect(page.locator(".shortcut-card")).toHaveCount(0);
-    await expect(page.locator("#hotkeysLauncher")).toHaveText("Windows Hotkeys");
+    await expect(page.locator("#hotkeysLauncher")).toHaveText("میانبرهای صفحه‌کلید");
     await page.locator("#hotkeysLauncher").click();
     await expect(page.locator("#hotkeysDialog")).toBeVisible();
     await expect(page.locator("#hotkeysDialog")).toContainText("Numpad 1–4");
@@ -61,7 +61,33 @@ test.describe("Selection Studio",()=>{
     await expect(page.locator("#exportQuestions")).toBeVisible();
     await expect(page.locator("#exportExam")).toBeVisible();
     await expect(page.locator("#submitBatch")).toBeDisabled();
+    if((page.viewportSize()?.width||0)>=760){
+      await page.locator("#densityToggle").click();
+      await expect(page.locator("html")).toHaveAttribute("data-density","comfortable");
+      await expect(page.locator("#densityToggle")).toHaveText("نمایش فشرده");
+    }
     await expectNoSeriousA11y(page);
+    await expectNoHorizontalOverflow(page);
+  });
+  test("selected questions can be filtered and restored after soft delete",async({page})=>{
+    await page.addInitScript(()=>{
+      sessionStorage.setItem("selection-studio-operator-auth-v1","admin");
+      localStorage.setItem("testbank-studio.records.v1",JSON.stringify([
+        {id:"EXAM-A-Q001",exam_id:"EXAM-A",source_question_number:1,subject:"PHY",grade:10,chapter:"01",unit:"01",difficulty:"level_2",correct_option:1,question_regions:[],answer_regions:[],entered_by:"alice"},
+        {id:"EXAM-A-Q002",exam_id:"EXAM-A",source_question_number:2,subject:"PHY",grade:10,chapter:"01",unit:"01",difficulty:"level_3",correct_option:2,question_regions:[],answer_regions:[],entered_by:"alice"}
+      ]));
+    });
+    await page.goto("/studio/selected.html");
+    await expect(page.locator(".question-card")).toHaveCount(2);
+    await page.locator("#questionSearch").fill("2");
+    await expect(page.locator(".question-card")).toHaveCount(1);
+    await expect(page.locator(".question-title strong")).toHaveText("سوال 2");
+    await page.locator("#questionSearch").fill("");
+    await page.locator(".question-card").first().getByRole("button",{name:"انتقال به حذف‌شده‌ها"}).click();
+    await expect(page.locator("#trashSection")).toBeVisible();
+    await page.locator(".restore-btn").click();
+    await expect(page.locator(".question-card")).toHaveCount(2);
+    await expect(page.locator("#trashSection")).toBeHidden();
     await expectNoHorizontalOverflow(page);
   });
 });
@@ -94,10 +120,35 @@ test.describe("Review Console",()=>{
 
     await expect(page.locator("#batchTitle")).toContainText("@alice");
     await expect(page.locator("#batchTitle")).toContainText("زیست");
+    await expect(page.locator(".review-question")).toHaveCount(1);
+    await page.locator("#statusFilter").selectOption("");
     await expect(page.locator(".review-question")).toHaveCount(2);
     await expect(page.locator("#questionList")).toContainText("EXAM-A");
     await expect(page.locator("#questionList")).not.toContainText("EXAM-C");
     await expectNoSeriousA11y(page);
+    await expectNoHorizontalOverflow(page);
+  });
+  test("quick review navigation stays inside the active pending queue",async({page})=>{
+    await page.addInitScript(()=>{
+      const region={page:1,bbox_norm:[0,0,1,1]};
+      const questions=[1,2,3].map((number)=>({id:"EXAM-Q"+number,exam_id:"EXAM",source_question_number:number,subject:"PHY",grade:10,chapter:"01",unit:"01",difficulty:"level_2",correct_option:1,question_regions:[region],answer_regions:[region],entered_by:"alice",review_status:number===2?"approved":"pending"}));
+      localStorage.setItem("testbank-studio.records.v1",JSON.stringify(questions));
+    });
+    await page.goto("/review-console/");
+    await page.locator("#adminUsername").fill("admin");
+    await page.locator("#adminPassword").fill("admin");
+    await page.locator("#adminLoginForm").press("Enter");
+    await expect(page.locator("#appView")).toBeVisible({timeout:2500});
+    await page.locator('[data-subject="PHY"]').click();
+    await page.locator(".operator-item").click();
+    await page.locator("#quickReviewBtn").click();
+    await expect(page.locator("#quickId")).toHaveText("EXAM-Q1");
+    await page.locator("#nextBtn").click();
+    await expect(page.locator("#quickId")).toHaveText("EXAM-Q3");
+    await page.locator("#prevBtn").click();
+    await expect(page.locator("#quickId")).toHaveText("EXAM-Q1");
+    await page.locator('[data-review-view="answer"]').click();
+    await expect(page.locator("#quickViewers")).toHaveAttribute("data-active-view","answer");
     await expectNoHorizontalOverflow(page);
   });
 });
