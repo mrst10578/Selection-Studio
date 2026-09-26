@@ -8,5 +8,54 @@
     "level_4": 0,
     "level_5": 0
   },
-  "subjects": {}
+  "subjects": {
+    "BIO": {
+      "name_fa": "زیست‌شناسی",
+      "chapter_name_fa": "فصل",
+      "unit_name_fa": "گفتار",
+      "count": 0,
+      "difficulty_counts": {"level_1":0,"level_2":0,"level_3":0,"level_4":0,"level_5":0},
+      "grades": {
+        "10": {"name_fa":"دهم","count":0,"difficulty_counts":{"level_1":0,"level_2":0,"level_3":0,"level_4":0,"level_5":0},"chapters":{}},
+        "11": {"name_fa":"یازدهم","count":0,"difficulty_counts":{"level_1":0,"level_2":0,"level_3":0,"level_4":0,"level_5":0},"chapters":{}},
+        "12": {"name_fa":"دوازدهم","count":0,"difficulty_counts":{"level_1":0,"level_2":0,"level_3":0,"level_4":0,"level_5":0},"chapters":{}}
+      }
+    },
+    "MATH": {
+      "name_fa": "ریاضی",
+      "chapter_name_fa": "فصل",
+      "unit_name_fa": "مبحث",
+      "count": 0,
+      "difficulty_counts": {"level_1":0,"level_2":0,"level_3":0,"level_4":0,"level_5":0},
+      "grades": {
+        "10": {"name_fa":"دهم","count":0,"difficulty_counts":{"level_1":0,"level_2":0,"level_3":0,"level_4":0,"level_5":0},"chapters":{}},
+        "11": {"name_fa":"یازدهم","count":0,"difficulty_counts":{"level_1":0,"level_2":0,"level_3":0,"level_4":0,"level_5":0},"chapters":{}},
+        "12": {"name_fa":"دوازدهم","count":0,"difficulty_counts":{"level_1":0,"level_2":0,"level_3":0,"level_4":0,"level_5":0},"chapters":{}}
+      }
+    },
+    "PHY": {
+      "name_fa": "فیزیک",
+      "chapter_name_fa": "فصل",
+      "unit_name_fa": "مبحث",
+      "count": 0,
+      "difficulty_counts": {"level_1":0,"level_2":0,"level_3":0,"level_4":0,"level_5":0},
+      "grades": {
+        "10": {"name_fa":"دهم","count":0,"difficulty_counts":{"level_1":0,"level_2":0,"level_3":0,"level_4":0,"level_5":0},"chapters":{}},
+        "11": {"name_fa":"یازدهم","count":0,"difficulty_counts":{"level_1":0,"level_2":0,"level_3":0,"level_4":0,"level_5":0},"chapters":{}},
+        "12": {"name_fa":"دوازدهم","count":0,"difficulty_counts":{"level_1":0,"level_2":0,"level_3":0,"level_4":0,"level_5":0},"chapters":{}}
+      }
+    },
+    "CHEM": {
+      "name_fa": "شیمی",
+      "chapter_name_fa": "فصل",
+      "unit_name_fa": "مبحث",
+      "count": 0,
+      "difficulty_counts": {"level_1":0,"level_2":0,"level_3":0,"level_4":0,"level_5":0},
+      "grades": {
+        "10": {"name_fa":"دهم","count":0,"difficulty_counts":{"level_1":0,"level_2":0,"level_3":0,"level_4":0,"level_5":0},"chapters":{}},
+        "11": {"name_fa":"یازدهم","count":0,"difficulty_counts":{"level_1":0,"level_2":0,"level_3":0,"level_4":0,"level_5":0},"chapters":{}},
+        "12": {"name_fa":"دوازدهم","count":0,"difficulty_counts":{"level_1":0,"level_2":0,"level_3":0,"level_4":0,"level_5":0},"chapters":{}}
+      }
+    }
+  }
 }
