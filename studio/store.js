@@ -57,12 +57,12 @@ export function setSessionKey(value){
 }
 export function buildQuestionId(examId,sourceQuestionNumber){
   const n=Number(sourceQuestionNumber);
-  if(!examId||!Number.isInteger(n)||n<1) throw new Error("شناسه آزمون و شماره سوال معتبر لازم است.");
+  if(!examId||!Number.isInteger(n)||n<1) throw new Error("شناسه آزمون و شماره سؤال معتبر لازم است.");
   return `${examId}-Q${String(n).padStart(3,"0")}`;
 }
 export function createBatch(records,exam,submittedBy){
   const active=records.filter(x=>!x.trashed_at);
-  if(!active.length) throw new Error("لیست سوالات خالی است.");
+  if(!active.length) throw new Error("فهرست سؤال‌ها خالی است.");
   if(!exam?.id) throw new Error("شناسنامه آزمون موجود نیست.");
   const suffix=Date.now().toString(36).toUpperCase()+"-"+crypto.getRandomValues(new Uint32Array(1))[0].toString(36).toUpperCase();
   const now=new Date().toISOString();
