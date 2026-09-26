@@ -6,11 +6,38 @@ import {getPreview} from "./preview-db.js";
 import {validRegion} from "./pdf-crop.js";
 import {biologyIssues,mountBiologyCombinationEditor} from "./biology-combination.js";
 import {installAdaptiveDensity,toast} from "./ui-runtime.js";
+import {TAXONOMY,taxonomySummary} from "./taxonomy-data.js";
 
 const $=id=>document.getElementById(id);
 let records=loadRecords(),exam=loadExamDraft(),editIndex=-1;
-for(let i=1;i<=12;i++)$("editChapter").insertAdjacentHTML("beforeend",`<option value="${String(i).padStart(2,"0")}">${i}</option>`);
-for(let i=1;i<=8;i++)$("editUnit").insertAdjacentHTML("beforeend",`<option value="${String(i).padStart(2,"0")}">${i}</option>`);
+
+function fillEditSelect(el,items,selected=""){
+  el.innerHTML='<option value="">انتخاب</option>'+items.map(([value,label])=>`<option value="${value}">${label}</option>`).join("");
+  el.value=items.some(([value])=>value===selected)?selected:"";
+}
+function editCfg(){return TAXONOMY.subjects[$("editSubject").value]||{}}
+function editIsMath(){return $("editSubject").value==="MATH"}
+function syncEditMathGrade(){
+  if(!editIsMath())return;
+  const unit=editCfg().topics?.[$("editChapter").value]?.units?.[$("editUnit").value];
+  if(unit?.grade)$("editGrade").value=String(unit.grade);
+}
+function renderEditUnits(selected=""){
+  const cfg=editCfg(),chapter=$("editChapter").value;
+  const units=editIsMath()?cfg.topics?.[chapter]?.units:cfg.grades?.[$("editGrade").value]?.chapters?.[chapter]?.units;
+  fillEditSelect($("editUnit"),Object.entries(units||{}).map(([id,item])=>[id,editIsMath()?(item.label_fa||item.name_fa):`${Number(id)} — ${item.name_fa}`]),selected);
+  syncEditMathGrade();
+}
+function renderEditTaxonomy({chapter="",unit=""}={}){
+  const cfg=editCfg(),math=editIsMath();
+  $("editGradeField").hidden=math;
+  $("editGradeChapterRow").classList.toggle("single",math);
+  $("editChapterLabel").textContent=cfg.chapter_name_fa||"فصل";
+  $("editUnitLabel").textContent=cfg.unit_name_fa||($("editSubject").value==="BIO"?"گفتار":"مبحث");
+  const chapters=math?cfg.topics:cfg.grades?.[$("editGrade").value]?.chapters;
+  fillEditSelect($("editChapter"),Object.entries(chapters||{}).map(([id,item])=>[id,`${Number(id)} — ${item.name_fa}`]),chapter);
+  renderEditUnits(unit);
+}
 
 const editBio=mountBiologyCombinationEditor({
   host:$("editBioPanel"),subjectEl:$("editSubject"),gradeEl:$("editGrade"),chapterEl:$("editChapter"),unitEl:$("editUnit"),
@@ -93,8 +120,7 @@ async function render(){
     badge.textContent=issues.length?"ناقص":"آماده";
     badge.className="quality-badge "+(issues.length?"warn":"ok");
     frag.querySelector(".question-meta").textContent=
-      `${subjectLabel(record.subject)} · ${gradeLabel(record.grade)} · فصل ${Number(record.chapter)||"-"} · `+
-      `${record.subject==="BIO"?"گفتار":"مبحث"} ${Number(record.unit)||"-"} · ${difficultyLabel(record.difficulty)} · `+
+      `${subjectLabel(record.subject)} · ${taxonomySummary(record)} · ${difficultyLabel(record.difficulty)} · `+
       `کلید ${record.correct_option||"-"}${record.subject==="BIO"&&record.biology_combination?.is_combined?`  · ترکیبی × ${record.biology_combination.topics.length}`:""}`;
     frag.querySelector(".question-missing").innerHTML=issues.map(x=>`<span>${x}</span>`).join("");
     frag.querySelector(".edit-btn").onclick=()=>openEdit(index);
@@ -117,16 +143,16 @@ function openEdit(index){
   $("editNumber").value=r.source_question_number;
   $("editSubject").value=r.subject;
   $("editGrade").value=String(r.grade);
-  $("editChapter").value=r.chapter||"";
-  $("editUnit").value=r.unit||"";
+  renderEditTaxonomy({chapter:r.chapter||"",unit:r.unit||""});
   $("editDifficulty").value=r.difficulty||"";
   $("editOption").value=r.correct_option||"";
-  updateEditUnit();
   editBio.setValue(r.subject==="BIO"?r.biology_combination:null,false);
   $("editDialog").showModal();
 }
-function updateEditUnit(){$("editUnitLabel").textContent=$("editSubject").value==="BIO"?"گفتار":"مبحث"}
-$("editSubject").onchange=updateEditUnit;
+$("editSubject").onchange=()=>renderEditTaxonomy();
+$("editGrade").onchange=()=>{if(!editIsMath())renderEditTaxonomy()};
+$("editChapter").onchange=()=>renderEditUnits();
+$("editUnit").onchange=syncEditMathGrade;
 $("closeEdit").onclick=()=>$("editDialog").close();
 
 $("editForm").onsubmit=e=>{
