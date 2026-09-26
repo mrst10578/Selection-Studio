@@ -53,8 +53,8 @@ function batchGate(){
   const s=settingsState(),blockers=[];
   if(!qs.length)blockers.push("هیچ سوالی برای ارسال وجود ندارد.");
   if(!exam?.id)blockers.push("شناسنامه آزمون موجود نیست.");
-  if(!s.workerUrl||!s.submittedBy||!s.key)blockers.push("Worker، کلید یا نام اپراتور تنظیم نضمصد.");
-  if(incomplete.length)blockers.push(`${incomplete.length} سوال ناقҔ است.`);
+  if(!s.workerUrl||!s.submittedBy||!s.key)blockers.push("Worker، کلید یا نام اپراتور تنظیم نشده است.");
+  if(incomplete.length)blockers.push(`${incomplete.length} سوال ناقص است.`);
   return {ready:!blockers.length,blockers,incomplete};
 }
 
@@ -95,13 +95,13 @@ async function render(){
     frag.querySelector(".question-meta").textContent=
       `${subjectLabel(record.subject)} · ${gradeLabel(record.grade)} · فصل ${Number(record.chapter)||"-"} · `+
       `${record.subject==="BIO"?"گفتار":"مبحث"} ${Number(record.unit)||"-"} · ${difficultyLabel(record.difficulty)} · `+
-      `‎ةليد ${record.correct_option||"-"}${record.subject==="BIO"&&record.biology_combination?.is_combined?` ´ برکيبی × ${record.biology_combination.topics.length}`:""}`;
+      `کلید ${record.correct_option||"-"}${record.subject==="BIO"&&record.biology_combination?.is_combined?`  · ترکیبی × ${record.biology_combination.topics.length}`:""}`;
     frag.querySelector(".question-missing").innerHTML=issues.map(x=>`<span>${x}</span>`).join("");
     frag.querySelector(".edit-btn").onclick=()=>openEdit(index);
     frag.querySelector(".delete-btn").onclick=async()=>{
       records[index]={...records[index],trashed_at:new Date().toISOString()};
       saveRecords(records);
-      toast("سوال به Trash ر؁ت","ok");
+      toast("سوال به Trash رفت","ok");
       await render();
     };
     preview(frag.querySelector(".q-preview"),record.id+":question");
@@ -149,7 +149,7 @@ $("editForm").onsubmit=e=>{
   saveRecords(records);
   $("editDialog").close();
   render();
-  toast("تغییرات ذخیره ضد","ok");
+  toast("تغییرات ذخیره شد","ok");
 };
 
 $("settingsBtn").onclick=()=>{
@@ -168,7 +168,7 @@ $("saveSettings").onclick=e=>{
   setSessionKey($("submitKey").value);
   $("settingsDialog").close();
   render();
-  toast("تنظیمات ذخیره ضد","ok");
+  toast("تنظیمات ذخیره شد","ok");
 };
 
 $("submitBatch").onclick=async()=>{
