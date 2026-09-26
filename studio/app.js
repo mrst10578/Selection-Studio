@@ -90,7 +90,7 @@ function syncMathGradeFromUnit(){
 function renderUnits(selected=""){
   const cfg=subjectCfg(),chapter=$("chapter").value;
   const units=isMath()?cfg.topics?.[chapter]?.units:cfg.grades?.[$("grade").value]?.chapters?.[chapter]?.units;
-  const items=Object.entries(units||{}).map(([id,item])=>[
+  const items=Object.entries(units||{}).sort((a,b)=>Number(a[0])-Number(b[0])).map(([id,item])=>[
     id,
     isMath()?(item.label_fa||`${item.name_fa} (${gradeLabel(item.grade)})`):`${Number(id)} — ${item.name_fa}`
   ]);
@@ -103,7 +103,7 @@ function renderTaxonomy({chapter="",unit=""}={}){
   $("subjectGradeRow").classList.toggle("single",math);
   updateUnitLabel();
   const chapters=math?cfg.topics:cfg.grades?.[$("grade").value]?.chapters;
-  fillSelect($("chapter"),Object.entries(chapters||{}).map(([id,item])=>[id,`${Number(id)} — ${item.name_fa}`]),chapter);
+  fillSelect($("chapter"),Object.entries(chapters||{}).sort((a,b)=>Number(a[0])-Number(b[0])).map(([id,item])=>[id,`${Number(id)} — ${item.name_fa}`]),chapter);
   renderUnits(unit);
 }
 const biologyEditor=mountBiologyCombinationEditor({
