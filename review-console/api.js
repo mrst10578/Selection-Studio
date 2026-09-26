@@ -7,7 +7,15 @@ export function createReviewApi({getWorkerUrl,getAdminKey}){
     if(!response.ok)throw new Error(typeof data==="string"?data:(data?.error||("HTTP "+response.status)));
     return data;
   }
+  async function source(batchId,questionId,kind){
+    const base=String(getWorkerUrl()||"").replace(/\/$/,"");
+    const url=base+"/studio/admin/source?batch_id="+encodeURIComponent(batchId)+"&question_id="+encodeURIComponent(questionId)+"&kind="+encodeURIComponent(kind);
+    const response=await fetch(url,{headers:{"x-testbank-admin-key":getAdminKey()||""}});
+    if(!response.ok)throw new Error((await response.text())||("HTTP "+response.status));
+    return response.blob();
+  }
   return {
+    source,
     list:status=>request("/studio/admin/list?status="+encodeURIComponent(status)),
     batch:(status,id)=>request("/studio/admin/batch?status="+encodeURIComponent(status)+"&id="+encodeURIComponent(id)),
     save:batch=>request("/studio/admin/save",{method:"POST",body:{batch}}),
