@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "subjects": {
+    "BIO": {
+      "name_fa": "زیست‌شناسی",
+      "chapter_name_fa": "فصل",
+      "unit_name_fa": "گفتار",
+      "grades": {
+        "10": {"name_fa": "دهم"},
+        "11": {"name_fa": "یازدهم"},
+        "12": {"name_fa": "دوازدهم"}
+      }
+    },
+    "MATH": {
+      "name_fa": "ریاضی",
+      "chapter_name_fa": "فصل",
+      "unit_name_fa": "مبحث",
+      "grades": {
+        "10": {"name_fa": "دهم"},
+        "11": {"name_fa": "یازدهم"},
+        "12": {"name_fa": "دوازدهم"}
+      }
+    },
+    "PHY": {
+      "name_fa": "فیزیک",
+      "chapter_name_fa": "فصل",
+      "unit_name_fa": "مبحث",
+      "grades": {
+        "10": {"name_fa": "دهم"},
+        "11": {"name_fa": "یازدهم"},
+        "12": {"name_fa": "دوازدهم"}
+      }
+    },
+    "CHEM": {
+      "name_fa": "شیمی",
+      "chapter_name_fa": "فصل",
+      "unit_name_fa": "مبحث",
+      "grades": {
+        "10": {"name_fa": "دهم"},
+        "11": {"name_fa": "یازدهم"},
+        "12": {"name_fa": "دوازدهم"}
+      }
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://selection-studio.local/schemas/exam.schema.json",
+  "title": "Selection Studio Exam",
+  "type": "object",
+  "required": ["id", "provider", "date"],
+  "properties": {
+    "id": {"type": "string", "minLength": 3},
+    "provider": {"type": "string", "minLength": 1},
+    "date": {"type": "string", "minLength": 6},
+    "question_pdf_name": {"type": ["string", "null"]},
+    "answer_pdf_name": {"type": ["string", "null"]},
+    "entered_by": {"type": ["string", "null"]}
+  },
+  "additionalProperties": true
+}
