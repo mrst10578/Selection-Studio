@@ -20,6 +20,19 @@ export function isOperatorAuthenticated(){
   return sessionStorage.getItem(AUTH_KEY)===USERNAME;
 }
 
+function finishBootSplash(){
+  const splash=document.getElementById("bootSplash");
+  const started=Number(window.__studioBootStarted)||performance.now();
+  const elapsed=performance.now()-started;
+  const remaining=Math.max(0,2500-elapsed);
+  setTimeout(()=>{
+    document.body.classList.remove("booting");
+    if(!splash)return;
+    splash.classList.add("leaving");
+    setTimeout(()=>splash.classList.add("hidden"),360);
+  },remaining);
+}
+
 export function installOperatorAuth(){
   if(document.getElementById("operatorLogin"))return;
   document.body.insertAdjacentHTML("afterbegin",loginMarkup());
@@ -39,11 +52,13 @@ export function installOperatorAuth(){
 
   if(isOperatorAuthenticated()){
     unlock();
+    finishBootSplash();
     return;
   }
 
   document.body.classList.add("auth-locked");
-  requestAnimationFrame(()=>username.focus());
+  finishBootSplash();
+  setTimeout(()=>requestAnimationFrame(()=>username.focus()),2550);
   form.addEventListener("submit",event=>{
     event.preventDefault();
     if(username.value.trim()===USERNAME&&password.value===PASSWORD){
