@@ -1,0 +1,15 @@
+name = "selection-studio-worker"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+[vars]
+GITHUB_OWNER = "mrst10578"
+GITHUB_REPO = "Selection-Studio"
+GITHUB_REF = "main"
+STUDIO_ORIGIN = "https://example.github.io"
+ALLOW_LOCAL_STUDIO = "0"
+
+# Configure as secrets, never commit values:
+# GITHUB_TOKEN
+# STUDIO_SUBMIT_KEY
+# STUDIO_ADMIN_KEY
