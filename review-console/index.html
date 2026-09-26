@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head><meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /><meta name="theme-color" content="#0a0d12" /><title>Selection Studio — Review</title><link rel="stylesheet" href="./console.css" /></head>
+<body>
+<section id="loginView" class="login-view">
+  <div class="login-card"><span class="eyebrow">REVIEW CONSOLE</span><h1>مدیریت بانک تست</h1><p>ورود مستقل از پنل گزینشگر</p>
+    <label>Worker URL<input id="workerUrl" placeholder="https://...workers.dev" /></label>
+    <label>کلید مدیر<input id="adminKey" type="password" /></label>
+    <label>نام بازبین<input id="reviewer" /></label>
+    <button id="loginBtn" class="primary" type="button">ورود</button>
+  </div>
+</section>
+
+<div id="appView" class="hidden">
+<header class="review-header"><div><span class="eyebrow">TESTBANK / REVIEW</span><h1>Review Console</h1></div><div class="header-actions"><span id="autosaveState" class="status-pill">ذخیره شد</span><button id="commandLauncher" type="button">فرمان‌ها <kbd>Ctrl K</kbd></button><button id="refreshBtn" type="button">بروزرسانی</button><button id="logoutBtn" type="button">خروج</button></div></header>
+<main class="review-layout">
+  <aside class="review-sidebar">
+    <div class="queue-tabs"><button data-queue="pending" class="active">در حال بررسی</button><button data-queue="approved">تکمیل‌شده</button><button data-queue="rejected">ردشده</button></div>
+    <div id="batchList" class="batch-list"><div class="empty-box">صف خالی است.</div></div>
+  </aside>
+  <section class="review-main">
+    <section id="emptyBatch" class="panel empty-review">یک Batch را انتخاب کن.</section>
+    <section id="batchEditor" class="hidden">
+      <div class="panel batch-overview">
+        <div class="section-head"><div><span class="eyebrow">BATCH</span><h2 id="batchTitle">-</h2><p id="batchMeta">-</p></div><div class="batch-actions"><button id="quickReviewBtn" class="primary">شروع / ادامه بررسی</button><button id="publishBtn">انتشار تاییدشده‌ها</button></div></div>
+        <div class="progress-grid"><div><span>تایید</span><b id="approvedCount">0</b></div><div><span>اصلاح</span><b id="needsCount">0</b></div><div><span>رد</span><b id="rejectedCount">0</b></div><div><span>باقی</span><b id="pendingCount">0</b></div></div>
+        <div class="progress-bar"><i id="progressBar"></i></div>
+        <div id="completionState" class="completion hidden"><strong>✓ بررسی این Batch کامل شد</strong><span>همه سوال‌ها تصمیم گرفته شده‌اند.</span></div>
+      </div>
+      <div class="panel tools"><input id="searchInput" type="search" placeholder="شماره یا ID…" /><select id="statusFilter"><option value="">همه وضعیت‌ها</option><option value="pending">بررسی‌نشده</option><option value="approved">تایید</option><option value="needs_changes">نیاز به اصلاح</option><option value="rejected">رد</option></select><select id="difficultyFilter"><option value="">همه Levelها</option><option value="level_1">Level 1</option><option value="level_2">Level 2</option><option value="level_3">Level 3</option><option value="level_4">Level 4</option><option value="level_5">Level 5</option></select><label class="checkline"><input id="incompleteFilter" type="checkbox" /> فقط ناقص</label><button id="undoBtn">Undo</button><button id="saveBtn">ذخیره</button></div>
+      <div id="questionList" class="review-question-list"></div>
+    </section>
+  </section>
+</main>
+</div>
+
+<dialog id="quickDialog" class="quick-dialog">
+  <div class="quick-shell">
+    <div class="quick-head"><div><span class="eyebrow">QUICK REVIEW</span><strong id="quickId">-</strong><small id="quickPosition">-</small></div><button id="quickClose">بستن</button></div>
+    <div class="quick-viewers"><figure><figcaption>سوال</figcaption><img id="quickQuestionImage" alt="Crop سوال" /></figure><figure><figcaption>پاسخ</figcaption><img id="quickAnswerImage" alt="Crop پاسخ" /></figure></div>
+    <aside class="quick-inspector">
+      <div class="inspector-title"><span class="eyebrow">INSPECTOR</span><strong>شناسنامه و تصمیم</strong></div>
+      <div class="two"><label>درس<select id="quickSubject"><option value="BIO">زیست‌شناسی</option><option value="MATH">ریاضی</option><option value="PHY">فیزیک</option><option value="CHEM">شیمی</option></select></label><label>پایه<select id="quickGrade"><option value="10">دهم</option><option value="11">یازدهم</option><option value="12">دوازدهم</option></select></label></div>
+      <div class="two"><label>فصل<select id="quickChapter"><option value="">-</option></select></label><label><span id="quickUnitLabel">گفتار</span><select id="quickUnit"><option value="">-</option></select></label></div>
+      <fieldset><legend>Level</legend><input id="quickDifficulty" type="hidden" /><div class="segmented five" data-target="quickDifficulty"><button type="button" data-value="level_1">L1</button><button type="button" data-value="level_2">L2</button><button type="button" data-value="level_3">L3</button><button type="button" data-value="level_4">L4</button><button type="button" data-value="level_5">L5</button></div></fieldset>
+      <fieldset><legend>کلید</legend><input id="quickOption" type="hidden" /><div class="segmented four" data-target="quickOption"><button type="button" data-value="1">1</button><button type="button" data-value="2">2</button><button type="button" data-value="3">3</button><button type="button" data-value="4">4</button></div></fieldset>
+      <section id="quickBioPanel" class="bio-panel hidden" hidden></section>
+      <div id="quickIssues" class="quick-issues"></div>
+      <div class="shortcut-legend"><span><kbd>Numpad 1–4</kbd> کلید</span><span><kbd>F1–F5</kbd> Level</span><span><kbd>Ctrl+عدد</kbd> فصل</span><span><kbd>Alt+عدد</kbd> گفتار/مبحث</span><span><kbd>Shift+1/2/3</kbd> پایه</span><span><kbd>A/F/R</kbd> تصمیم</span></div>
+    </aside>
+    <section id="correctionSheet" class="correction hidden"><strong>چه چیزی باید اصلاح شود؟</strong><div class="reason-grid"><button data-reason="question_crop">Crop سوال</button><button data-reason="answer_crop">Crop پاسخ</button><button data-reason="taxonomy">طبقه‌بندی</button><button data-reason="answer_key">کلید</button><button data-reason="biology_combination">ترکیب زیست</button><button data-reason="other">سایر</button></div><textarea id="correctionNote" placeholder="یادداشت اختیاری"></textarea><div><button id="cancelCorrection">انصراف</button><button id="confirmCorrection" class="primary">ثبت اصلاح و بعدی</button></div></section>
+    <div class="quick-actions"><button id="prevBtn">قبلی</button><button id="approveBtn" class="approve">✓ تایید</button><button id="needsBtn" class="needs">↩ اصلاح</button><button id="rejectBtn" class="reject">× رد</button><button id="nextBtn">بعدی</button></div>
+  </div>
+</dialog>
+
+<dialog id="commandPalette" class="command-palette"><div class="command-shell"><div class="command-search"><span>⌕</span><input id="commandInput" type="search" placeholder="فرمان یا شماره سوال…" /><kbd>Esc</kbd></div><div id="commandList" class="command-list"></div></div></dialog>
+<template id="batchItem"><button class="batch-item" type="button"><strong></strong><span></span><small></small></button></template>
+<template id="questionItem"><article class="review-question"><div><strong class="q-title"></strong><span class="status-badge"></span></div><p class="q-meta"></p><div class="q-issues"></div><button class="open-review" type="button">باز کردن</button></article></template>
+<script type="module" src="./app.js"></script>
+</body></html>
