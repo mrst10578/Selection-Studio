@@ -34,7 +34,7 @@
       <label><span class="provider-label-line"><span>نام آزمون</span><small id="providerWarning" class="provider-warning hidden" role="status" aria-live="polite">(اسم حتما باید فارسی باشه)</small></span><input id="provider" autocomplete="off" placeholder="قلمچی" lang="fa" dir="rtl" /></label>
       <div class="session-field"><span class="field-label">تاریخ آزمون</span><div class="date-field" id="examDateField" dir="ltr"><input id="examYear" value="1405" readonly tabindex="-1" aria-label="سال آزمون، ثابت ۱۴۰۵" /><span class="date-separator" aria-hidden="true">/</span><input id="examMonth" inputmode="numeric" pattern="[0-9۰-۹]*" maxlength="2" placeholder="03" aria-label="ماه آزمون، دو رقمی" /><span class="date-separator" aria-hidden="true">/</span><input id="examDay" inputmode="numeric" pattern="[0-9۰-۹]*" maxlength="2" placeholder="07" aria-label="روز آزمون، دو رقمی" /></div><input id="examDate" type="hidden" /></div>
       <label>اپراتور<input id="operator" autocomplete="name" /></label>
-      <label class="file-label">PDF سوال<input id="questionPdf" type="file" accept="application/pdf" /></label>
+      <label class="file-label">PDF سؤال<input id="questionPdf" type="file" accept="application/pdf" /></label>
       <label class="file-label">PDF پاسخ<input id="answerPdf" type="file" accept="application/pdf" /></label>
       <button id="saveSession" class="primary" type="button">ثبت آزمون</button>
     </div>
@@ -46,10 +46,10 @@
 
   <section class="workbench">
     <div class="viewer panel">
-      <div class="viewer-tabs"><button id="questionTab" class="active" type="button">سوال <span id="questionCropState">بدون Crop</span></button><button id="answerTab" type="button">پاسخ <span id="answerCropState">بدون Crop</span></button></div>
+      <div class="viewer-tabs"><button id="questionTab" class="active" type="button">سؤال <span id="questionCropState">بدون برش</span></button><button id="answerTab" type="button">پاسخ <span id="answerCropState">بدون برش</span></button></div>
       <div id="questionPane" class="pdf-pane">
         <div class="pdf-toolbar"><button id="qPrev" type="button">قبلی</button><span id="qPage">-</span><label class="page-jump">رفتن به صفحه<input id="qPageJump" type="number" min="1" inputmode="numeric" aria-label="رفتن به صفحهٔ سؤال" /></label><button id="qNext" type="button">بعدی</button><button id="qClear" type="button" class="secondary">پاک‌کردن برش</button></div><p id="qCropHelp" class="crop-help" aria-live="polite">برای جابه‌جایی صفحه، سند را بکش؛ برای برش، حالت انتخاب برش را فعال کن.</p>
-        <div class="pdf-stage" id="qStage"><button id="qCropLock" class="mobile-crop-lock" type="button" aria-label="قفل کردن PDF و فعال کردن کراپ" aria-pressed="false"></button><canvas id="qCanvas"></canvas><div class="pdf-empty">PDF سوال را انتخاب کن.</div></div>
+        <div class="pdf-stage" id="qStage"><button id="qCropLock" class="mobile-crop-lock" type="button" aria-label="قفل کردن PDF و فعال کردن کراپ" aria-pressed="false"></button><canvas id="qCanvas"></canvas><div class="pdf-empty">PDF سؤال را انتخاب کن.</div></div>
       </div>
       <div id="answerPane" class="pdf-pane hidden">
         <div class="pdf-toolbar"><button id="aPrev" type="button">قبلی</button><span id="aPage">-</span><label class="page-jump">رفتن به صفحه<input id="aPageJump" type="number" min="1" inputmode="numeric" aria-label="رفتن به صفحهٔ پاسخ" /></label><button id="aNext" type="button">بعدی</button><button id="aClear" type="button" class="secondary">پاک‌کردن برش</button></div><p id="aCropHelp" class="crop-help" aria-live="polite">برای جابه‌جایی صفحه، سند را بکش؛ برای برش، حالت انتخاب برش را فعال کن.</p>
@@ -58,9 +58,9 @@
     </div>
 
     <aside class="panel inspector">
-      <div class="section-head compact"><div><span class="eyebrow">مشخصات سؤال</span><h2>شناسنامه سؤال</h2><p id="questionIdentity">سوال -</p></div><span id="gateBadge" class="gate-badge blocked">0/8</span></div>
+      <div class="section-head compact"><div><span class="eyebrow">مشخصات سؤال</span><h2>شناسنامه سؤال</h2><p id="questionIdentity">سؤال -</p></div><span id="gateBadge" class="gate-badge blocked">0/8</span></div>
       <form id="questionForm">
-        <label>شماره سوال<input id="sourceNumber" type="number" min="1" inputmode="numeric" required /></label>
+        <label>شماره سؤال<input id="sourceNumber" type="number" min="1" inputmode="numeric" required /></label>
         <div class="two" id="subjectGradeRow">
           <label>درس<select id="subject"><option value="BIO">زیست‌شناسی</option><option value="MATH">ریاضی</option><option value="PHY">فیزیک</option><option value="CHEM">شیمی</option></select></label>
           <label id="gradeField">پایه<select id="grade"><option value="10">دهم</option><option value="11">یازدهم</option><option value="12">دوازدهم</option></select></label>
@@ -88,7 +88,7 @@
     </aside>
   </section>
 
-  <section class="panel recent"><div class="section-head compact"><div><h2>آخرین سوال‌ها</h2><p><b id="recordCount">0</b> سوال ذخیره محلی</p></div><a class="button-link" href="./selected.html">مشاهده لیست</a></div><div id="recentList" class="recent-list"><div class="empty-box">هنوز سوالی ثبت نشده.</div></div></section>
+  <section class="panel recent"><div class="section-head compact"><div><h2>آخرین سؤال‌ها</h2><p><b id="recordCount">0</b> سؤال ذخیره محلی</p></div><a class="button-link" href="./selected.html">مشاهده لیست</a></div><div id="recentList" class="recent-list"><div class="empty-box">هنوز سؤالی ثبت نشده.</div></div></section>
 </main>
 
 <button id="hotkeysLauncher" class="command-launcher hotkeys-launcher" type="button">میانبرها</button>
@@ -101,9 +101,9 @@
       <span><kbd>Ctrl + عدد</kbd><b>فصل / مبحث اصلی</b></span>
       <span><kbd>Alt + عدد</kbd><b>گفتار / مبحث / زیرعنوان</b></span>
       <span><kbd>Shift + 1/2/3</kbd><b>پایه، به‌جز ریاضی</b></span>
-      <span><kbd>Q / W</kbd><b>PDF سوال / پاسخ</b></span>
-      <span><kbd>N</kbd><b>شماره سوال</b></span>
-      <span><kbd>L</kbd><b>لیست سوالات</b></span>
+      <span><kbd>Q / W</kbd><b>PDF سؤال / پاسخ</b></span>
+      <span><kbd>N</kbd><b>شماره سؤال</b></span>
+      <span><kbd>L</kbd><b>فهرست سؤال‌ها</b></span>
       <span><kbd>Ctrl + K</kbd><b>باز کردن همین پنل</b></span>
     </div>
     <p class="hotkeys-note">برای فصل‌های دو رقمی، رقم‌ها را سریع پشت‌سرهم وارد کن.</p>
