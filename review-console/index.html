@@ -12,17 +12,24 @@
 </section>
 
 <div id="appView" class="hidden">
-<header class="review-header"><div><span class="eyebrow">TESTBANK / REVIEW</span><h1>Review Console</h1></div><div class="header-actions"><a class="back-link" href="../">پنل گزینشگر</a><span id="autosaveState" class="status-pill">ذخیره شد</span><button id="commandLauncher" type="button">فرمان‌ها <kbd>Ctrl K</kbd></button><button id="refreshBtn" type="button">بروزرسانی</button><button id="logoutBtn" type="button">خروج</button></div></header>
+<header class="review-header"><div><span class="eyebrow">TESTBANK / ADMIN</span><h1>پنل مدیریت</h1></div><div class="header-actions"><span id="autosaveState" class="status-pill">ذخیره شد</span><button id="commandLauncher" type="button">فرمان‌ها <kbd>Ctrl K</kbd></button><button id="refreshBtn" type="button">بروزرسانی</button><button id="logoutBtn" type="button">خروج</button></div></header>
 <main class="review-layout">
-  <aside class="review-sidebar" aria-label="صف‌های بررسی">
-    <div class="queue-tabs"><button data-queue="pending" class="active">در حال بررسی</button><button data-queue="completed">تکمیل‌شده</button><button data-queue="rejected">ردشده</button></div>
-    <div id="batchList" class="batch-list"><div class="empty-box">صف خالی است.</div></div>
+  <aside class="review-sidebar admin-browser" aria-label="انتخاب درس و گزینشگر">
+    <div class="admin-step"><span class="eyebrow">STEP 1</span><strong>انتخاب درس</strong></div>
+    <div class="subject-picker">
+      <button type="button" data-subject="BIO">زیست</button>
+      <button type="button" data-subject="MATH">ریاضی</button>
+      <button type="button" data-subject="PHY">فیزیک</button>
+      <button type="button" data-subject="CHEM">شیمی</button>
+    </div>
+    <div class="admin-step operators-head"><span class="eyebrow">STEP 2</span><strong>گزینشگرها</strong><small id="operatorHint">اول درس را انتخاب کن.</small></div>
+    <div id="operatorList" class="operator-list"><div class="empty-box">درسی انتخاب نشده.</div></div>
   </aside>
   <section class="review-main">
-    <section id="emptyBatch" class="panel empty-review">یک Batch را انتخاب کن.</section>
+    <section id="emptyBatch" class="panel empty-review">درس و سپس username گزینشگر را انتخاب کن.</section>
     <section id="batchEditor" class="hidden">
       <div class="panel batch-overview">
-        <div class="section-head"><div><span class="eyebrow">BATCH</span><h2 id="batchTitle">-</h2><p id="batchMeta">-</p></div><div class="batch-actions"><button id="quickReviewBtn" class="primary">شروع / ادامه بررسی</button><button id="publishBtn">انتشار تاییدشده‌ها</button></div></div>
+        <div class="section-head"><div><span class="eyebrow">SELECTOR TESTS</span><h2 id="batchTitle">-</h2><p id="batchMeta">-</p></div><div class="batch-actions"><button id="quickReviewBtn" class="primary">شروع / ادامه بررسی</button><button id="publishBtn">انتشار تاییدشده‌ها</button></div></div>
         <div class="progress-grid"><div><span>تایید</span><b id="approvedCount">0</b></div><div><span>اصلاح</span><b id="needsCount">0</b></div><div><span>رد</span><b id="rejectedCount">0</b></div><div><span>باقی</span><b id="pendingCount">0</b></div></div>
         <div class="progress-bar"><i id="progressBar"></i></div>
         <div id="completionState" class="completion hidden"><strong>✓ بررسی این Batch کامل شد</strong><span>همه سوال‌ها تصمیم گرفته شده‌اند.</span></div>
@@ -54,7 +61,6 @@
 </dialog>
 
 <dialog id="commandPalette" class="command-palette"><div class="command-shell"><div class="command-search"><span>⌕</span><input id="commandInput" type="search" placeholder="فرمان یا شماره سوال…" /><kbd>Esc</kbd></div><div id="commandList" class="command-list"></div></div></dialog>
-<template id="batchItem"><button class="batch-item" type="button" aria-label="باز کردن Batch"><strong></strong><span></span><small></small></button></template>
 <template id="questionItem"><article class="review-question"><div><strong class="q-title"></strong><span class="status-badge"></span></div><p class="q-meta"></p><div class="q-issues"></div><button class="open-review" type="button">باز کردن</button></article></template>
 <script type="module" src="./app.js"></script>
 </body></html>
