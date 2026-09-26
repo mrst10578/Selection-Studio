@@ -92,7 +92,16 @@ export class PdfCropper{
       return;
     }
     const bytes=await file.arrayBuffer();
-    this.pdf=await pdfjsLib.getDocument({data:bytes}).promise;
+    this.pdf=await pdfjsLib.getDocument({
+      data:bytes,
+      cMapUrl:"https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/cmaps/",
+      cMapPacked:true,
+      standardFontDataUrl:"https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/standard_fonts/",
+      wasmUrl:"https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/wasm/",
+      useSystemFonts:true,
+      disableFontFace:false,
+      fontExtraProperties:true
+    }).promise;
     this.page=1;
     this.syncInteractionMode();
     await this.render();
