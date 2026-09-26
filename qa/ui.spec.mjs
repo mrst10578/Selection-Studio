@@ -22,6 +22,7 @@ test.describe("Selection Studio",()=>{
     await expect(page.locator("#operatorLoginSubmit")).toHaveText("ورود موفق");
     await expect(page.locator("#operatorLogin")).toBeHidden({timeout:2500});
     await expect(page.locator(".topbar h1")).toHaveText("Selection Studio");
+    await expect(page.locator('.topbar nav a[href*="admin"]')).toHaveCount(0);
     await expect(page.locator("#saveQuestion")).toBeDisabled();
     await expect(page.locator(".date-separator")).toHaveCount(2);
     await expect(page.locator("#examYear")).toHaveAttribute("inputmode","numeric");
@@ -66,18 +67,36 @@ test.describe("Selection Studio",()=>{
 });
 
 test.describe("Review Console",()=>{
-  test("local admin login opens management console",async({page})=>{
+  test("admin drills from subject to selector username to that selector tests",async({page})=>{
+    await page.addInitScript(()=>{
+      const records=[
+        {id:"EXAM-A-Q001",exam_id:"EXAM-A",source_question_number:1,subject:"BIO",grade:10,chapter:"01",unit:"01",difficulty:"level_2",correct_option:1,question_regions:[],answer_regions:[],entered_by:"alice",review_status:"pending",created_at:"2026-01-01T00:00:00.000Z"},
+        {id:"EXAM-A-Q002",exam_id:"EXAM-A",source_question_number:2,subject:"BIO",grade:10,chapter:"01",unit:"01",difficulty:"level_3",correct_option:2,question_regions:[],answer_regions:[],entered_by:"alice",review_status:"approved",created_at:"2026-01-01T00:00:00.000Z"},
+        {id:"EXAM-B-Q003",exam_id:"EXAM-B",source_question_number:3,subject:"BIO",grade:10,chapter:"01",unit:"01",difficulty:"level_2",correct_option:3,question_regions:[],answer_regions:[],entered_by:"bob",review_status:"pending",created_at:"2026-01-01T00:00:00.000Z"},
+        {id:"EXAM-C-Q004",exam_id:"EXAM-C",source_question_number:4,subject:"MATH",grade:11,chapter:"01",unit:"01",difficulty:"level_2",correct_option:4,question_regions:[],answer_regions:[],entered_by:"alice",review_status:"pending",created_at:"2026-01-01T00:00:00.000Z"}
+      ];
+      localStorage.setItem("testbank-studio.records.v1",JSON.stringify(records));
+    });
     await page.goto("/review-console/");
     await expect(page.locator("#loginView h1")).toHaveText("مدیریت بانک تست");
-    await expect(page.locator("#adminPassword")).toHaveAttribute("type","password");
     await page.locator("#adminUsername").fill("admin");
     await page.locator("#adminPassword").fill("admin");
     await page.locator("#adminLoginForm").press("Enter");
-    await expect(page.locator("#loginView")).toHaveClass(/auth-success/);
-    await expect(page.locator("#loginBtn")).toHaveText("ورود موفق");
     await expect(page.locator("#loginView")).toBeHidden({timeout:2500});
     await expect(page.locator("#appView")).toBeVisible();
-    await expect(page.locator(".queue-tabs")).toBeVisible();
+    await expect(page.locator(".back-link")).toHaveCount(0);
+    await expect(page.locator("[data-subject]")).toHaveCount(4);
+
+    await page.locator('[data-subject="BIO"]').click();
+    await expect(page.locator("#operatorList")).toContainText("@alice");
+    await expect(page.locator("#operatorList")).toContainText("@bob");
+    await page.locator(".operator-item",{hasText:"@alice"}).click();
+
+    await expect(page.locator("#batchTitle")).toContainText("@alice");
+    await expect(page.locator("#batchTitle")).toContainText("زیست");
+    await expect(page.locator(".review-question")).toHaveCount(2);
+    await expect(page.locator("#questionList")).toContainText("EXAM-A");
+    await expect(page.locator("#questionList")).not.toContainText("EXAM-C");
     await expectNoSeriousA11y(page);
     await expectNoHorizontalOverflow(page);
   });
