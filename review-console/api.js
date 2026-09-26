@@ -1,29 +1,22 @@
-import {loadRecords,saveRecords,loadExamDraft} from "../studio/store.js";
+import {loadRecords,saveRecords} from "../studio/store.js";
 import {getPreview} from "../studio/preview-db.js";
 
-function activeQuestions(records){return records.filter(q=>!q.trashed_at)}
-function localStatus(questions){
-  const active=activeQuestions(questions);
-  if(active.length&&active.every(q=>(q.review_status||"pending")==="rejected"))return "rejected";
-  if(active.length&&active.every(q=>["approved","rejected"].includes(q.review_status||"pending")))return "completed";
-  return "pending";
+const operatorName=record=>String(record?.entered_by||"legacy").trim()||"legacy";
+const scopedId=(subject,username)=>"LOCAL::"+subject+"::"+encodeURIComponent(username);
+function parseScope(id){
+  const match=String(id||"").match(/^LOCAL::([^:]+)::(.+)$/);
+  return match?{subject:match[1],username:decodeURIComponent(match[2])}:null;
 }
-function groups(){
-  const map=new Map();
-  for(const record of loadRecords()){
-    if(record.trashed_at)continue;
-    const id=record.exam_id||"UNKNOWN";
-    if(!map.has(id))map.set(id,[]);
-    map.get(id).push(record);
-  }
-  return [...map.entries()].map(([id,questions])=>({id,questions}));
+function scopedRecords(subject,username){
+  return loadRecords().filter(record=>!record.trashed_at&&record.subject===subject&&operatorName(record)===username);
 }
-function examFor(id){
-  const draft=loadExamDraft();
-  return draft?.id===id?draft:{id};
+function saveBatchLocally(batch){
+  const incoming=new Map((batch.questions||[]).map(q=>[q.id,q]));
+  saveRecords(loadRecords().map(record=>incoming.has(record.id)?{...record,...incoming.get(record.id)}:record));
+  return batch;
 }
-function batchFromGroup(group){
-  const questions=group.questions.map((q,index)=>({
+function batchFor(subject,username){
+  const questions=scopedRecords(subject,username).map((q,index)=>({
     ...q,
     submission_order:q.submission_order||index+1,
     review_status:q.review_status||"pending",
@@ -31,46 +24,39 @@ function batchFromGroup(group){
   }));
   return {
     schema_version:3,
-    id:group.id,
-    status:localStatus(questions),
+    id:scopedId(subject,username),
+    status:"local",
     created_at:questions[0]?.created_at||new Date().toISOString(),
     updated_at:new Date().toISOString(),
-    submitted_by:questions[0]?.entered_by||"admin",
-    exam:examFor(group.id),
+    submitted_by:username,
+    subject,
+    username,
+    exam:{id:"ALL-"+subject},
     questions,
     review:{reviewed_by:null,reviewed_at:null,note:null},
     revisions:[]
   };
 }
-function saveBatchLocally(batch){
-  const incoming=new Map((batch.questions||[]).map(q=>[q.id,q]));
-  const next=loadRecords().map(record=>incoming.has(record.id)?{...record,...incoming.get(record.id)}:record);
-  saveRecords(next);
-  return batch;
-}
 
 export function createLocalReviewApi(){
   return {
-    async list(status="pending"){
-      return groups().map(group=>{
-        const batch=batchFromGroup(group);
-        const active=activeQuestions(batch.questions);
-        const reviewed=active.filter(q=>(q.review_status||"pending")!=="pending").length;
-        return {
-          id:batch.id,
-          exam_id:batch.exam?.id||batch.id,
-          exam_label:batch.exam?.provider?batch.exam.provider+(batch.exam.date?" — "+batch.exam.date:""):batch.id,
-          question_count:active.length,
-          reviewed_count:reviewed,
-          submitted_by:batch.submitted_by,
-          status:batch.status
-        };
-      }).filter(item=>item.status===status);
+    async operators(subject){
+      const counts=new Map();
+      for(const record of loadRecords()){
+        if(record.trashed_at||record.subject!==subject)continue;
+        const username=operatorName(record);
+        const current=counts.get(username)||{username,total:0,pending:0,approved:0,needs_changes:0,rejected:0};
+        current.total++;
+        const status=record.review_status||"pending";
+        current[status]=(current[status]||0)+1;
+        counts.set(username,current);
+      }
+      return [...counts.values()].sort((a,b)=>a.username.localeCompare(b.username,"fa"));
     },
-    async batch(_status,id){
-      const group=groups().find(x=>x.id===id);
-      if(!group)throw new Error("Batch محلی پیدا نشد.");
-      return batchFromGroup(group);
+    async batch(subject,username){
+      const batch=batchFor(subject,username);
+      if(!batch.questions.length)throw new Error("برای این گزینشگر تستی در این درس پیدا نشد.");
+      return batch;
     },
     async save(batch){
       saveBatchLocally(batch);
@@ -82,25 +68,16 @@ export function createLocalReviewApi(){
       return blob;
     },
     async publish(batchId,reviewer){
-      const records=loadRecords();
+      const scope=parseScope(batchId);
+      if(!scope)throw new Error("محدوده گزینشگر نامعتبر است.");
       let published=0;
       const now=new Date().toISOString();
-      const next=records.map(q=>{
-        if(q.exam_id!==batchId||q.trashed_at||(q.review_status||"pending")!=="approved")return q;
+      saveRecords(loadRecords().map(q=>{
+        if(q.trashed_at||q.subject!==scope.subject||operatorName(q)!==scope.username||(q.review_status||"pending")!=="approved")return q;
         published++;
         return {...q,status:"published",published_at:now,published_by:reviewer||"admin"};
-      });
-      saveRecords(next);
+      }));
       return {published_count:published};
-    },
-    async reject(batchId,reviewer,note=null){
-      const now=new Date().toISOString();
-      saveRecords(loadRecords().map(q=>q.exam_id===batchId&&!q.trashed_at?{...q,review_status:"rejected",reviewed_by:reviewer||"admin",reviewed_at:now,review_note:note}:q));
-      return {ok:true};
-    },
-    async restore(batchId){
-      saveRecords(loadRecords().map(q=>q.exam_id===batchId&&!q.trashed_at?{...q,review_status:"pending",review_note:null,review_reason:null}:q));
-      return {ok:true};
     },
     async lock(){return {ok:true}},
     async unlock(){return {ok:true}}

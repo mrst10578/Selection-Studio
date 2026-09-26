@@ -10,7 +10,7 @@ const $=value=>String(value).startsWith("#")?document.querySelector(value):docum
 const ADMIN_SESSION='selection-review-admin-user-v1';
 const ADMIN_USERNAME='admin';
 const ADMIN_PASSWORD='admin';
-let queueStatus='pending', queueItems=[], quickIndex=-1, autosaveTimer=null, currentReason='';
+let selectedSubject='',selectedOperator='',operatorItems=[],quickIndex=-1,autosaveTimer=null,currentReason='';
 
 function adminUser(){return sessionStorage.getItem(ADMIN_SESSION)||''}
 function reviewer(){return adminUser()||ADMIN_USERNAME}
@@ -53,11 +53,9 @@ const quickBio=mountBiologyCombinationEditor({
 });
 
 async function showAdmin(){
-  try{
-    await loadQueue('pending');
-    $('#loginView').classList.add('hidden');
-    $('#appView').classList.remove('hidden');
-  }catch(e){toast('باز کردن پنل ناموفق: '+e.message,'error')}
+  $('#loginView').classList.add('hidden');
+  $('#appView').classList.remove('hidden');
+  resetBrowser();
 }
 function login(event){
   event?.preventDefault();
@@ -83,45 +81,61 @@ $('#adminLoginForm').addEventListener('submit',login);
 function statusClass(s){return s||'pending'}
 
 $('#logoutBtn').onclick=()=>{sessionStorage.removeItem(ADMIN_SESSION);location.reload()};
-$('#refreshBtn').onclick=()=>loadQueue(queueStatus).catch(e=>toast(e.message,'error'));
+$('#refreshBtn').onclick=async()=>{
+  if(selectedSubject)await loadOperators(selectedSubject);
+  if(selectedSubject&&selectedOperator)await openOperator(selectedOperator);
+};
 
-document.querySelectorAll('[data-queue]').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('[data-queue]').forEach(x=>x.classList.remove('active'));btn.classList.add('active');loadQueue(btn.dataset.queue).catch(e=>toast(e.message,'error'))});
-
-async function loadQueue(status){
-  queueStatus=status;
-  const result=await api.list(status);
-  queueItems=Array.isArray(result)?result:(result?.items||result?.batches||[]);
-  renderQueue();
+function resetBrowser(){
+  selectedSubject='';selectedOperator='';operatorItems=[];model.batch=null;
+  document.querySelectorAll('[data-subject]').forEach(btn=>btn.classList.remove('active'));
+  $('#operatorHint').textContent='اول درس را انتخاب کن.';
+  $('#operatorList').innerHTML='<div class="empty-box">درسی انتخاب نشده.</div>';
+  $('#emptyBatch').classList.remove('hidden');
+  $('#emptyBatch').textContent='درس و سپس username گزینشگر را انتخاب کن.';
+  $('#batchEditor').classList.add('hidden');
 }
-function renderQueue(){
-  const host=$('#batchList');host.innerHTML='';
-  if(!queueItems.length){host.innerHTML='<div class="empty-box">صف خالی است.</div>';return}
-  for(const item of queueItems){
-    const frag=$('#batchItem').content.cloneNode(true),btn=frag.querySelector('.batch-item');
-    btn.querySelector('strong').textContent=item.exam_label||item.exam_id||item.id;
-    btn.querySelector('span').textContent=`${item.question_count||0} سوال · ${item.submitted_by||'-'}`;
-    btn.querySelector('small').textContent=`بررسی‌شده ${item.reviewed_count||0}/${item.question_count||0}`;
-    btn.classList.toggle('active',model.batch?.id===item.id);
-    btn.onclick=()=>openBatch(item.id,status);
-    host.appendChild(frag);
+document.querySelectorAll('[data-subject]').forEach(btn=>btn.onclick=async()=>{
+  selectedSubject=btn.dataset.subject;selectedOperator='';model.batch=null;
+  document.querySelectorAll('[data-subject]').forEach(x=>x.classList.toggle('active',x===btn));
+  $('#batchEditor').classList.add('hidden');$('#emptyBatch').classList.remove('hidden');
+  $('#emptyBatch').textContent='حالا username گزینشگر را انتخاب کن.';
+  await loadOperators(selectedSubject);
+});
+
+async function loadOperators(subject){
+  operatorItems=await api.operators(subject);
+  $('#operatorHint').textContent=subjectLabel(subject)+' · '+operatorItems.length+' گزینشگر';
+  const host=$('#operatorList');host.innerHTML='';
+  if(!operatorItems.length){host.innerHTML='<div class="empty-box">برای این درس هنوز گزینشگری تست ثبت نکرده.</div>';return}
+  for(const item of operatorItems){
+    const btn=document.createElement('button');
+    btn.type='button';btn.className='operator-item';
+    btn.innerHTML=`<strong>@${item.username}</strong><span>${item.total} تست</span><small>${item.pending} در انتظار بررسی</small>`;
+    btn.classList.toggle('active',item.username===selectedOperator);
+    btn.onclick=()=>openOperator(item.username);
+    host.appendChild(btn);
   }
 }
-
-async function openBatch(id,status=queueStatus){
+async function openOperator(username){
   try{
-    if(model.batch?.id&&model.batch.id!==id){await api.unlock(model.batch.id,reviewer()).catch(()=>{})}
-    const result=await api.batch(status,id);const batch=result?.batch||result;
+    if(model.batch?.id)await api.unlock(model.batch.id,reviewer()).catch(()=>{});
+    selectedOperator=username;
+    const batch=await api.batch(selectedSubject,username);
     await api.lock(batch.id,reviewer()).catch(()=>{});
-    model.load(batch);$('#emptyBatch').classList.add('hidden');$('#batchEditor').classList.remove('hidden');renderBatch();renderQueue();
-  }catch(e){toast('باز کردن Batch ناموفق: '+e.message,'error')}
+    model.load(batch);
+    $('#emptyBatch').classList.add('hidden');$('#batchEditor').classList.remove('hidden');
+    await loadOperators(selectedSubject);
+    renderBatch();
+  }catch(e){toast('باز کردن تست‌های گزینشگر ناموفق: '+e.message,'error')}
 }
 
 function filters(){return {search:$('#searchInput').value,status:$('#statusFilter').value,difficulty:$('#difficultyFilter').value,incomplete:$('#incompleteFilter').checked}}
 function renderBatch(){
   if(!model.batch)return;
   const c=model.counts(),total=c.pending+c.approved+c.needs_changes+c.rejected,reviewed=total-c.pending;
-  $('#batchTitle').textContent=model.batch.exam?.provider?`${model.batch.exam.provider} — ${model.batch.exam.date||''}`:(model.batch.exam?.id||model.batch.id);
-  $('#batchMeta').textContent=`اپراتور ${model.batch.submitted_by||'-'} · ${total} سوال`;
+  $('#batchTitle').textContent=subjectLabel(selectedSubject)+' · @'+selectedOperator;
+  $('#batchMeta').textContent=`${total} تست گزینش‌شده توسط این گزینشگر`;
   $('#approvedCount').textContent=c.approved;$('#needsCount').textContent=c.needs_changes;$('#rejectedCount').textContent=c.rejected;$('#pendingCount').textContent=c.pending;
   $('#progressBar').style.width=(total?Math.round(reviewed/total*100):0)+'%';$('#completionState').classList.toggle('hidden',!(total>0&&c.pending===0));
   $('#publishBtn').disabled=c.approved===0;
@@ -132,7 +146,7 @@ function renderBatch(){
     const q=model.batch.questions[index],frag=$('#questionItem').content.cloneNode(true),card=frag.querySelector('.review-question');
     card.dataset.status=q.review_status||'pending';frag.querySelector('.q-title').textContent='سوال '+q.source_question_number;
     frag.querySelector('.status-badge').textContent=reviewStatusLabel(q.review_status||'pending');
-    frag.querySelector('.q-meta').textContent=`${subjectLabel(q.subject)} · ${taxonomySummary(q)} · ${difficultyLabel(q.difficulty)} · کلید ${q.correct_option||'-'}`;
+    frag.querySelector('.q-meta').textContent=`${q.exam_id||'-'} · ${taxonomySummary(q)} · ${difficultyLabel(q.difficulty)} · کلید ${q.correct_option||'-'}`;
     frag.querySelector('.q-issues').innerHTML=questionIssues(q).map(x=>`<span>${x}</span>`).join('');
     frag.querySelector('.open-review').onclick=()=>openQuick(index);host.appendChild(frag);
   }
@@ -145,7 +159,7 @@ function scheduleSave(){
 async function saveBatch(){if(!model.batch)return;await api.save(model.batch);$('#autosaveState').textContent='ذخیره شد'}
 $('#saveBtn').onclick=()=>saveBatch().then(()=>toast('ذخیره شد','ok')).catch(e=>toast(e.message,'error'));
 $('#undoBtn').onclick=()=>{if(model.undo())toast('Undo انجام شد','ok')};
-$('#publishBtn').onclick=async()=>{try{await saveBatch();const r=await api.publish(model.batch.id,reviewer());toast(`انتشار انجام شد: ${r?.published_count??'OK'}`,'ok');await loadQueue(queueStatus)}catch(e){toast('انتشار ناموفق: '+e.message,'error')}};
+$('#publishBtn').onclick=async()=>{try{await saveBatch();const r=await api.publish(model.batch.id,reviewer());toast(`انتشار انجام شد: ${r?.published_count??'OK'}`,'ok');await loadOperators(selectedSubject);await openOperator(selectedOperator)}catch(e){toast('انتشار ناموفق: '+e.message,'error')}};
 
 function setQuickChoice(target,value){
   $('#'+target).value=value?String(value):'';document.querySelectorAll(`[data-target="${target}"] button`).forEach(b=>b.classList.toggle('active',b.dataset.value===String(value||'')));syncQuickMeta();
@@ -200,7 +214,7 @@ document.addEventListener('keydown',e=>{
 });
 
 const palette=createCommandPalette({dialog:$('#commandPalette'),input:$('#commandInput'),list:$('#commandList'),getCommands:()=>{
-  const cmds=[{label:'بروزرسانی صف',run:()=>$('#refreshBtn').click()},{label:'شروع / ادامه بررسی',run:()=>$('#quickReviewBtn').click()}];
+  const cmds=[{label:'بروزرسانی',run:()=>$('#refreshBtn').click()},{label:'شروع / ادامه بررسی',run:()=>$('#quickReviewBtn').click()}];
   if($('#quickDialog').open)cmds.unshift({label:'تایید سوال',shortcut:'A',run:()=>$('#approveBtn').click()},{label:'نیاز به اصلاح',shortcut:'F',run:()=>$('#needsBtn').click()},{label:'رد سوال',shortcut:'R',run:()=>$('#rejectBtn').click()});
   return cmds;
 },onQuery:q=>{const m=q.match(/(?:سوال|q|question)?\s*(\d{1,4})/i);if(!m||!model.batch)return[];const n=Number(m[1]),i=model.batch.questions.findIndex(x=>Number(x.source_question_number)===n&&!x.trashed_at);return i<0?[]:[{label:`باز کردن سوال ${n}`,run:()=>openQuick(i)}]}});
