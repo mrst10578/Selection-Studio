@@ -34,6 +34,7 @@ function finishBootSplash(){
 export function installOperatorAuth(){
   if(document.getElementById("operatorLogin"))return;
   document.body.insertAdjacentHTML("afterbegin",loginMarkup());
+  document.body.classList.remove("auth-pending");
   const view=document.getElementById("operatorLogin");
   const form=document.getElementById("operatorLoginForm");
   const username=document.getElementById("operatorUsername");
