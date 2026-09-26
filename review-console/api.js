@@ -1,3 +1,113 @@
+import {loadRecords,saveRecords,loadExamDraft} from "../studio/store.js";
+import {getPreview} from "../studio/preview-db.js";
+
+function activeQuestions(records){return records.filter(q=>!q.trashed_at)}
+function localStatus(questions){
+  const active=activeQuestions(questions);
+  if(active.length&&active.every(q=>(q.review_status||"pending")==="rejected"))return "rejected";
+  if(active.length&&active.every(q=>["approved","rejected"].includes(q.review_status||"pending")))return "completed";
+  return "pending";
+}
+function groups(){
+  const map=new Map();
+  for(const record of loadRecords()){
+    if(record.trashed_at)continue;
+    const id=record.exam_id||"UNKNOWN";
+    if(!map.has(id))map.set(id,[]);
+    map.get(id).push(record);
+  }
+  return [...map.entries()].map(([id,questions])=>({id,questions}));
+}
+function examFor(id){
+  const draft=loadExamDraft();
+  return draft?.id===id?draft:{id};
+}
+function batchFromGroup(group){
+  const questions=group.questions.map((q,index)=>({
+    ...q,
+    submission_order:q.submission_order||index+1,
+    review_status:q.review_status||"pending",
+    revision_history:q.revision_history||[]
+  }));
+  return {
+    schema_version:3,
+    id:group.id,
+    status:localStatus(questions),
+    created_at:questions[0]?.created_at||new Date().toISOString(),
+    updated_at:new Date().toISOString(),
+    submitted_by:questions[0]?.entered_by||"admin",
+    exam:examFor(group.id),
+    questions,
+    review:{reviewed_by:null,reviewed_at:null,note:null},
+    revisions:[]
+  };
+}
+function saveBatchLocally(batch){
+  const incoming=new Map((batch.questions||[]).map(q=>[q.id,q]));
+  const next=loadRecords().map(record=>incoming.has(record.id)?{...record,...incoming.get(record.id)}:record);
+  saveRecords(next);
+  return batch;
+}
+
+export function createLocalReviewApi(){
+  return {
+    async list(status="pending"){
+      return groups().map(group=>{
+        const batch=batchFromGroup(group);
+        const active=activeQuestions(batch.questions);
+        const reviewed=active.filter(q=>(q.review_status||"pending")!=="pending").length;
+        return {
+          id:batch.id,
+          exam_id:batch.exam?.id||batch.id,
+          exam_label:batch.exam?.provider?batch.exam.provider+(batch.exam.date?" — "+batch.exam.date:""):batch.id,
+          question_count:active.length,
+          reviewed_count:reviewed,
+          submitted_by:batch.submitted_by,
+          status:batch.status
+        };
+      }).filter(item=>item.status===status);
+    },
+    async batch(_status,id){
+      const group=groups().find(x=>x.id===id);
+      if(!group)throw new Error("Batch محلی پیدا نشد.");
+      return batchFromGroup(group);
+    },
+    async save(batch){
+      saveBatchLocally(batch);
+      return {ok:true,batch};
+    },
+    async source(_batchId,questionId,kind){
+      const blob=await getPreview(questionId+":"+kind);
+      if(!blob)throw new Error("Preview در دسترس نیست.");
+      return blob;
+    },
+    async publish(batchId,reviewer){
+      const records=loadRecords();
+      let published=0;
+      const now=new Date().toISOString();
+      const next=records.map(q=>{
+        if(q.exam_id!==batchId||q.trashed_at||(q.review_status||"pending")!=="approved")return q;
+        published++;
+        return {...q,status:"published",published_at:now,published_by:reviewer||"admin"};
+      });
+      saveRecords(next);
+      return {published_count:published};
+    },
+    async reject(batchId,reviewer,note=null){
+      const now=new Date().toISOString();
+      saveRecords(loadRecords().map(q=>q.exam_id===batchId&&!q.trashed_at?{...q,review_status:"rejected",reviewed_by:reviewer||"admin",reviewed_at:now,review_note:note}:q));
+      return {ok:true};
+    },
+    async restore(batchId){
+      saveRecords(loadRecords().map(q=>q.exam_id===batchId&&!q.trashed_at?{...q,review_status:"pending",review_note:null,review_reason:null}:q));
+      return {ok:true};
+    },
+    async lock(){return {ok:true}},
+    async unlock(){return {ok:true}}
+  };
+}
+
+// Worker-backed API kept for the later backend phase.
 export function createReviewApi({getWorkerUrl,getAdminKey}){
   async function request(path,{method="GET",body}={}){
     const base=String(getWorkerUrl()||"").replace(/\/$/,"");
