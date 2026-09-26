@@ -5,6 +5,7 @@ import {
 import {putPreview} from "./preview-db.js";
 import {PdfCropper,validRegion} from "./pdf-crop.js";
 import {installAdaptiveDensity,installDensityToggle,isTypingTarget,toast} from "./ui-runtime.js";
+import {installThemeToggle,installFocusMode} from "./appearance.js";
 import "./operator-auth.js";
 import {installWindowsMetadataShortcuts} from "./windows-shortcuts.js";
 import {mountBiologyCombinationEditor,biologyIssues} from "./biology-combination.js";
@@ -265,10 +266,12 @@ $("questionForm").addEventListener("submit",async e=>{
   const [qBlob,aBlob]=await Promise.all([qCrop.cropBlob(),aCrop.cropBlob()]);
   if(qBlob)await putPreview(id+":question",qBlob);if(aBlob)await putPreview(id+":answer",aBlob);
   $("sourceNumber").value=String(source+1);qCrop.clearRegion();aCrop.clearRegion();setSegmented("difficulty","");setSegmented("correctOption","");biologyEditor.reset();switchPane("question");
-  renderRecent();renderGate();toast("سوال ثبت شد","ok");
+  renderRecent();renderGate();toast(`سؤال ${source} ثبت شد · ${activeRecords().length} سؤال در فهرست`,"ok");
 });
 
 installAdaptiveDensity();
+installThemeToggle($("themeToggle"));
+installFocusMode($("focusToggle"));
 installDensityToggle($("densityToggle"));
 installWindowsMetadataShortcuts({
   enabled:()=>matchMedia("(pointer:fine)").matches&&innerWidth>=900&&!hotkeysDialog.open,
