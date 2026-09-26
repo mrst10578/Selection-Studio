@@ -21,7 +21,7 @@ export function biologyIssues(question){
   const issues=[];
   for(const topic of topics){
     const key=`${Number(topic?.grade)}|${topic?.chapter}|${topic?.unit}`;
-    if(![10,11,12].includes(Number(topic?.grade))||!/^0[1-9]|1[0-2]$/.test(String(topic?.chapter||""))||!/^0[1-8]$/.test(String(topic?.unit||""))){
+    if(![10,11,12].includes(Number(topic?.grade))||!/^(0[1-9]|1[0-2])$/.test(String(topic?.chapter||""))||!/^0[1-8]$/.test(String(topic?.unit||""))){
       issues.push("مبحث ترکیبی ناقص یا نامعتبر است");
       continue;
     }
