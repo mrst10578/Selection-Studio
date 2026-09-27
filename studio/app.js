@@ -122,12 +122,26 @@ $("saveSession").onclick=async()=>{
   if(!validExamDateParts()){toast("ماه و روز آزمون را دو رقمی و معتبر وارد کن؛ مثل 03/07.","error");focusExamMonth();return}
   const id=examId();
   if(!id||!operator){toast("نام آزمون، تاریخ و اپراتور لازم است.","error");return}
-  if(!$("questionPdf").files[0]||!$("answerPdf").files[0]){toast("هر دو PDF را انتخاب کن.","error");return}
-  exam={id,provider,date:humanDate($("examDate").value),entered_by:operator,question_pdf_name:$("questionPdf").files[0].name,answer_pdf_name:$("answerPdf").files[0].name};
+  if(!qCrop.isRenderReady()||!aCrop.isRenderReady()){toast("هر دو PDF باید با موفقیت باز و آمادهٔ نمایش باشند.","error");return}
+  exam={id,provider,date:humanDate($("examDate").value),entered_by:operator,question_pdf_name:qCrop.file.name,answer_pdf_name:aCrop.file.name};
   saveExamDraft(exam); renderSession(); toast("آزمون آماده شد","ok");
 };
-$("questionPdf").onchange=async()=>{await qCrop.loadFile($("questionPdf").files[0]);renderSession()};
-$("answerPdf").onchange=async()=>{await aCrop.loadFile($("answerPdf").files[0]);renderSession()};
+async function loadPdfInput(input,crop,label){
+  const selected=input.files[0]||null;
+  try{
+    const result=await crop.loadFile(selected);
+    if(result?.status==="stale")return;
+    if(result?.status==="ready")toast(label+" آماده شد","ok");
+  }catch(error){
+    input.value="";
+    const kept=crop.file?.name?" سند فعال قبلی «"+crop.file.name+"» حفظ شد.":"";
+    toast(pdfViewerError(error)+kept,"error");
+  }finally{
+    renderSession();
+  }
+}
+$("questionPdf").onchange=()=>loadPdfInput($("questionPdf"),qCrop,"PDF سؤال");
+$("answerPdf").onchange=()=>loadPdfInput($("answerPdf"),aCrop,"PDF پاسخ");
 
 function switchPane(name){
   activePane=name;
