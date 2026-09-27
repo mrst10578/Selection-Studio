@@ -5,7 +5,7 @@ import {
 import {putPreview} from "./preview-db.js";
 import {PdfCropper,validRegion} from "./pdf-crop.js";
 import {installAdaptiveDensity,installDensityToggle,isTypingTarget,toast} from "./ui-runtime.js";
-import {installThemeToggle,installFocusMode} from "./appearance.js";
+import {installFocusMode} from "./appearance.js";
 import "./operator-auth.js";
 import {installWindowsMetadataShortcuts} from "./windows-shortcuts.js";
 import {mountBiologyCombinationEditor,biologyIssues} from "./biology-combination.js";
@@ -253,9 +253,11 @@ function stage(checks){
   if(!checks.number||!checks.taxonomy||!checks.biology||!checks.difficulty||!checks.key)return "meta"; return "ready";
 }
 function renderGate(){
-  const {checks,missing}=gateState(),complete=Object.values(checks).filter(Boolean).length,s=stage(checks);
+  const {checks,missing}=gateState(),isBio=$("subject").value==="BIO",relevantEntries=Object.entries(checks).filter(([key])=>key!=="biology"||isBio),complete=relevantEntries.filter(([,ready])=>ready).length,total=relevantEntries.length,s=stage(checks);
+  const bioCheck=$("bioReadinessCheck");
+  if(bioCheck){bioCheck.hidden=!isBio;bioCheck.classList.toggle("hidden",!isBio)}
   document.querySelectorAll("[data-check]").forEach(el=>el.classList.toggle("done",Boolean(checks[el.dataset.check])));
-  $("gateBadge").textContent=missing.length?`${complete}/8`:"آماده"; $("gateBadge").classList.toggle("ready",!missing.length);$("gateBadge").classList.toggle("blocked",!!missing.length);
+  $("gateBadge").textContent=missing.length?`${complete}/${total}`:"آماده"; $("gateBadge").classList.toggle("ready",!missing.length);$("gateBadge").classList.toggle("blocked",!!missing.length);
   $("saveQuestion").disabled=!!missing.length||submittingQuestion;
   const msg={exam:"مرحلهٔ بعد: آزمون و دو فایل",question:"مرحلهٔ بعد: برش سؤال",answer:"مرحلهٔ بعد: برش پاسخ",meta:"مرحلهٔ بعد: تکمیل شناسنامه",ready:"آمادهٔ ثبت"}[s];
   $("nextAction").textContent=msg;
@@ -336,7 +338,6 @@ $("questionForm").addEventListener("submit",async e=>{
 });
 
 installAdaptiveDensity();
-installThemeToggle($("themeToggle"));
 installFocusMode($("focusToggle"));
 installDensityToggle($("densityToggle"));
 installWindowsMetadataShortcuts({
