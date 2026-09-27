@@ -483,7 +483,7 @@ button.primary:hover::after,.primary:hover::after{inset-inline-start:calc(100% +
   --text-muted:#91A0B2;
   --line:#253140;
   --line-strong:#3D4B5D;
-  --control-border:#354457;
+  --control-border:#60758C;
   --accent:#76B7FF;
   --accent-hover:#93C6FF;
   --accent-contrast:#07111C;
@@ -583,7 +583,7 @@ button.primary:hover::after,.primary:hover::after{inset-inline-start:calc(100% +
   letter-spacing:-.015em;
 }
 :root[data-theme="dark"] .eyebrow{
-  color:#718197;
+  color:#74859A;
   letter-spacing:.035em;
 }
 :root[data-theme="dark"] .status-pill,
