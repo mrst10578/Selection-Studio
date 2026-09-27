@@ -521,7 +521,7 @@ body{overflow-x:hidden}
   .pdf-toolbar button{padding-inline:8px}
   .page-jump{width:100%;justify-content:center}
   .crop-help{display:block}
-  .pdf-stage{height:calc(100vh - 188px);height:calc(100svh - 188px);min-height:500px}
+  .pdf-stage{height:calc(100svh - 188px);min-height:500px}
   .pdf-stage-shell>.mobile-crop-lock{
     display:grid;
     place-items:center;
