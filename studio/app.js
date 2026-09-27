@@ -26,8 +26,28 @@ function pdfViewerError(error){
   return "بازکردن یا نمایش PDF ناموفق بود. فایل را دوباره انتخاب کن.";
 }
 const cropError=error=>toast(pdfViewerError(error),"error");
+function syncCropFreezeButton(buttonId,clearId,locked){
+  const button=$(buttonId),clear=$(clearId);
+  button.classList.toggle("locked",locked);
+  button.classList.toggle("unlocked",!locked);
+  button.setAttribute("aria-pressed",String(locked));
+  button.textContent=locked?"کراپ قفل است":"قفل کراپ";
+  clear.disabled=locked;
+}
+function installCropFreeze(crop,buttonId,clearId){
+  crop.onRegionLockChange=locked=>syncCropFreezeButton(buttonId,clearId,locked);
+  $(buttonId).onclick=()=>{
+    if(!crop.isRegionLocked()&&!crop.isRegionReady()){
+      toast("اول محدودهٔ کراپ را مشخص کن.","error");
+      return;
+    }
+    crop.toggleRegionLock();
+  };
+  syncCropFreezeButton(buttonId,clearId,crop.isRegionLocked());
+}
 const qCrop=new PdfCropper({canvas:$("qCanvas"),stage:$("qStage"),pageLabel:$("qPage"),prevBtn:$("qPrev"),nextBtn:$("qNext"),modeBtn:$("qCropLock"),onChange:()=>renderGate(),onPageChange:(page,total)=>updatePageJump("qPageJump",page,total),onError:cropError});
 const aCrop=new PdfCropper({canvas:$("aCanvas"),stage:$("aStage"),pageLabel:$("aPage"),prevBtn:$("aPrev"),nextBtn:$("aNext"),modeBtn:$("aCropLock"),onChange:()=>renderGate(),onPageChange:(page,total)=>updatePageJump("aPageJump",page,total),onError:cropError});
+installCropFreeze(qCrop,"qRegionLock","qClear");installCropFreeze(aCrop,"aRegionLock","aClear");
 function updatePageJump(id,page,total){const input=$(id);if(!input)return;input.value=page||"";input.max=total||"";input.disabled=!total}
 function installPageJump(id,crop){const input=$(id);input.addEventListener("change",()=>{const page=Number(input.value);if(Number.isInteger(page)&&page>=1&&page<=crop.pdf?.numPages)crop.go(page);else input.value=crop.page||""})}
 installPageJump("qPageJump",qCrop);installPageJump("aPageJump",aCrop);
@@ -324,7 +344,7 @@ $("questionForm").addEventListener("submit",async e=>{
     records.push(record);
     saveRecords(records);
     $("sourceNumber").value=String(source+1);
-    qCrop.clearRegion();aCrop.clearRegion();setSegmented("difficulty","");setSegmented("correctOption","");biologyEditor.reset();switchPane("question");
+    qCrop.setRegionLocked(false);aCrop.setRegionLocked(false);qCrop.clearRegion();aCrop.clearRegion();setSegmented("difficulty","");setSegmented("correctOption","");biologyEditor.reset();switchPane("question");
     renderRecent();
     toast(`سؤال ${source} ثبت شد · ${activeRecords().length} سؤال در فهرست`,"ok");
   }catch(error){
