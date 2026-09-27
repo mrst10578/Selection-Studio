@@ -143,6 +143,10 @@ test.describe("Selection Studio",()=>{
     await expect(page.locator("#qCropLock")).toBeVisible();
     await expect(page.locator("#qCropLock")).toHaveAttribute("aria-pressed","false");
     await expect(page.locator("#qStage")).toHaveClass(/mobile-browse-mode/);
+    await expect(page.locator("#hotkeysLauncher")).toBeHidden();
+    const nativeFileStyle=await page.locator("#questionPdf").evaluate(el=>({opacity:getComputedStyle(el).opacity,position:getComputedStyle(el).position}));
+    expect(nativeFileStyle.opacity).toBe("0");
+    expect(nativeFileStyle.position).toBe("absolute");
     const themeBox=await page.locator("#themeToggle").boundingBox();
     expect(themeBox).not.toBeNull();
     expect(themeBox.x).toBeGreaterThanOrEqual(0);
@@ -174,6 +178,12 @@ test.describe("Selection Studio",()=>{
     await page.locator("#operatorLoginForm").press("Enter");
     await expect(page.locator(".shortcut-card")).toHaveCount(0);
     await expect(page.locator("#hotkeysLauncher")).toHaveText("میانبرها");
+    if((page.viewportSize()?.width||0)<=600){
+      await expect(page.locator("#hotkeysLauncher")).toBeHidden();
+      await expectNoHorizontalOverflow(page);
+      return;
+    }
+    await expect(page.locator("#hotkeysLauncher")).toBeVisible();
     await page.locator("#hotkeysLauncher").click();
     await expect(page.locator("#hotkeysDialog")).toBeVisible();
     await expect(page.locator("#hotkeysDialog")).toContainText("Numpad 1–4");
