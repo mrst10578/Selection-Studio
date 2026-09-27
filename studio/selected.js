@@ -5,7 +5,7 @@ import {
 import {getPreview} from "./preview-db.js";
 import {validRegion} from "./pdf-crop.js";
 import {biologyIssues,mountBiologyCombinationEditor} from "./biology-combination.js";
-import {installAdaptiveDensity,installDensityToggle,toast} from "./ui-runtime.js";
+import {toast} from "./ui-runtime.js";
 import {TAXONOMY,taxonomySummary,filterTaxonomyEntries} from "./taxonomy-data.js";
 import "./operator-auth.js";
 
@@ -276,6 +276,4 @@ $("exportExam").onclick=()=>downloadText(
   "application/x-ndjson"
 );
 
-installAdaptiveDensity();
-installDensityToggle($("densityToggle"));
 render();

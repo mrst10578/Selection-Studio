@@ -61,5 +61,5 @@ export function mountBiologyCombinationEditor({host,subjectEl,gradeEl,chapterEl,
   }
   [subjectEl,gradeEl,chapterEl,unitEl].forEach(el=>el.addEventListener("change",render));
   render();
-  return {getValue:()=>structuredClone(value),setValue:set,getIssues:issues,isReady:()=>issues().length===0,reset:()=>set(null,false)};
+  return {getValue:()=>structuredClone(value),setValue:set,getIssues:issues,isReady:()=>issues().length===0,reset:()=>set(null,false),refresh:render};
 }

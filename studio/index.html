@@ -24,7 +24,7 @@
 </section>
 <header class="topbar">
   <div><span class="eyebrow">پنل گزینش</span><h1>Selection Studio</h1><p>انتخاب، برش و شناسنامه‌گذاری سؤال</p></div>
-  <nav><a class="active" href="./">گزینش</a><a href="./selected.html">فهرست <b id="navCount">0</b></a><a href="./guide.html">راهنما</a><button id="focusToggle" class="focus-toggle" type="button" aria-pressed="false">حالت تمرکز</button><button id="densityToggle" class="density-toggle" type="button" aria-pressed="true">نمایش راحت</button></nav>
+  <nav><a class="active" href="./">گزینش</a><a href="./selected.html">فهرست <b id="navCount">0</b></a><a href="./guide.html">راهنما</a></nav>
 </header>
 <main class="shell">
   <section class="panel session" id="sessionCard">
@@ -48,11 +48,11 @@
       <div class="viewer-tabs"><button id="questionTab" class="active" type="button">سؤال <span id="questionCropState">بدون برش</span></button><button id="answerTab" type="button">پاسخ <span id="answerCropState">بدون برش</span></button></div>
       <div id="questionPane" class="pdf-pane">
         <div class="pdf-toolbar"><button id="qPrev" type="button">قبلی</button><span id="qPage">-</span><label class="page-jump">رفتن به صفحه<input id="qPageJump" type="number" min="1" inputmode="numeric" aria-label="رفتن به صفحهٔ سؤال" /></label><button id="qNext" type="button">بعدی</button><button id="qClear" type="button" class="secondary">پاک‌کردن برش</button></div><p id="qCropHelp" class="crop-help" aria-live="polite">برای جابه‌جایی صفحه، سند را بکش؛ برای برش، حالت انتخاب برش را فعال کن.</p>
-        <div class="pdf-stage" id="qStage"><button id="qCropLock" class="mobile-crop-lock" type="button" aria-label="قفل کردن PDF و فعال کردن کراپ" aria-pressed="false"></button><canvas id="qCanvas"></canvas><div class="pdf-empty">PDF سؤال را انتخاب کن.</div></div>
+        <div class="pdf-stage-shell"><button id="qCropLock" class="mobile-crop-lock" type="button" aria-label="قفل کردن PDF و فعال کردن کراپ" aria-pressed="false"></button><div class="pdf-stage" id="qStage"><canvas id="qCanvas"></canvas><div class="pdf-empty">PDF سؤال را انتخاب کن.</div></div></div>
       </div>
       <div id="answerPane" class="pdf-pane hidden">
         <div class="pdf-toolbar"><button id="aPrev" type="button">قبلی</button><span id="aPage">-</span><label class="page-jump">رفتن به صفحه<input id="aPageJump" type="number" min="1" inputmode="numeric" aria-label="رفتن به صفحهٔ پاسخ" /></label><button id="aNext" type="button">بعدی</button><button id="aClear" type="button" class="secondary">پاک‌کردن برش</button></div><p id="aCropHelp" class="crop-help" aria-live="polite">برای جابه‌جایی صفحه، سند را بکش؛ برای برش، حالت انتخاب برش را فعال کن.</p>
-        <div class="pdf-stage" id="aStage"><button id="aCropLock" class="mobile-crop-lock" type="button" aria-label="قفل کردن PDF و فعال کردن کراپ" aria-pressed="false"></button><canvas id="aCanvas"></canvas><div class="pdf-empty">PDF پاسخ را انتخاب کن.</div></div>
+        <div class="pdf-stage-shell"><button id="aCropLock" class="mobile-crop-lock" type="button" aria-label="قفل کردن PDF و فعال کردن کراپ" aria-pressed="false"></button><div class="pdf-stage" id="aStage"><canvas id="aCanvas"></canvas><div class="pdf-empty">PDF پاسخ را انتخاب کن.</div></div></div>
       </div>
     </div>
 

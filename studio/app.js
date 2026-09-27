@@ -4,8 +4,7 @@ import {
 } from "./store.js";
 import {putPreview} from "./preview-db.js";
 import {PdfCropper,validRegion} from "./pdf-crop.js";
-import {installAdaptiveDensity,installDensityToggle,isTypingTarget,toast} from "./ui-runtime.js";
-import {installFocusMode} from "./appearance.js";
+import {isTypingTarget,toast} from "./ui-runtime.js";
 import "./operator-auth.js";
 import {installWindowsMetadataShortcuts} from "./windows-shortcuts.js";
 import {mountBiologyCombinationEditor,biologyIssues} from "./biology-combination.js";
@@ -292,6 +291,7 @@ function restore(){
   if(sticky.subject)$("subject").value=sticky.subject;
   if(sticky.grade)$("grade").value=sticky.grade;
   renderTaxonomy({chapter:sticky.chapter||"",unit:sticky.unit||""});
+  biologyEditor.refresh();
   const last=activeRecords().at(-1);$("sourceNumber").value=String((Number(last?.source_question_number)||0)+1||1);
 }
 $("subject").addEventListener("change",()=>{renderTaxonomy();persistSticky();renderGate()});
@@ -337,9 +337,6 @@ $("questionForm").addEventListener("submit",async e=>{
   }
 });
 
-installAdaptiveDensity();
-installFocusMode($("focusToggle"));
-installDensityToggle($("densityToggle"));
 installWindowsMetadataShortcuts({
   enabled:()=>matchMedia("(pointer:fine)").matches&&innerWidth>=900&&!hotkeysDialog.open,
   setCorrectOption:n=>setSegmented("correctOption",n),

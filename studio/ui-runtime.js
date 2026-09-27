@@ -1,29 +1,3 @@
-export function installAdaptiveDensity(){
-  const root=document.documentElement;
-  const coarse=matchMedia("(pointer:coarse)");
-  const apply=()=>{
-    const width=innerWidth;
-    const preference=localStorage.getItem("testbank-ui-density-v1");
-    root.dataset.density=width<760?"touch":preference|| (width>=1180&&!coarse.matches?"dense":"balanced");
-    root.dataset.pointer=coarse.matches?"coarse":"fine";
-  };
-  apply(); addEventListener("resize",apply,{passive:true}); coarse.addEventListener?.("change",apply);
-}
-export function installDensityToggle(button){
-  if(!button)return;
-  const sync=()=>{
-    const compact=document.documentElement.dataset.density==="dense";
-    button.textContent=compact?"نمایش راحت":"نمایش فشرده";
-    button.setAttribute("aria-pressed",String(compact));
-  };
-  button.addEventListener("click",()=>{
-    if(innerWidth<760)return;
-    const next=document.documentElement.dataset.density==="dense"?"comfortable":"dense";
-    localStorage.setItem("testbank-ui-density-v1",next);
-    document.documentElement.dataset.density=next;sync();
-  });
-  addEventListener("resize",sync,{passive:true});sync();
-}
 export function isTypingTarget(target){
   return Boolean(target?.closest?.("input,textarea,select,[contenteditable='true']"));
 }
