@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PDF Crop QA</title>
+<style>
+html,body{margin:0;padding:0}
+#stage{position:relative;width:360px;height:300px;overflow:auto;direction:ltr}
+#canvas{display:block;direction:ltr}
+#box{position:absolute}
+</style></head>
+<body>
+<div id="stage"><canvas id="canvas"></canvas></div>
+<span id="page"></span>
+<button id="prev" type="button">prev</button><button id="next" type="button">next</button><button id="mode" type="button">mode</button>
+<script type="module">
+import {PdfCropper} from "../studio/pdf-crop.js";
+window.PdfCropper=PdfCropper;
+</script>
+</body></html>
