@@ -178,6 +178,12 @@ test.describe("Selection Studio",()=>{
     await page.locator("#operatorLoginForm").press("Enter");
     await expect(page.locator(".shortcut-card")).toHaveCount(0);
     await expect(page.locator("#hotkeysLauncher")).toHaveText("میانبرها");
+    if((page.viewportSize()?.width||0)<=600){
+      await expect(page.locator("#hotkeysLauncher")).toBeHidden();
+      await expectNoHorizontalOverflow(page);
+      return;
+    }
+    await expect(page.locator("#hotkeysLauncher")).toBeVisible();
     await page.locator("#hotkeysLauncher").click();
     await expect(page.locator("#hotkeysDialog")).toBeVisible();
     await expect(page.locator("#hotkeysDialog")).toContainText("Numpad 1–4");
