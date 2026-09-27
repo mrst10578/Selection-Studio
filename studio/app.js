@@ -276,21 +276,37 @@ $("provider").addEventListener("input",()=>{renderProviderWarning();renderGate()
 $("operator").addEventListener("input",renderGate);
 
 $("questionForm").addEventListener("submit",async e=>{
-  e.preventDefault(); const gate=gateState(); if(gate.missing.length){toast("سؤال ناقص است: "+gate.missing.join("، "),"error");return}
+  e.preventDefault();
+  if(submittingQuestion)return;
+  const gate=gateState();
+  if(gate.missing.length){toast("سؤال ناقص است: "+gate.missing.join("، "),"error");return}
+  submittingQuestion=true;
+  renderGate();
   const source=Number($("sourceNumber").value),id=buildQuestionId(exam.id,source);
-  const visualHash=await qCrop.visualHash();
-  const record={
-    id,exam_id:exam.id,source_question_number:source,subject:$("subject").value,grade:Number($("grade").value),
-    chapter:$("chapter").value,unit:$("unit").value,difficulty:$("difficulty").value,correct_option:Number($("correctOption").value),
-    question_regions:[structuredClone(qCrop.region)],answer_regions:[structuredClone(aCrop.region)],visual_hash:visualHash,
-    biology_combination:$("subject").value==="BIO"?biologyEditor.getValue():null,status:"draft",review_status:"pending",
-    entered_by:$("operator").value.trim(),created_at:new Date().toISOString()
-  };
-  records.push(record); saveRecords(records);
-  const [qBlob,aBlob]=await Promise.all([qCrop.cropBlob(),aCrop.cropBlob()]);
-  if(qBlob)await putPreview(id+":question",qBlob);if(aBlob)await putPreview(id+":answer",aBlob);
-  $("sourceNumber").value=String(source+1);qCrop.clearRegion();aCrop.clearRegion();setSegmented("difficulty","");setSegmented("correctOption","");biologyEditor.reset();switchPane("question");
-  renderRecent();renderGate();toast(`سؤال ${source} ثبت شد · ${activeRecords().length} سؤال در فهرست`,"ok");
+  try{
+    const [qCapture,aCapture]=await Promise.all([qCrop.captureCrop(),aCrop.captureCrop()]);
+    const visualHash=await qCrop.visualHash(qCapture.blob);
+    const record={
+      id,exam_id:exam.id,source_question_number:source,subject:$("subject").value,grade:Number($("grade").value),
+      chapter:$("chapter").value,unit:$("unit").value,difficulty:$("difficulty").value,correct_option:Number($("correctOption").value),
+      question_regions:[qCapture.region],answer_regions:[aCapture.region],visual_hash:visualHash,
+      biology_combination:$("subject").value==="BIO"?biologyEditor.getValue():null,status:"draft",review_status:"pending",
+      entered_by:$("operator").value.trim(),created_at:new Date().toISOString()
+    };
+    await Promise.all([putPreview(id+":question",qCapture.blob),putPreview(id+":answer",aCapture.blob)]);
+    records.push(record);
+    saveRecords(records);
+    $("sourceNumber").value=String(source+1);
+    qCrop.clearRegion();aCrop.clearRegion();setSegmented("difficulty","");setSegmented("correctOption","");biologyEditor.reset();switchPane("question");
+    renderRecent();
+    toast(`سؤال ${source} ثبت شد · ${activeRecords().length} سؤال در فهرست`,"ok");
+  }catch(error){
+    const message=String(error?.message||"");
+    toast(message.startsWith("PDF_CROP_")?"برش PDF هنوز آماده نیست؛ بعد از کامل‌شدن نمایش دوباره ثبت کن.":"ثبت سؤال کامل نشد؛ هیچ رکورد ناقصی ذخیره نشد.","error");
+  }finally{
+    submittingQuestion=false;
+    renderGate();
+  }
 });
 
 installAdaptiveDensity();
