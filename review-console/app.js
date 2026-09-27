@@ -2,7 +2,7 @@ import {ReviewModel,questionIssues,reviewStatusLabel} from './model.js';
 import {createLocalReviewApi} from './api.js';
 import {difficultyLabel,subjectLabel,gradeLabel} from '../studio/store.js';
 import {mountBiologyCombinationEditor} from '../studio/biology-combination.js';
-import {installAdaptiveDensity,installDensityToggle,isTypingTarget,createCommandPalette,toast} from '../studio/ui-runtime.js';
+import {isTypingTarget,createCommandPalette,toast} from '../studio/ui-runtime.js';
 import {installWindowsMetadataShortcuts} from '../studio/windows-shortcuts.js';
 import {TAXONOMY,taxonomySummary,filterTaxonomyEntries} from '../studio/taxonomy-data.js';
 
@@ -280,7 +280,5 @@ const palette=createCommandPalette({dialog:$('#commandPalette'),input:$('#comman
 },onQuery:q=>{const m=q.match(/(?:سوال|q|question)?\s*(\d{1,4})/i);if(!m||!model.batch)return[];const n=Number(m[1]),i=model.batch.questions.findIndex(x=>Number(x.source_question_number)===n&&!x.trashed_at);return i<0?[]:[{label:`باز کردن سؤال ${n}`,run:()=>openQuick(i)}]}});
 $('#commandLauncher').onclick=()=>palette.open();
 
-installAdaptiveDensity();
-installDensityToggle($('#densityToggle'));
 if(adminUser())showAdmin();
 else requestAnimationFrame(()=>$('#adminUsername').focus());
