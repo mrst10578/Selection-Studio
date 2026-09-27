@@ -92,7 +92,7 @@ export class PdfCropper{
     this.onError(error);
   }
 
-  isMobile(){return window.innerWidth<=700}
+  isMobile(){return window.matchMedia("(pointer:coarse)").matches||window.innerWidth<=700}
   canCrop(){return !this.isMobile()||this.mobileCropMode}
 
   isRenderReady(){
