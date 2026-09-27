@@ -1,9 +1,9 @@
 <!doctype html>
 <html lang="fa" dir="rtl">
-<head><meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /><meta name="theme-color" content="#F4F3F0" /><title>Selection Studio | مدیریت</title><script>(()=>{const t=localStorage.getItem("testbank-ui-theme-v1");document.documentElement.dataset.theme=t==="dark"?"dark":"light"})()</script><link rel="stylesheet" href="../studio/design-system.css" /><link rel="stylesheet" href="./console.css" /></head>
+<head><meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /><meta name="theme-color" content="#F4F3F0" /><title>Selection Studio | مدیریت</title><script>(()=>{localStorage.removeItem("testbank-ui-theme-v1");document.documentElement.dataset.theme="light"})()</script><link rel="stylesheet" href="../studio/design-system.css" /><link rel="stylesheet" href="./console.css" /></head>
 <body>
 <section id="loginView" class="login-view">
-  <form id="adminLoginForm" class="login-card" autocomplete="off"><div class="login-card-head"><div><span class="eyebrow">پنل مدیریت</span><h1>مدیریت بانک تست</h1></div><button id="adminLoginThemeToggle" class="theme-toggle" type="button" aria-pressed="false">تم تیره</button></div>
+  <form id="adminLoginForm" class="login-card" autocomplete="off"><div class="login-card-head"><div><span class="eyebrow">پنل مدیریت</span><h1>مدیریت بانک تست</h1></div></div>
     <label>نام کاربری<input id="adminUsername" autocomplete="username" autocapitalize="none" spellcheck="false" /></label>
     <label>رمز عبور<input id="adminPassword" type="password" autocomplete="current-password" /></label>
     <p id="adminLoginError" class="login-error" role="alert" aria-live="polite"></p>
@@ -12,7 +12,7 @@
 </section>
 
 <div id="appView" class="hidden">
-<header class="review-header"><div><span class="eyebrow">بانک تست</span><h1>پنل مدیریت</h1></div><div class="header-actions"><span id="autosaveState" class="status-pill" title="داده‌های این پنل در حافظهٔ همین مرورگر ذخیره می‌شوند.">ذخیره در این مرورگر</span><button id="themeToggle" class="theme-toggle" type="button" aria-pressed="false">تم تیره</button><button id="densityToggle" class="density-toggle" type="button" aria-pressed="true">نمایش راحت</button><button id="commandLauncher" type="button">فرمان‌ها <kbd>Ctrl K</kbd></button><button id="refreshBtn" type="button">بروزرسانی</button><button id="logoutBtn" type="button">خروج</button></div></header>
+<header class="review-header"><div><span class="eyebrow">بانک تست</span><h1>پنل مدیریت</h1></div><div class="header-actions"><span id="autosaveState" class="status-pill" title="داده‌های این پنل در حافظهٔ همین مرورگر ذخیره می‌شوند.">ذخیره در این مرورگر</span><button id="densityToggle" class="density-toggle" type="button" aria-pressed="true">نمایش راحت</button><button id="commandLauncher" type="button">فرمان‌ها <kbd>Ctrl K</kbd></button><button id="refreshBtn" type="button">بروزرسانی</button><button id="logoutBtn" type="button">خروج</button></div></header>
 <main class="review-layout">
   <aside class="review-sidebar admin-browser" aria-label="انتخاب درس و گزینشگر">
     <div class="admin-step"><span class="eyebrow">مرحله ۱</span><strong>انتخاب درس</strong></div>
@@ -57,7 +57,7 @@
       <div id="quickIssues" class="quick-issues" aria-live="polite"></div><section id="reviewHistory" class="review-history" aria-label="سابقه بازبینی"></section>
       <div class="shortcut-legend"><span><kbd>Numpad 1–4</kbd> کلید</span><span><kbd>F1–F5</kbd> Level</span><span><kbd>Ctrl+عدد</kbd> فصل</span><span><kbd>Alt+عدد</kbd> گفتار/مبحث</span><span><kbd>Shift+1/2/3</kbd> پایه (غیرریاضی)</span><span><kbd>A/F/R</kbd> تصمیم</span></div>
     </aside>
-    <section id="correctionSheet" class="correction hidden"><strong>چه چیزی باید اصلاح شود؟</strong><div class="reason-grid"><button data-reason="question_crop">برش سؤال</button><button data-reason="answer_crop">برش پاسخ</button><button data-reason="taxonomy">طبقه‌بندی</button><button data-reason="answer_key">کلید</button><button data-reason="biology_combination">ترکیب زیست</button><button data-reason="other">سایر</button></div><textarea id="correctionNote" placeholder="یادداشت اختیاری"></textarea><div><button id="cancelCorrection">انصراف</button><button id="confirmCorrection" class="primary">ثبت اصلاح و بعدی</button></div></section>
+    <section id="correctionSheet" class="correction hidden"><strong>چه چیزی باید اصلاح شود؟</strong><div class="reason-grid"><button data-reason="question_crop">برش سؤال</button><button data-reason="answer_crop">برش پاسخ</button><button data-reason="taxonomy">طبقه‌بندی</button><button data-reason="answer_key">کلید</button><button id="biologyCorrectionReason" data-reason="biology_combination">ترکیب زیست</button><button data-reason="other">سایر</button></div><textarea id="correctionNote" placeholder="یادداشت اختیاری"></textarea><div><button id="cancelCorrection">انصراف</button><button id="confirmCorrection" class="primary">ثبت اصلاح و بعدی</button></div></section>
     <div class="quick-actions"><button id="prevBtn" aria-label="سؤال قبلی در صف">قبلی</button><button id="approveBtn" class="approve">✓ تایید</button><button id="needsBtn" class="needs">↩ اصلاح</button><button id="rejectBtn" class="reject">× رد</button><button id="nextBtn" aria-label="سؤال بعدی در صف">بعدی</button></div>
   </div>
 </dialog>
