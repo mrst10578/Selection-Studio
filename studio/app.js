@@ -89,6 +89,8 @@ function setDateParts(value){
   $("examYear").value=FIXED_EXAM_YEAR;
   $("examMonth").value=d.length>=6?d.slice(4,6):"";
   $("examDay").value=d.length>=8?d.slice(6,8):"";
+  $("examMonth").dataset.lastAccepted=$("examMonth").value;
+  $("examDay").dataset.lastAccepted=$("examDay").value;
   syncExamDate();
 }
 function focusExamMonth(){
