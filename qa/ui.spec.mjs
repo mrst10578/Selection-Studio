@@ -147,6 +147,23 @@ test.describe("Selection Studio",()=>{
     expect(themeBox.x+themeBox.width).toBeLessThanOrEqual(390);
     await expectNoHorizontalOverflow(page);
   });
+  test("360px mobile workbench keeps header and crop controls reachable",async({page},testInfo)=>{
+    test.skip(testInfo.project.name!=="mobile-chromium","Explicit narrow-width mobile check.");
+    await page.setViewportSize({width:360,height:800});
+    await page.goto("/studio/");
+    await waitForStudioBoot(page);
+    await page.locator("#operatorUsername").fill("admin");
+    await page.locator("#operatorPassword").fill("admin");
+    await page.locator("#operatorLoginForm").press("Enter");
+    await expect(page.locator("#operatorLogin")).toBeHidden({timeout:2500});
+    await expect(page.locator("#qCropLock")).toBeVisible();
+    const themeBox=await page.locator("#themeToggle").boundingBox();
+    expect(themeBox).not.toBeNull();
+    expect(themeBox.x).toBeGreaterThanOrEqual(0);
+    expect(themeBox.x+themeBox.width).toBeLessThanOrEqual(360);
+    await expectNoHorizontalOverflow(page);
+  });
+
   test("Windows Hotkeys panel replaces inline shortcut guide",async({page})=>{
     await page.goto("/studio/");
     await waitForStudioBoot(page);
