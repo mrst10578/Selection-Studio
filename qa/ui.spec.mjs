@@ -61,14 +61,14 @@ test.describe("Selection Studio",()=>{
     await expectNoSeriousA11y(page);
     await expectNoHorizontalOverflow(page);
   });
-  test("light theme is fixed while focus mode still persists",async({page})=>{
+  test("dark theme is fixed while focus mode still persists",async({page})=>{
     await page.addInitScript(()=>{
       sessionStorage.setItem("selection-studio-operator-auth-v1","admin");
-      localStorage.setItem("testbank-ui-theme-v1","dark");
+      localStorage.setItem("testbank-ui-theme-v1","light");
     });
     await page.goto("/studio/");
     await expect(page.locator("#bootSplash")).toBeHidden({timeout:1800});
-    await expect(page.locator("html")).toHaveAttribute("data-theme","light");
+    await expect(page.locator("html")).toHaveAttribute("data-theme","dark");
     await expect(page.locator(".theme-toggle")).toHaveCount(0);
     expect(await page.evaluate(()=>localStorage.getItem("testbank-ui-theme-v1"))).toBeNull();
 
@@ -79,11 +79,11 @@ test.describe("Selection Studio",()=>{
     await expect(page.locator("#saveQuestion")).toBeVisible();
 
     await page.reload();
-    await expect(page.locator("html")).toHaveAttribute("data-theme","light");
+    await expect(page.locator("html")).toHaveAttribute("data-theme","dark");
     await expect(page.locator("html")).toHaveAttribute("data-focus-mode","true");
     await expect(page.locator(".theme-toggle")).toHaveCount(0);
   });
-  test("control boundaries and text keep required contrast in the fixed light theme",async({page})=>{
+  test("control boundaries and text keep required contrast in the fixed dark theme",async({page})=>{
     await page.addInitScript(()=>sessionStorage.setItem("selection-studio-operator-auth-v1","admin"));
     await page.goto("/studio/");
     await expect(page.locator("#bootSplash")).toBeHidden({timeout:1800});
