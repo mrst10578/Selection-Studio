@@ -8,7 +8,7 @@ import {isTypingTarget,toast} from "./ui-runtime.js";
 import "./operator-auth.js";
 import {installWindowsMetadataShortcuts} from "./windows-shortcuts.js";
 import {mountBiologyCombinationEditor,biologyIssues} from "./biology-combination.js";
-import {TAXONOMY,taxonomySummary,filterTaxonomyEntries} from "./taxonomy-data.js";
+import {TAXONOMY,taxonomySummary} from "./taxonomy-data.js";
 
 const $=id=>document.getElementById(id);
 let records=loadRecords();
@@ -207,7 +207,7 @@ function syncMathGradeFromUnit(){
 function renderUnits(selected=""){
   const cfg=subjectCfg(),chapter=$("chapter").value;
   const units=isMath()?cfg.topics?.[chapter]?.units:cfg.grades?.[$("grade").value]?.chapters?.[chapter]?.units;
-  const items=filterTaxonomyEntries(Object.entries(units||{}).sort((a,b)=>Number(a[0])-Number(b[0])),$("taxonomySearch").value,$("unit").value).map(([id,item])=>[
+  const items=Object.entries(units||{}).sort((a,b)=>Number(a[0])-Number(b[0])).map(([id,item])=>[
     id,
     isMath()?(item.label_fa||`${item.name_fa} (${gradeLabel(item.grade)})`):`${Number(id)} — ${item.name_fa}`
   ]);
@@ -220,7 +220,7 @@ function renderTaxonomy({chapter="",unit=""}={}){
   $("subjectGradeRow").classList.toggle("single",math);
   updateUnitLabel();
   const chapters=math?cfg.topics:cfg.grades?.[$("grade").value]?.chapters;
-  fillSelect($("chapter"),filterTaxonomyEntries(Object.entries(chapters||{}).sort((a,b)=>Number(a[0])-Number(b[0])),$("taxonomySearch").value,chapter).map(([id,item])=>[id,`${Number(id)} — ${item.name_fa}`]),chapter);
+  fillSelect($("chapter"),Object.entries(chapters||{}).sort((a,b)=>Number(a[0])-Number(b[0])).map(([id,item])=>[id,`${Number(id)} — ${item.name_fa}`]),chapter);
   renderUnits(unit);
 }
 const biologyEditor=mountBiologyCombinationEditor({
@@ -295,7 +295,6 @@ function restore(){
   const last=activeRecords().at(-1);$("sourceNumber").value=String((Number(last?.source_question_number)||0)+1||1);
 }
 $("subject").addEventListener("change",()=>{renderTaxonomy();persistSticky();renderGate()});
-$("taxonomySearch").addEventListener("input",()=>renderTaxonomy({chapter:$("chapter").value,unit:$("unit").value}));
 $("grade").addEventListener("change",()=>{if(!isMath())renderTaxonomy();persistSticky();renderGate()});
 $("chapter").addEventListener("change",()=>{renderUnits();persistSticky();renderGate()});
 $("unit").addEventListener("change",()=>{syncMathGradeFromUnit();persistSticky();renderGate()});
