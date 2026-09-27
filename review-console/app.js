@@ -3,7 +3,6 @@ import {createLocalReviewApi} from './api.js';
 import {difficultyLabel,subjectLabel,gradeLabel} from '../studio/store.js';
 import {mountBiologyCombinationEditor} from '../studio/biology-combination.js';
 import {installAdaptiveDensity,installDensityToggle,isTypingTarget,createCommandPalette,toast} from '../studio/ui-runtime.js';
-import {installThemeToggle} from '../studio/appearance.js';
 import {installWindowsMetadataShortcuts} from '../studio/windows-shortcuts.js';
 import {TAXONOMY,taxonomySummary,filterTaxonomyEntries} from '../studio/taxonomy-data.js';
 
@@ -186,7 +185,12 @@ function setQuickChoice(target,value){
   $('#'+target).value=value?String(value):'';document.querySelectorAll(`[data-target="${target}"] button`).forEach(b=>b.classList.toggle('active',b.dataset.value===String(value||'')));syncQuickMeta();
 }
 document.querySelectorAll('[data-target] button').forEach(b=>b.onclick=()=>setQuickChoice(b.closest('[data-target]').dataset.target,b.dataset.value));
-$('#quickSubject').addEventListener('change',()=>{renderQuickTaxonomy();syncQuickMeta()});
+function syncBiologyOnlyReviewUi(){
+  const bio=$('#quickSubject').value==='BIO',reason=$('#biologyCorrectionReason');
+  if(reason){reason.hidden=!bio;reason.classList.toggle('hidden',!bio)}
+  if(!bio&&currentReason==='biology_combination'){currentReason='';reason?.classList.remove('active')}
+}
+$('#quickSubject').addEventListener('change',()=>{renderQuickTaxonomy();syncBiologyOnlyReviewUi();syncQuickMeta()});
 $('#quickGrade').addEventListener('change',()=>{if(!quickIsMath())renderQuickTaxonomy();syncQuickMeta()});
 $('#quickChapter').addEventListener('change',()=>{renderQuickUnits();syncQuickMeta()});
 $('#quickTaxonomySearch').addEventListener('input',()=>renderQuickTaxonomy({chapter:$('#quickChapter').value,unit:$('#quickUnit').value}));
@@ -204,7 +208,7 @@ function openQuick(index){
   $('#quickId').textContent=q.id;$('#quickPosition').textContent='سؤال '+q.source_question_number+' · '+(position>=0?position+1:index+1)+'/'+(visible.length||model.batch.questions.length)+' در صف';
   $('#quickViewers').dataset.activeView='question';document.querySelectorAll('[data-review-view]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.reviewView==='question')));
   $('#quickSubject').value=q.subject;$('#quickGrade').value=String(q.grade);renderQuickTaxonomy({chapter:q.chapter||'',unit:q.unit||''});
-  setQuickChoice('quickDifficulty',q.difficulty||'');setQuickChoice('quickOption',q.correct_option||'');quickBio.setValue(q.subject==='BIO'?q.biology_combination:null,false);
+  setQuickChoice('quickDifficulty',q.difficulty||'');setQuickChoice('quickOption',q.correct_option||'');quickBio.setValue(q.subject==='BIO'?q.biology_combination:null,false);syncBiologyOnlyReviewUi();
   loadSource($('#quickQuestionImage'),'question');loadSource($('#quickAnswerImage'),'answer');resetCorrection();renderQuickIssues();renderReviewHistory(q);$('#quickDialog').showModal();
 }
 function syncQuickMeta(){
@@ -277,8 +281,6 @@ const palette=createCommandPalette({dialog:$('#commandPalette'),input:$('#comman
 $('#commandLauncher').onclick=()=>palette.open();
 
 installAdaptiveDensity();
-installThemeToggle($('#adminLoginThemeToggle'));
-installThemeToggle($('#themeToggle'));
 installDensityToggle($('#densityToggle'));
 if(adminUser())showAdmin();
 else requestAnimationFrame(()=>$('#adminUsername').focus());
