@@ -158,6 +158,37 @@ test.describe("PdfCropper concurrency and crop integrity",()=>{
     expect(result.afterHash).toBe(result.beforeHash);
   });
 
+  test("mobile rotation preserves browse anchor and crop while staying in mobile interaction mode",async({page},testInfo)=>{
+    test.skip(testInfo.project.name!=="mobile-chromium","Rotation contract is a mobile interaction test.");
+    await page.setViewportSize({width:390,height:844});
+    await openHarness(page);
+    const before=await page.evaluate(async()=>{
+      const {PdfCropper}=await import("/studio/pdf-crop.js");
+      document.body.insertAdjacentHTML("beforeend",'<div id="oStage" style="position:relative;width:calc(100vw - 40px);height:280px;overflow:auto;display:block"><canvas id="oCanvas"></canvas></div><span id="oPage"></span><button id="oPrev"></button><button id="oNext"></button><button id="oMode"></button>');
+      const pdf={numPages:1,async getPage(){return{getViewport:({scale})=>({width:500*scale,height:1600*scale}),render({canvasContext}){const promise=Promise.resolve().then(()=>{canvasContext.fillStyle="#fff";canvasContext.fillRect(0,0,canvasContext.canvas.width,canvasContext.canvas.height);canvasContext.fillStyle="#345";canvasContext.fillRect(0,0,canvasContext.canvas.width/2,canvasContext.canvas.height/2)});return{promise,cancel(){}}}}},async destroy(){}};
+      const loader=async()=>({base:"",lib:{getDocument(){return{promise:Promise.resolve(pdf),async destroy(){}}}}});
+      const crop=new PdfCropper({canvas:oCanvas,stage:oStage,pageLabel:oPage,prevBtn:oPrev,nextBtn:oNext,modeBtn:oMode,pdfLoader:loader});
+      crop.resizeObserver.disconnect();
+      await crop.loadFile({name:"rotate.pdf",arrayBuffer:async()=>new Uint8Array([1]).buffer});
+      crop.region={page:1,bbox_norm:[.15,.2,.55,.6]};crop.regionsByPage.set(1,structuredClone(crop.region));crop.paintRegion();
+      oStage.scrollTop=560;
+      window.__rotationCrop=crop;
+      window.__rotationStage=oStage;
+      return {anchor:crop.captureViewAnchor(),region:structuredClone(crop.region),mobile:crop.isMobile(),scrollTop:oStage.scrollTop};
+    });
+    await page.setViewportSize({width:844,height:390});
+    const after=await page.evaluate(async()=>{
+      await window.__rotationCrop.refresh();
+      return {anchor:window.__rotationCrop.captureViewAnchor(),region:structuredClone(window.__rotationCrop.region),mobile:window.__rotationCrop.isMobile(),scrollTop:window.__rotationStage.scrollTop,mode:window.__rotationStage.className};
+    });
+    expect(before.mobile).toBe(true);
+    expect(after.mobile).toBe(true);
+    expect(after.region).toEqual(before.region);
+    expect(Math.abs(after.anchor.y-before.anchor.y)).toBeLessThan(.025);
+    expect(after.scrollTop).toBeGreaterThan(100);
+    expect(after.mode).toContain("mobile-browse-mode");
+  });
+
   test("short tap, short drag and pointer cancel do not erase a valid crop",async({page})=>{
     await openHarness(page);
     const result=await page.evaluate(async()=>{
