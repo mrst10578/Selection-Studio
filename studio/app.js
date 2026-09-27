@@ -107,8 +107,16 @@ function humanDate(value){
 }
 function dispatchChange(el){el.dispatchEvent(new Event("change",{bubbles:true}))}
 
+function sessionMatchesForm(){
+  return Boolean(
+    exam?.id&&exam.id===examId()&&
+    exam.entered_by=== $("operator").value.trim()&&
+    exam.question_pdf_name===qCrop.file?.name&&
+    exam.answer_pdf_name===aCrop.file?.name
+  );
+}
 function renderSession(){
-  const ready=Boolean(exam?.id&&qCrop.isRenderReady()&&aCrop.isRenderReady());
+  const ready=Boolean(sessionMatchesForm()&&qCrop.isRenderReady()&&aCrop.isRenderReady());
   $("sessionCard").classList.toggle("ready",ready);
   $("sessionCard").classList.toggle("collapsed",ready);
   $("toggleSession").textContent=ready?"ویرایش آزمون":"تنظیم آزمون";
@@ -210,7 +218,7 @@ function gateState(){
   const id=examId()&&Number.isInteger(source)&&source>0?buildQuestionId(examId(),source):null;
   const unique=Boolean(id&&!activeRecords().some(x=>x.id===id));
   const checks={
-    exam:Boolean(exam?.id&&qCrop.isRenderReady()&&aCrop.isRenderReady()&&$("operator").value.trim()),
+    exam:Boolean(sessionMatchesForm()&&qCrop.isRenderReady()&&aCrop.isRenderReady()),
     number:Boolean(Number.isInteger(source)&&source>0&&unique),
     question:qCrop.isRegionReady(),
     answer:aCrop.isRegionReady(),
