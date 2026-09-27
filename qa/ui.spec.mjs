@@ -61,7 +61,7 @@ test.describe("Selection Studio",()=>{
     await expectNoSeriousA11y(page);
     await expectNoHorizontalOverflow(page);
   });
-  test("dark theme is fixed while focus mode still persists",async({page})=>{
+  test("dark theme is fixed and display-mode controls are removed",async({page})=>{
     await page.addInitScript(()=>{
       sessionStorage.setItem("selection-studio-operator-auth-v1","admin");
       localStorage.setItem("testbank-ui-theme-v1","light");
@@ -70,18 +70,14 @@ test.describe("Selection Studio",()=>{
     await expect(page.locator("#bootSplash")).toBeHidden({timeout:1800});
     await expect(page.locator("html")).toHaveAttribute("data-theme","dark");
     await expect(page.locator(".theme-toggle")).toHaveCount(0);
+    await expect(page.locator("#focusToggle")).toHaveCount(0);
+    await expect(page.locator("#densityToggle")).toHaveCount(0);
     expect(await page.evaluate(()=>localStorage.getItem("testbank-ui-theme-v1"))).toBeNull();
-
-    await page.locator("#focusToggle").click();
-    await expect(page.locator("html")).toHaveAttribute("data-focus-mode","true");
-    await expect(page.locator(".recent")).toBeHidden();
-    await expect(page.locator("#sessionEditor")).toBeVisible();
-    await expect(page.locator("#saveQuestion")).toBeVisible();
 
     await page.reload();
     await expect(page.locator("html")).toHaveAttribute("data-theme","dark");
-    await expect(page.locator("html")).toHaveAttribute("data-focus-mode","true");
-    await expect(page.locator(".theme-toggle")).toHaveCount(0);
+    await expect(page.locator("#focusToggle")).toHaveCount(0);
+    await expect(page.locator("#densityToggle")).toHaveCount(0);
   });
   test("control boundaries and text keep required contrast in the fixed dark theme",async({page})=>{
     await page.addInitScript(()=>sessionStorage.setItem("selection-studio-operator-auth-v1","admin"));
@@ -141,7 +137,12 @@ test.describe("Selection Studio",()=>{
     await page.locator("#operatorLoginForm").press("Enter");
     await expect(page.locator("#qCropLock")).toBeVisible();
     await expect(page.locator("#qCropLock")).toHaveAttribute("aria-pressed","false");
+    await expect(page.locator("#qCropLock svg")).toHaveCount(1);
     await expect(page.locator("#qStage")).toHaveClass(/mobile-browse-mode/);
+    const lockBox=await page.locator("#qCropLock").boundingBox(),stageBox=await page.locator("#qStage").boundingBox();
+    expect(lockBox).not.toBeNull();expect(stageBox).not.toBeNull();
+    expect(Math.abs(lockBox.x-(stageBox.x+10))).toBeLessThanOrEqual(2);
+    expect(Math.abs(lockBox.y-(stageBox.y+10))).toBeLessThanOrEqual(2);
     await expect(page.locator("#hotkeysLauncher")).toBeHidden();
     const nativeFileStyle=await page.locator("#questionPdf").evaluate(el=>({opacity:getComputedStyle(el).opacity,position:getComputedStyle(el).position}));
     expect(nativeFileStyle.opacity).toBe("0");
@@ -163,13 +164,21 @@ test.describe("Selection Studio",()=>{
     await expectNoHorizontalOverflow(page);
   });
 
-  test("biology UX only appears for biology questions",async({page})=>{
-    await page.addInitScript(()=>{sessionStorage.setItem("selection-studio-operator-auth-v1","admin");localStorage.removeItem("testbank-studio.sticky.v1")});
+  test("biology UX never leaks into restored non-biology subjects",async({page})=>{
+    await page.addInitScript(()=>{
+      sessionStorage.setItem("selection-studio-operator-auth-v1","admin");
+      localStorage.setItem("testbank-studio.sticky.v1",JSON.stringify({subject:"MATH",grade:"10",chapter:"",unit:""}));
+    });
     await page.goto("/studio/");
     await expect(page.locator("#bootSplash")).toBeHidden({timeout:1800});
-    await page.locator("#subject").selectOption("CHEM");
+    await expect(page.locator("#subject")).toHaveValue("MATH");
     await expect(page.locator("#bioCombinationPanel")).toBeHidden();
     await expect(page.locator("#bioReadinessCheck")).toBeHidden();
+    for(const subject of ["PHY","CHEM"]){
+      await page.locator("#subject").selectOption(subject);
+      await expect(page.locator("#bioCombinationPanel")).toBeHidden();
+      await expect(page.locator("#bioReadinessCheck")).toBeHidden();
+    }
     await page.locator("#subject").selectOption("BIO");
     await expect(page.locator("#bioCombinationPanel")).toBeVisible();
     await expect(page.locator("#bioReadinessCheck")).toBeVisible();
@@ -211,11 +220,7 @@ test.describe("Selection Studio",()=>{
     await expect(page.locator("#exportQuestions")).toBeVisible();
     await expect(page.locator("#exportExam")).toBeVisible();
     await expect(page.locator("#submitBatch")).toBeDisabled();
-    if((page.viewportSize()?.width||0)>=760){
-      await page.locator("#densityToggle").click();
-      await expect(page.locator("html")).toHaveAttribute("data-density","comfortable");
-      await expect(page.locator("#densityToggle")).toHaveText("نمایش فشرده");
-    }
+    await expect(page.locator("#densityToggle")).toHaveCount(0);
     await expectNoSeriousA11y(page);
     await expectNoHorizontalOverflow(page);
   });
