@@ -277,6 +277,7 @@ export class PdfCropper{
       this.viewByPage.clear();
       this.drag=null;
       this.mobileCropMode=false;
+      this.regionLocked=false;
       this.loading=false;
       this.rendering=false;
       this.readyFrame=null;
@@ -284,6 +285,7 @@ export class PdfCropper{
       try{if(previous&&previous!==candidate)await previous.destroy?.()}catch{}
       this.loadingTask=null;
       this.syncInteractionMode();
+      this.onRegionLockChange(false);
       this.onChange();
       return {status:"ready",file:this.file};
     }catch(error){
