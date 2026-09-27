@@ -8,6 +8,7 @@
   --text-muted:#59626E;
   --line:#D4D8DC;
   --line-strong:#828D99;
+  --control-border:#78838F;
   --accent:#2F5F8F;
   --accent-hover:#244F78;
   --accent-contrast:#FFFFFF;
@@ -39,6 +40,7 @@
   --text-muted:#ABB4BF;
   --line:#414B57;
   --line-strong:#7B8896;
+  --control-border:#8996A4;
   --accent:#92B8D9;
   --accent-hover:#A9CAE6;
   --accent-contrast:#17212A;
@@ -76,7 +78,7 @@ button,input,select,textarea{font:inherit}
 button,a,input,select,textarea{outline:none}
 button,.button-link{
   min-height:var(--control-h);
-  border:1px solid var(--line);
+  border:1px solid var(--control-border);
   border-radius:var(--radius-sm);
   background:var(--surface);
   color:var(--text);
@@ -104,7 +106,7 @@ a{color:var(--accent);text-underline-offset:3px}
 input,select,textarea{
   width:100%;
   min-height:var(--control-h);
-  border:1px solid var(--line-strong);
+  border:1px solid var(--control-border);
   border-radius:var(--radius-sm);
   background:var(--surface-raised);
   color:var(--text);
