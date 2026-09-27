@@ -136,8 +136,17 @@ $("saveSession").onclick=async()=>{
 };
 function updatePdfState(crop,stateId){
   const host=$(stateId);
-  if(crop.loading){host.textContent="در حال بازکردن فایل تازه...";return}
-  if(crop.rendering){host.textContent="در حال آماده‌سازی صفحه...";return}
+  if(crop.loading){
+    host.dataset.state="busy";
+    host.textContent="در حال بازکردن فایل تازه...";
+    return;
+  }
+  if(crop.rendering){
+    host.dataset.state="busy";
+    host.textContent="در حال آماده‌سازی صفحه...";
+    return;
+  }
+  host.dataset.state=crop.file?.name?"active":"empty";
   host.textContent=crop.file?.name?"سند فعال: "+crop.file.name:"فایلی فعال نیست.";
 }
 async function loadPdfInput(input,crop,label,stateId){
