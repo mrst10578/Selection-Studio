@@ -17,6 +17,16 @@ async function waitForStudioBoot(page){
   await expect(page.locator("#operatorLogin")).toBeVisible();
 }
 
+function contrastRatio(a,b){
+  const lum=value=>{
+    const hex=value.trim().replace("#","");
+    const rgb=[0,2,4].map(i=>parseInt(hex.slice(i,i+2),16)/255).map(v=>v<=.04045?v/12.92:Math.pow((v+.055)/1.055,2.4));
+    return .2126*rgb[0]+.7152*rgb[1]+.0722*rgb[2];
+  };
+  const x=lum(a),y=lum(b),hi=Math.max(x,y),lo=Math.min(x,y);
+  return (hi+.05)/(lo+.05);
+}
+
 test.describe("Selection Studio",()=>{
   test("operator workbench requires temporary operator login",async({page})=>{
     await page.goto("/studio/");
@@ -69,6 +79,39 @@ test.describe("Selection Studio",()=>{
     await expect(page.locator("html")).toHaveAttribute("data-theme","dark");
     await expect(page.locator("html")).toHaveAttribute("data-focus-mode","true");
   });
+  test("control boundaries and text keep required contrast in both themes",async({page})=>{
+    await page.addInitScript(()=>sessionStorage.setItem("selection-studio-operator-auth-v1","admin"));
+    await page.goto("/studio/");
+    await expect(page.locator("#bootSplash")).toBeHidden({timeout:1800});
+    for(const theme of ["light","dark"]){
+      const vars=await page.evaluate(()=>{const c=getComputedStyle(document.documentElement);return{
+        border:c.getPropertyValue("--control-border").trim(),
+        subtle:c.getPropertyValue("--surface-subtle").trim(),
+        selection:c.getPropertyValue("--selection").trim(),
+        text:c.getPropertyValue("--text").trim(),
+        bg:c.getPropertyValue("--bg").trim(),
+        accent:c.getPropertyValue("--accent").trim()
+      }});
+      expect(contrastRatio(vars.border,vars.subtle)).toBeGreaterThanOrEqual(3);
+      expect(contrastRatio(vars.border,vars.selection)).toBeGreaterThanOrEqual(3);
+      expect(contrastRatio(vars.text,vars.bg)).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(vars.accent,vars.selection)).toBeGreaterThanOrEqual(3);
+      if(theme==="light")await page.locator("#themeToggle").click();
+    }
+  });
+
+  test("legacy record ID page and bbox semantics remain unchanged",async({page})=>{
+    const legacy={id:"LEGACY-1404-Q007",exam_id:"LEGACY-1404",source_question_number:7,subject:"PHY",grade:11,chapter:"03",unit:"02",difficulty:"level_4",correct_option:3,question_regions:[{page:3,bbox_norm:[.125,.2,.625,.72]}],answer_regions:[{page:9,bbox_norm:[.1,.1,.9,.9]}],entered_by:"legacy"};
+    await page.addInitScript(record=>{sessionStorage.setItem("selection-studio-operator-auth-v1","admin");localStorage.setItem("testbank-studio.records.v1",JSON.stringify([record]))},legacy);
+    await page.goto("/studio/selected.html");
+    const loaded=await page.evaluate(async()=>{const {loadRecords}=await import("/studio/store.js");return loadRecords()[0]});
+    expect(loaded.id).toBe(legacy.id);
+    expect(loaded.question_regions[0].page).toBe(3);
+    expect(loaded.question_regions[0].bbox_norm).toEqual(legacy.question_regions[0].bbox_norm);
+    expect(loaded.answer_regions[0].page).toBe(9);
+    expect(loaded.answer_regions[0].bbox_norm).toEqual(legacy.answer_regions[0].bbox_norm);
+  });
+
   test("exam date starts at month, keeps 1405 fixed, and jumps to day after two digits",async({page})=>{
     await page.goto("/studio/");
     await waitForStudioBoot(page);
@@ -104,6 +147,23 @@ test.describe("Selection Studio",()=>{
     expect(themeBox.x+themeBox.width).toBeLessThanOrEqual(390);
     await expectNoHorizontalOverflow(page);
   });
+  test("360px mobile workbench keeps header and crop controls reachable",async({page},testInfo)=>{
+    test.skip(testInfo.project.name!=="mobile-chromium","Explicit narrow-width mobile check.");
+    await page.setViewportSize({width:360,height:800});
+    await page.goto("/studio/");
+    await waitForStudioBoot(page);
+    await page.locator("#operatorUsername").fill("admin");
+    await page.locator("#operatorPassword").fill("admin");
+    await page.locator("#operatorLoginForm").press("Enter");
+    await expect(page.locator("#operatorLogin")).toBeHidden({timeout:2500});
+    await expect(page.locator("#qCropLock")).toBeVisible();
+    const themeBox=await page.locator("#themeToggle").boundingBox();
+    expect(themeBox).not.toBeNull();
+    expect(themeBox.x).toBeGreaterThanOrEqual(0);
+    expect(themeBox.x+themeBox.width).toBeLessThanOrEqual(360);
+    await expectNoHorizontalOverflow(page);
+  });
+
   test("Windows Hotkeys panel replaces inline shortcut guide",async({page})=>{
     await page.goto("/studio/");
     await waitForStudioBoot(page);

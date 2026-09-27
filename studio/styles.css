@@ -137,8 +137,9 @@ body{overflow-x:hidden}
   color:var(--text-muted);
   font-size:.82rem;
 }
-.pdf-stage{
+ .pdf-stage{
   position:relative;
+  direction:ltr;
   height:min(72vh,820px);
   min-height:560px;
   display:grid;
@@ -148,8 +149,9 @@ body{overflow-x:hidden}
   background:var(--document-bg);
   overscroll-behavior:contain;
 }
-.pdf-stage canvas{
+ .pdf-stage canvas{
   display:block;
+  direction:ltr;
   max-width:none;
   background:#fff;
   box-shadow:0 2px 18px rgba(24,29,34,.12);
@@ -164,6 +166,8 @@ body{overflow-x:hidden}
   pointer-events:none;
 }
 .pdf-stage.has-pdf .pdf-empty{display:none}
+.pdf-stage.is-loading{cursor:progress}
+.pdf-stage.is-loading::after{content:"در حال آماده‌سازی PDF…";position:sticky;top:10px;left:10px;z-index:9;display:block;width:max-content;max-width:calc(100% - 20px);margin:10px;padding:7px 9px;border:1px solid var(--control-border);border-radius:var(--radius-sm);background:var(--surface-raised);color:var(--text-muted);font-size:.78rem;box-shadow:var(--shadow)}
 .crop-box{
   position:absolute;
   z-index:4;

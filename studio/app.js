@@ -15,11 +15,20 @@ const $=id=>document.getElementById(id);
 let records=loadRecords();
 let exam=loadExamDraft();
 let activePane="question";
+let submittingQuestion=false;
 let biologyGate={ready:false,issues:["مشخص کن سؤال زیست ترکیبی هست یا نه"]};
 
 
-const qCrop=new PdfCropper({canvas:$("qCanvas"),stage:$("qStage"),pageLabel:$("qPage"),prevBtn:$("qPrev"),nextBtn:$("qNext"),modeBtn:$("qCropLock"),onChange:()=>renderGate(),onPageChange:(page,total)=>updatePageJump("qPageJump",page,total)});
-const aCrop=new PdfCropper({canvas:$("aCanvas"),stage:$("aStage"),pageLabel:$("aPage"),prevBtn:$("aPrev"),nextBtn:$("aNext"),modeBtn:$("aCropLock"),onChange:()=>renderGate(),onPageChange:(page,total)=>updatePageJump("aPageJump",page,total)});
+function pdfViewerError(error){
+  const name=error?.name||"";
+  if(name==="PasswordException")return "این PDF رمز دارد یا رمز آن پذیرفته نشد.";
+  if(name==="InvalidPDFException")return "فایل PDF معتبر نیست یا آسیب دیده است.";
+  if(name==="MissingPDFException")return "فایل PDF در دسترس نیست.";
+  return "بازکردن یا نمایش PDF ناموفق بود. فایل را دوباره انتخاب کن.";
+}
+const cropError=error=>toast(pdfViewerError(error),"error");
+const qCrop=new PdfCropper({canvas:$("qCanvas"),stage:$("qStage"),pageLabel:$("qPage"),prevBtn:$("qPrev"),nextBtn:$("qNext"),modeBtn:$("qCropLock"),onChange:()=>renderGate(),onPageChange:(page,total)=>updatePageJump("qPageJump",page,total),onError:cropError});
+const aCrop=new PdfCropper({canvas:$("aCanvas"),stage:$("aStage"),pageLabel:$("aPage"),prevBtn:$("aPrev"),nextBtn:$("aNext"),modeBtn:$("aCropLock"),onChange:()=>renderGate(),onPageChange:(page,total)=>updatePageJump("aPageJump",page,total),onError:cropError});
 function updatePageJump(id,page,total){const input=$(id);if(!input)return;input.value=page||"";input.max=total||"";input.disabled=!total}
 function installPageJump(id,crop){const input=$(id);input.addEventListener("change",()=>{const page=Number(input.value);if(Number.isInteger(page)&&page>=1&&page<=crop.pdf?.numPages)crop.go(page);else input.value=crop.page||""})}
 installPageJump("qPageJump",qCrop);installPageJump("aPageJump",aCrop);
@@ -70,7 +79,7 @@ function installDateField(){
   });
   month.addEventListener("input",()=>{
     month.value=normalizedDate(month.value).slice(0,2);
-    syncExamDate();renderGate();
+    syncExamDate();renderSession();
     if(month.value.length===2){
       day.focus();
       requestAnimationFrame(()=>day.select());
@@ -78,7 +87,7 @@ function installDateField(){
   });
   day.addEventListener("input",()=>{
     day.value=normalizedDate(day.value).slice(0,2);
-    syncExamDate();renderGate();
+    syncExamDate();renderSession();
   });
   day.addEventListener("keydown",e=>{
     if(e.key==="Backspace"&&!day.value){
@@ -98,8 +107,16 @@ function humanDate(value){
 }
 function dispatchChange(el){el.dispatchEvent(new Event("change",{bubbles:true}))}
 
+function sessionMatchesForm(){
+  return Boolean(
+    exam?.id&&exam.id===examId()&&
+    exam.entered_by=== $("operator").value.trim()&&
+    exam.question_pdf_name===qCrop.file?.name&&
+    exam.answer_pdf_name===aCrop.file?.name
+  );
+}
 function renderSession(){
-  const ready=Boolean(exam?.id&&qCrop.file&&aCrop.file);
+  const ready=Boolean(sessionMatchesForm()&&qCrop.isRenderReady()&&aCrop.isRenderReady());
   $("sessionCard").classList.toggle("ready",ready);
   $("sessionCard").classList.toggle("collapsed",ready);
   $("toggleSession").textContent=ready?"ویرایش آزمون":"تنظیم آزمون";
@@ -113,12 +130,26 @@ $("saveSession").onclick=async()=>{
   if(!validExamDateParts()){toast("ماه و روز آزمون را دو رقمی و معتبر وارد کن؛ مثل 03/07.","error");focusExamMonth();return}
   const id=examId();
   if(!id||!operator){toast("نام آزمون، تاریخ و اپراتور لازم است.","error");return}
-  if(!$("questionPdf").files[0]||!$("answerPdf").files[0]){toast("هر دو PDF را انتخاب کن.","error");return}
-  exam={id,provider,date:humanDate($("examDate").value),entered_by:operator,question_pdf_name:$("questionPdf").files[0].name,answer_pdf_name:$("answerPdf").files[0].name};
+  if(!qCrop.isRenderReady()||!aCrop.isRenderReady()){toast("هر دو PDF باید با موفقیت باز و آمادهٔ نمایش باشند.","error");return}
+  exam={id,provider,date:humanDate($("examDate").value),entered_by:operator,question_pdf_name:qCrop.file.name,answer_pdf_name:aCrop.file.name};
   saveExamDraft(exam); renderSession(); toast("آزمون آماده شد","ok");
 };
-$("questionPdf").onchange=async()=>{await qCrop.loadFile($("questionPdf").files[0]);renderSession()};
-$("answerPdf").onchange=async()=>{await aCrop.loadFile($("answerPdf").files[0]);renderSession()};
+async function loadPdfInput(input,crop,label){
+  const selected=input.files[0]||null;
+  try{
+    const result=await crop.loadFile(selected);
+    if(result?.status==="stale")return;
+    if(result?.status==="ready")toast(label+" آماده شد","ok");
+  }catch(error){
+    input.value="";
+    const kept=crop.file?.name?" سند فعال قبلی «"+crop.file.name+"» حفظ شد.":"";
+    toast(pdfViewerError(error)+kept,"error");
+  }finally{
+    renderSession();
+  }
+}
+$("questionPdf").onchange=()=>loadPdfInput($("questionPdf"),qCrop,"PDF سؤال");
+$("answerPdf").onchange=()=>loadPdfInput($("answerPdf"),aCrop,"PDF پاسخ");
 
 function switchPane(name){
   activePane=name;
@@ -187,10 +218,10 @@ function gateState(){
   const id=examId()&&Number.isInteger(source)&&source>0?buildQuestionId(examId(),source):null;
   const unique=Boolean(id&&!activeRecords().some(x=>x.id===id));
   const checks={
-    exam:Boolean(exam?.id&&qCrop.file&&aCrop.file&&$("operator").value.trim()),
+    exam:Boolean(sessionMatchesForm()&&qCrop.isRenderReady()&&aCrop.isRenderReady()),
     number:Boolean(Number.isInteger(source)&&source>0&&unique),
-    question:validRegion(qCrop.region),
-    answer:validRegion(aCrop.region),
+    question:qCrop.isRegionReady(),
+    answer:aCrop.isRegionReady(),
     taxonomy:Boolean($("chapter").value&&$("unit").value&&[10,11,12].includes(Number($("grade").value))),
     difficulty:["level_1","level_2","level_3","level_4","level_5"].includes($("difficulty").value),
     key:[1,2,3,4].includes(Number($("correctOption").value)),
@@ -208,12 +239,13 @@ function renderGate(){
   const {checks,missing}=gateState(),complete=Object.values(checks).filter(Boolean).length,s=stage(checks);
   document.querySelectorAll("[data-check]").forEach(el=>el.classList.toggle("done",Boolean(checks[el.dataset.check])));
   $("gateBadge").textContent=missing.length?`${complete}/8`:"آماده"; $("gateBadge").classList.toggle("ready",!missing.length);$("gateBadge").classList.toggle("blocked",!!missing.length);
-  $("saveQuestion").disabled=!!missing.length;
+  $("saveQuestion").disabled=!!missing.length||submittingQuestion;
   const msg={exam:"مرحلهٔ بعد: آزمون و دو فایل",question:"مرحلهٔ بعد: برش سؤال",answer:"مرحلهٔ بعد: برش پاسخ",meta:"مرحلهٔ بعد: تکمیل شناسنامه",ready:"آمادهٔ ثبت"}[s];
   $("nextAction").textContent=msg;
   const order=["exam","question","answer","meta","ready"],idx=order.indexOf(s);
   document.querySelectorAll("[data-step]").forEach(el=>{const i=order.indexOf(el.dataset.step);el.classList.toggle("done",i>=0&&i<idx);el.classList.toggle("active",i===idx)});
-  $("questionCropState").textContent=qCrop.region?"ثبت شد":"بدون Crop"; $("answerCropState").textContent=aCrop.region?"ثبت شد":"بدون Crop";
+  $("questionCropState").textContent=qCrop.loading||qCrop.rendering?"در حال آماده‌سازی":qCrop.isRegionReady()?"ثبت شد":qCrop.region?"نیازمند رندر":"بدون برش";
+  $("answerCropState").textContent=aCrop.loading||aCrop.rendering?"در حال آماده‌سازی":aCrop.isRegionReady()?"ثبت شد":aCrop.region?"نیازمند رندر":"بدون برش";
   $("questionIdentity").textContent="سؤال "+($("sourceNumber").value||"-");
 }
 document.querySelectorAll("[data-check]").forEach(button=>button.addEventListener("click",()=>{
@@ -249,25 +281,41 @@ $("grade").addEventListener("change",()=>{if(!isMath())renderTaxonomy();persistS
 $("chapter").addEventListener("change",()=>{renderUnits();persistSticky();renderGate()});
 $("unit").addEventListener("change",()=>{syncMathGradeFromUnit();persistSticky();renderGate()});
 $("sourceNumber").addEventListener("input",renderGate);
-$("provider").addEventListener("input",()=>{renderProviderWarning();renderGate()});
-$("operator").addEventListener("input",renderGate);
+$("provider").addEventListener("input",()=>{renderProviderWarning();renderSession()});
+$("operator").addEventListener("input",renderSession);
 
 $("questionForm").addEventListener("submit",async e=>{
-  e.preventDefault(); const gate=gateState(); if(gate.missing.length){toast("سؤال ناقص است: "+gate.missing.join("، "),"error");return}
+  e.preventDefault();
+  if(submittingQuestion)return;
+  const gate=gateState();
+  if(gate.missing.length){toast("سؤال ناقص است: "+gate.missing.join("، "),"error");return}
+  submittingQuestion=true;
+  renderGate();
   const source=Number($("sourceNumber").value),id=buildQuestionId(exam.id,source);
-  const visualHash=await qCrop.visualHash();
-  const record={
-    id,exam_id:exam.id,source_question_number:source,subject:$("subject").value,grade:Number($("grade").value),
-    chapter:$("chapter").value,unit:$("unit").value,difficulty:$("difficulty").value,correct_option:Number($("correctOption").value),
-    question_regions:[structuredClone(qCrop.region)],answer_regions:[structuredClone(aCrop.region)],visual_hash:visualHash,
-    biology_combination:$("subject").value==="BIO"?biologyEditor.getValue():null,status:"draft",review_status:"pending",
-    entered_by:$("operator").value.trim(),created_at:new Date().toISOString()
-  };
-  records.push(record); saveRecords(records);
-  const [qBlob,aBlob]=await Promise.all([qCrop.cropBlob(),aCrop.cropBlob()]);
-  if(qBlob)await putPreview(id+":question",qBlob);if(aBlob)await putPreview(id+":answer",aBlob);
-  $("sourceNumber").value=String(source+1);qCrop.clearRegion();aCrop.clearRegion();setSegmented("difficulty","");setSegmented("correctOption","");biologyEditor.reset();switchPane("question");
-  renderRecent();renderGate();toast(`سؤال ${source} ثبت شد · ${activeRecords().length} سؤال در فهرست`,"ok");
+  try{
+    const [qCapture,aCapture]=await Promise.all([qCrop.captureCrop(),aCrop.captureCrop()]);
+    const visualHash=await qCrop.visualHash(qCapture.blob);
+    const record={
+      id,exam_id:exam.id,source_question_number:source,subject:$("subject").value,grade:Number($("grade").value),
+      chapter:$("chapter").value,unit:$("unit").value,difficulty:$("difficulty").value,correct_option:Number($("correctOption").value),
+      question_regions:[qCapture.region],answer_regions:[aCapture.region],visual_hash:visualHash,
+      biology_combination:$("subject").value==="BIO"?biologyEditor.getValue():null,status:"draft",review_status:"pending",
+      entered_by:$("operator").value.trim(),created_at:new Date().toISOString()
+    };
+    await Promise.all([putPreview(id+":question",qCapture.blob),putPreview(id+":answer",aCapture.blob)]);
+    records.push(record);
+    saveRecords(records);
+    $("sourceNumber").value=String(source+1);
+    qCrop.clearRegion();aCrop.clearRegion();setSegmented("difficulty","");setSegmented("correctOption","");biologyEditor.reset();switchPane("question");
+    renderRecent();
+    toast(`سؤال ${source} ثبت شد · ${activeRecords().length} سؤال در فهرست`,"ok");
+  }catch(error){
+    const message=String(error?.message||"");
+    toast(message.startsWith("PDF_CROP_")?"برش PDF هنوز آماده نیست؛ بعد از کامل‌شدن نمایش دوباره ثبت کن.":"ثبت سؤال کامل نشد؛ هیچ رکورد ناقصی ذخیره نشد.","error");
+  }finally{
+    submittingQuestion=false;
+    renderGate();
+  }
 });
 
 installAdaptiveDensity();
