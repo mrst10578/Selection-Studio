@@ -34,25 +34,33 @@ test.describe("PdfCropper concurrency and crop integrity",()=>{
       const loader=async()=>({base:"",lib:{getDocument({data}){
         const code=new Uint8Array(data)[0];
         let stopped=false;
-        const delay=code===1?100:10;
+        const delay=({1:100,2:10,3:10,4:100})[code]||10;
         const promise=(async()=>{await sleep(delay);if(stopped)throw new Error("destroyed");return fakePdf(code)})();
         return {promise,async destroy(){stopped=true}};
       }}});
       const crop=new PdfCropper({canvas:tCanvas,stage:tStage,pageLabel:tPage,prevBtn:tPrev,nextBtn:tNext,pdfLoader:loader});
       crop.resizeObserver.disconnect();
-      const file=code=>({name:code===1?"A.pdf":"B.pdf",arrayBuffer:async()=>new Uint8Array([code]).buffer});
+      const names={1:"A.pdf",2:"B.pdf",3:"C.pdf",4:"D.pdf"};
+      const file=code=>({name:names[code],arrayBuffer:async()=>new Uint8Array([code]).buffer});
       const a=crop.loadFile(file(1));
       await sleep(5);
       const b=crop.loadFile(file(2));
       const settled=await Promise.allSettled([a,b]);
       const pixel=[...crop.ctx.getImageData(0,0,1,1).data];
-      return {name:crop.file?.name,ready:crop.isRenderReady(),page:crop.page,pixel,statuses:settled.map(x=>x.status)};
+      const firstName=crop.file?.name;
+      const c=crop.loadFile(file(3));
+      await sleep(5);
+      const d=crop.loadFile(file(4));
+      const settledReverse=await Promise.allSettled([c,d]);
+      return {firstName,name:crop.file?.name,ready:crop.isRenderReady(),page:crop.page,pixel,statuses:settled.map(x=>x.status),reverseStatuses:settledReverse.map(x=>x.status)};
     });
-    expect(result.name).toBe("B.pdf");
+    expect(result.firstName).toBe("B.pdf");
+    expect(result.name).toBe("D.pdf");
     expect(result.ready).toBe(true);
     expect(result.page).toBe(1);
     expect(result.pixel[2]).toBeGreaterThan(result.pixel[0]);
     expect(result.statuses).toEqual(["fulfilled","fulfilled"]);
+    expect(result.reverseStatuses).toEqual(["fulfilled","fulfilled"]);
   });
 
   test("a delayed next page cannot crop pixels from the previous committed page",async({page})=>{
