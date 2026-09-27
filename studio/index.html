@@ -34,8 +34,8 @@
       <label><span class="provider-label-line"><span>نام آزمون</span><small id="providerWarning" class="provider-warning hidden" role="status" aria-live="polite">(اسم حتما باید فارسی باشه)</small></span><input id="provider" autocomplete="off" placeholder="قلمچی" lang="fa" dir="rtl" /></label>
       <div class="session-field"><span class="field-label">تاریخ آزمون</span><div class="date-field" id="examDateField" dir="ltr"><input id="examYear" value="1405" readonly tabindex="-1" aria-label="سال آزمون، ثابت ۱۴۰۵" /><span class="date-separator" aria-hidden="true">/</span><input id="examMonth" inputmode="numeric" pattern="[0-9۰-۹]*" maxlength="2" placeholder="03" aria-label="ماه آزمون، دو رقمی" /><span class="date-separator" aria-hidden="true">/</span><input id="examDay" inputmode="numeric" pattern="[0-9۰-۹]*" maxlength="2" placeholder="07" aria-label="روز آزمون، دو رقمی" /></div><input id="examDate" type="hidden" /></div>
       <label>اپراتور<input id="operator" autocomplete="name" /></label>
-      <label class="file-label">PDF سؤال<input id="questionPdf" type="file" accept="application/pdf" /></label>
-      <label class="file-label">PDF پاسخ<input id="answerPdf" type="file" accept="application/pdf" /></label>
+      <label class="file-label">PDF سؤال<input id="questionPdf" type="file" accept="application/pdf" /><small id="questionPdfState" class="file-state" aria-live="polite">فایلی فعال نیست.</small></label>
+      <label class="file-label">PDF پاسخ<input id="answerPdf" type="file" accept="application/pdf" /><small id="answerPdfState" class="file-state" aria-live="polite">فایلی فعال نیست.</small></label>
       <button id="saveSession" class="primary" type="button">ثبت آزمون</button>
     </div>
   </section>
