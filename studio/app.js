@@ -108,7 +108,7 @@ function humanDate(value){
 function dispatchChange(el){el.dispatchEvent(new Event("change",{bubbles:true}))}
 
 function renderSession(){
-  const ready=Boolean(exam?.id&&qCrop.file&&aCrop.file);
+  const ready=Boolean(exam?.id&&qCrop.isRenderReady()&&aCrop.isRenderReady());
   $("sessionCard").classList.toggle("ready",ready);
   $("sessionCard").classList.toggle("collapsed",ready);
   $("toggleSession").textContent=ready?"ویرایش آزمون":"تنظیم آزمون";
