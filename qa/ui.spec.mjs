@@ -84,7 +84,6 @@ test.describe("Selection Studio",()=>{
     await page.goto("/studio/");
     await expect(page.locator("#bootSplash")).toBeHidden({timeout:1800});
     for(const theme of ["light","dark"]){
-      if(document===undefined){}
       const vars=await page.evaluate(()=>{const c=getComputedStyle(document.documentElement);return{
         border:c.getPropertyValue("--control-border").trim(),
         subtle:c.getPropertyValue("--surface-subtle").trim(),
