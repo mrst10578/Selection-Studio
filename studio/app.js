@@ -15,6 +15,7 @@ const $=id=>document.getElementById(id);
 let records=loadRecords();
 let exam=loadExamDraft();
 let activePane="question";
+let submittingQuestion=false;
 let biologyGate={ready:false,issues:["مشخص کن سؤال زیست ترکیبی هست یا نه"]};
 
 
