@@ -1,36 +1,19 @@
 const THEME_KEY="testbank-ui-theme-v1";
 const FOCUS_KEY="testbank-focus-mode-v1";
 
-export function preferredTheme(){
-  const saved=localStorage.getItem(THEME_KEY);
-  return saved==="dark"?"dark":"light";
+export function preferredTheme(){return "light"}
+
+export function applyTheme(){
+  localStorage.removeItem(THEME_KEY);
+  document.documentElement.dataset.theme="light";
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content","#F4F3F0");
+  document.querySelectorAll(".theme-toggle").forEach(button=>button.remove());
+  return "light";
 }
 
-export function applyTheme(theme){
-  const next=theme==="dark"?"dark":"light";
-  document.documentElement.dataset.theme=next;
-  document.querySelector('meta[name="theme-color"]')?.setAttribute("content",next==="dark"?"#1B1F23":"#F4F3F0");
-  return next;
-}
-
-function syncThemeToggles(){
-  const dark=document.documentElement.dataset.theme==="dark";
-  document.querySelectorAll(".theme-toggle").forEach(button=>{
-    button.textContent=dark?"تم روشن":"تم تیره";
-    button.setAttribute("aria-pressed",String(dark));
-    button.setAttribute("aria-label",dark?"فعال‌کردن تم روشن":"فعال‌کردن تم تیره");
-  });
-}
 export function installThemeToggle(button){
-  if(!button)return;
-  applyTheme(preferredTheme());
-  button.addEventListener("click",()=>{
-    const next=document.documentElement.dataset.theme==="dark"?"light":"dark";
-    localStorage.setItem(THEME_KEY,next);
-    applyTheme(next);
-    syncThemeToggles();
-  });
-  syncThemeToggles();
+  button?.remove();
+  applyTheme();
 }
 
 export function installFocusMode(button){
@@ -50,3 +33,4 @@ export function installFocusMode(button){
   });
   sync();
 }
+
