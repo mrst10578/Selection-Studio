@@ -65,21 +65,32 @@ function renderProviderWarning(){
 function providerSlug(value){return providerName(value).replace(/[\s\u200c]+/g,"-")}
 function asciiDigits(value){return String(value||"").replace(/[۰-۹]/g,ch=>"۰۱۲۳۴۵۶۷۸۹".indexOf(ch)).replace(/[٠-٩]/g,ch=>"٠١٢٣٤٥٦٧٨٩".indexOf(ch))}
 function normalizedDate(value){return asciiDigits(value).replace(/[^0-9]/g,"")}
+function datePartValue(value,max){
+  const digits=normalizedDate(value).slice(0,2);
+  if(!digits)return null;
+  const number=Number(digits);
+  return Number.isInteger(number)&&number>=1&&number<=max?number:null;
+}
 function validExamDateParts(){
-  const month=normalizedDate($("examMonth").value),day=normalizedDate($("examDay").value);
-  return /^(0[1-9]|1[0-2])$/.test(month)&&/^(0[1-9]|[12][0-9]|3[01])$/.test(day);
+  return datePartValue($("examMonth").value,12)!==null&&datePartValue($("examDay").value,31)!==null;
 }
 function syncExamDate(){
-  const month=normalizedDate($("examMonth").value).slice(0,2);
-  const day=normalizedDate($("examDay").value).slice(0,2);
-  $("examYear").value=FIXED_EXAM_YEAR;$("examMonth").value=month;$("examDay").value=day;
-  $("examDate").value=`${FIXED_EXAM_YEAR}/${month}/${day}`;
+  const monthDigits=normalizedDate($("examMonth").value).slice(0,2);
+  const dayDigits=normalizedDate($("examDay").value).slice(0,2);
+  $("examYear").value=FIXED_EXAM_YEAR;
+  const month=datePartValue(monthDigits,12);
+  const day=datePartValue(dayDigits,31);
+  const mm=month===null?(monthDigits?monthDigits.padStart(2,"0"):""):String(month).padStart(2,"0");
+  const dd=day===null?(dayDigits?dayDigits.padStart(2,"0"):""):String(day).padStart(2,"0");
+  $("examDate").value=`${FIXED_EXAM_YEAR}/${mm}/${dd}`;
 }
 function setDateParts(value){
   const d=normalizedDate(value);
   $("examYear").value=FIXED_EXAM_YEAR;
   $("examMonth").value=d.length>=6?d.slice(4,6):"";
   $("examDay").value=d.length>=8?d.slice(6,8):"";
+  $("examMonth").dataset.lastAccepted=$("examMonth").value;
+  $("examDay").dataset.lastAccepted=$("examDay").value;
   syncExamDate();
 }
 function focusExamMonth(){
@@ -90,24 +101,43 @@ function focusExamMonth(){
 function installDateField(){
   const field=$("examDateField"),month=$("examMonth"),day=$("examDay");
   $("examYear").value=FIXED_EXAM_YEAR;
+  const installBoundedPart=(input,max,onAccepted)=>{
+    input.dataset.lastAccepted=normalizedDate(input.value).slice(0,2);
+    input.addEventListener("input",()=>{
+      const digits=normalizedDate(input.value).slice(0,2);
+      const number=digits?Number(digits):null;
+      const validPartial=digits===""||digits==="0"||(Number.isInteger(number)&&number>=1&&number<=max);
+      if(!validPartial){
+        input.value=input.dataset.lastAccepted||"";
+        return;
+      }
+      input.value=digits;
+      input.dataset.lastAccepted=digits;
+      syncExamDate();renderSession();
+      onAccepted?.(digits);
+    });
+    input.addEventListener("blur",()=>{
+      const value=datePartValue(input.value,max);
+      if(value!==null){
+        input.value=String(value).padStart(2,"0");
+        input.dataset.lastAccepted=input.value;
+      }
+      syncExamDate();renderSession();
+    });
+  };
   field.addEventListener("pointerdown",e=>{
     if(document.activeElement!==month&&document.activeElement!==day){
       e.preventDefault();
       focusExamMonth();
     }
   });
-  month.addEventListener("input",()=>{
-    month.value=normalizedDate(month.value).slice(0,2);
-    syncExamDate();renderSession();
-    if(month.value.length===2){
+  installBoundedPart(month,12,digits=>{
+    if(digits.length===2&&datePartValue(digits,12)!==null){
       day.focus();
       requestAnimationFrame(()=>day.select());
     }
   });
-  day.addEventListener("input",()=>{
-    day.value=normalizedDate(day.value).slice(0,2);
-    syncExamDate();renderSession();
-  });
+  installBoundedPart(day,31);
   day.addEventListener("keydown",e=>{
     if(e.key==="Backspace"&&!day.value){
       e.preventDefault();
@@ -249,13 +279,19 @@ const biologyEditor=mountBiologyCombinationEditor({
 });
 
 function activeRecords(){return records.filter(x=>!x.trashed_at)}
+function sourceQuestionNumber(){
+  const digits=normalizedDate($("sourceNumber").value);
+  if(!/^\d+$/.test(digits))return null;
+  const value=Number(digits);
+  return Number.isInteger(value)&&value>0?value:null;
+}
 function gateState(){
-  const source=Number($("sourceNumber").value);
-  const id=examId()&&Number.isInteger(source)&&source>0?buildQuestionId(examId(),source):null;
-  const unique=Boolean(id&&!activeRecords().some(x=>x.id===id));
+  const source=sourceQuestionNumber();
+  const currentExamId=exam?.id||examId();
+  const unique=source!==null&&(!currentExamId||!activeRecords().some(x=>x.exam_id===currentExamId&&Number(x.source_question_number)===source));
   const checks={
     exam:Boolean(sessionMatchesForm()&&qCrop.isRenderReady()&&aCrop.isRenderReady()),
-    number:Boolean(Number.isInteger(source)&&source>0&&unique),
+    number:Boolean(source!==null&&unique),
     question:qCrop.isRegionReady(),
     answer:aCrop.isRegionReady(),
     taxonomy:Boolean($("chapter").value&&$("unit").value&&[10,11,12].includes(Number($("grade").value))),
@@ -318,7 +354,7 @@ $("subject").addEventListener("change",()=>{renderTaxonomy();persistSticky();ren
 $("grade").addEventListener("change",()=>{if(!isMath())renderTaxonomy();persistSticky();renderGate()});
 $("chapter").addEventListener("change",()=>{renderUnits();persistSticky();renderGate()});
 $("unit").addEventListener("change",()=>{syncMathGradeFromUnit();persistSticky();renderGate()});
-$("sourceNumber").addEventListener("input",renderGate);
+$("sourceNumber").addEventListener("input",()=>{$("sourceNumber").value=normalizedDate($("sourceNumber").value);renderGate()});
 $("provider").addEventListener("input",()=>{renderProviderWarning();renderSession()});
 $("operator").addEventListener("input",renderSession);
 
@@ -329,7 +365,7 @@ $("questionForm").addEventListener("submit",async e=>{
   if(gate.missing.length){toast("سؤال ناقص است: "+gate.missing.join("، "),"error");return}
   submittingQuestion=true;
   renderGate();
-  const source=Number($("sourceNumber").value),id=buildQuestionId(exam.id,source);
+  const source=sourceQuestionNumber(),id=buildQuestionId(exam.id,source);
   try{
     const [qCapture,aCapture]=await Promise.all([qCrop.captureCrop(),aCrop.captureCrop()]);
     const visualHash=await qCrop.visualHash(qCapture.blob);

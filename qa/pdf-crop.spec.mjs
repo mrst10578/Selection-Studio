@@ -247,6 +247,37 @@ test.describe("PdfCropper concurrency and crop integrity",()=>{
     expect(result.finalRegion).toBeNull();
   });
 
+  test("height-only mobile viewport changes do not rerender or shift a crop",async({page})=>{
+    await page.setViewportSize({width:390,height:844});
+    await openHarness(page);
+    const result=await page.evaluate(async()=>{
+      const {PdfCropper}=await import("/studio/pdf-crop.js");
+      document.body.insertAdjacentHTML("beforeend",'<div id="vStage" style="position:relative;width:350px;height:300px;overflow:auto;display:block"><canvas id="vCanvas"></canvas></div><span id="vPage"></span><button id="vPrev"></button><button id="vNext"></button><button id="vMode"></button>');
+      const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+      const pdf={numPages:1,async getPage(){return{getViewport:({scale})=>({width:500*scale,height:1600*scale}),render({canvasContext}){const promise=Promise.resolve().then(()=>{canvasContext.fillStyle="#fff";canvasContext.fillRect(0,0,canvasContext.canvas.width,canvasContext.canvas.height)});return{promise,cancel(){}}}}},async destroy(){}};
+      const loader=async()=>({base:"",lib:{getDocument(){return{promise:Promise.resolve(pdf),async destroy(){}}}}});
+      const crop=new PdfCropper({canvas:vCanvas,stage:vStage,pageLabel:vPage,prevBtn:vPrev,nextBtn:vNext,modeBtn:vMode,pdfLoader:loader});
+      await crop.loadFile({name:"viewport.pdf",arrayBuffer:async()=>new Uint8Array([1]).buffer});
+      await crop.toggleMobileCrop();
+      crop.region={page:1,bbox_norm:[.2,.25,.7,.65]};crop.regionsByPage.set(1,structuredClone(crop.region));crop.paintRegion();
+      await sleep(180);
+      const before={seq:crop.renderSeq,left:crop.box.style.left,top:crop.box.style.top,width:crop.box.style.width,height:crop.box.style.height,canvasWidth:vCanvas.clientWidth,canvasHeight:vCanvas.clientHeight};
+      vStage.style.height="470px";
+      await sleep(260);
+      const after={seq:crop.renderSeq,left:crop.box.style.left,top:crop.box.style.top,width:crop.box.style.width,height:crop.box.style.height,canvasWidth:vCanvas.clientWidth,canvasHeight:vCanvas.clientHeight};
+      crop.resizeObserver.disconnect();
+      return {before,after,region:crop.region};
+    });
+    expect(result.after.seq).toBe(result.before.seq);
+    expect(result.after.left).toBe(result.before.left);
+    expect(result.after.top).toBe(result.before.top);
+    expect(result.after.width).toBe(result.before.width);
+    expect(result.after.height).toBe(result.before.height);
+    expect(result.after.canvasWidth).toBe(result.before.canvasWidth);
+    expect(result.after.canvasHeight).toBe(result.before.canvasHeight);
+    expect(result.region.bbox_norm).toEqual([.2,.25,.7,.65]);
+  });
+
   test("PDF drawing surface is explicitly LTR while the app remains RTL",async({page})=>{
     await openHarness(page);
     const result=await page.evaluate(async()=>{
