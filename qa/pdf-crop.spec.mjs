@@ -156,8 +156,9 @@ test.describe("PdfCropper concurrency and crop integrity",()=>{
       crop.resizeObserver.disconnect();
       await crop.loadFile({name:"tap.pdf",arrayBuffer:async()=>new Uint8Array([1]).buffer});
       const original={page:1,bbox_norm:[.2,.2,.7,.7]};crop.region=structuredClone(original);crop.regionsByPage.set(1,structuredClone(original));crop.paintRegion();
-      crop.drag={start:{x:20,y:20,w:300,h:400,left:0,top:0},current:{x:20,y:20,w:300,h:400,left:0,top:0}};
-      crop.up({preventDefault(){},clientX:24,clientY:24});
+      const rect=pCanvas.getBoundingClientRect();
+      crop.drag={start:{x:20,y:20,w:rect.width,h:rect.height,left:0,top:0},current:{x:20,y:20,w:rect.width,h:rect.height,left:0,top:0}};
+      crop.up({preventDefault(){},clientX:rect.left+24,clientY:rect.top+24});
       const afterShort=structuredClone(crop.region);
       crop.drag={start:{x:40,y:40,w:300,h:400,left:0,top:0},current:{x:42,y:42,w:300,h:400,left:0,top:0}};
       crop.cancel();
