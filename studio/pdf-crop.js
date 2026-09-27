@@ -132,14 +132,14 @@ export class PdfCropper{
     this.stage.classList.toggle("is-loading",this.loading||this.rendering);
     this.stage.classList.toggle("has-pdf",Boolean(this.file));
     if(this.modeBtn){
-      this.modeBtn.disabled=!this.pdf||this.loading||this.rendering;
+      this.modeBtn.disabled=!this.pdf||this.loading||this.rendering||this.regionLocked;
       this.modeBtn.innerHTML=this.mobileCropMode?LOCKED_ICON:UNLOCKED_ICON;
       this.modeBtn.setAttribute("aria-pressed",this.mobileCropMode?"true":"false");
       this.modeBtn.setAttribute("aria-label",this.mobileCropMode?"خاموش کردن حالت برش و فعال‌کردن حرکت سند":"فعال‌کردن حالت برش");
       this.modeBtn.title=this.mobileCropMode?"حالت برش فعال است":"فعال‌کردن انتخاب برش";
     }
     const help=document.getElementById(this.stage.id==="qStage"?"qCropHelp":"aCropHelp");
-    if(help)help.textContent=this.regionLocked?"کراپ قفل شده است؛ برای تغییر محدوده، ابتدا قفل کراپ را باز کن.":this.mobileCropMode?"حالت برش فعال است؛ محدوده را روی صفحه بکش. برای حرکت سند، این حالت را خاموش کن.":"برای جابه‌جایی صفحه، سند را بکش؛ برای برش، حالت انتخاب برش را فعال کن.";
+    if(help)help.textContent=this.regionLocked?"کراپ قفل شده است و تا ثبت سؤال قابل تغییر نیست.":this.mobileCropMode?"حالت برش فعال است؛ محدوده را روی صفحه بکش. برای حرکت سند، این حالت را خاموش کن.":"برای جابه‌جایی صفحه، سند را بکش؛ برای برش، حالت انتخاب برش را فعال کن.";
   }
 
   captureViewAnchor(){
