@@ -38,7 +38,7 @@ export function mountBiologyCombinationEditor({host,subjectEl,gradeEl,chapterEl,
   function set(next,emit=true){value=normalizeBioCombination(next);render();if(emit)onChange(structuredClone(value))}
   function render(){
     const bio=subjectEl.value==="BIO"; host.hidden=!bio; host.classList.toggle("hidden",!bio);
-    if(!bio){onGateChange({ready:true,issues:[]});return}
+    if(!bio){host.replaceChildren();onGateChange({ready:true,issues:[]});return}
     const errs=issues(),ready=!errs.length,decided=value!==null,combined=value?.is_combined===true;
     host.innerHTML=`<div class="bio-head"><div><span class="eyebrow">زیست ترکیبی</span><strong>سؤال ترکیبی زیست</strong><small>ترکیبی بودن را مشخص کن؛ در حالت ترکیبی همه مباحث اضافه باید کامل باشند.</small></div><span class="gate-badge ${ready?"ready":"blocked"}">${ready?"آماده":"قفل"}</span></div>
     <div class="bio-toggle" role="group" aria-label="ترکیبی بودن سؤال"><button type="button" data-combined="false" class="${decided&&!combined?"active":""}">غیرترکیبی</button><button type="button" data-combined="true" class="${combined?"active":""}">ترکیبی</button></div>

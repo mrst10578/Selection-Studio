@@ -6,7 +6,6 @@ import {getPreview} from "./preview-db.js";
 import {validRegion} from "./pdf-crop.js";
 import {biologyIssues,mountBiologyCombinationEditor} from "./biology-combination.js";
 import {installAdaptiveDensity,installDensityToggle,toast} from "./ui-runtime.js";
-import {installThemeToggle} from "./appearance.js";
 import {TAXONOMY,taxonomySummary,filterTaxonomyEntries} from "./taxonomy-data.js";
 import "./operator-auth.js";
 
@@ -278,6 +277,5 @@ $("exportExam").onclick=()=>downloadText(
 );
 
 installAdaptiveDensity();
-installThemeToggle($("themeToggle"));
 installDensityToggle($("densityToggle"));
 render();

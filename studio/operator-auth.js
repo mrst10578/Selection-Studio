@@ -1,5 +1,3 @@
-import {installThemeToggle} from "./appearance.js";
-
 const AUTH_KEY="selection-studio-operator-auth-v1";
 const USERNAME="admin";
 const PASSWORD="admin";
@@ -8,7 +6,7 @@ function loginMarkup(){
   return `
   <section id="operatorLogin" class="operator-login" role="dialog" aria-modal="true" aria-labelledby="operatorLoginTitle">
     <form id="operatorLoginForm" class="operator-login-card" autocomplete="off">
-      <div class="login-card-head"><div><span class="eyebrow">Selection Studio</span><h1 id="operatorLoginTitle">ورود گزینشگر</h1></div><button id="operatorLoginThemeToggle" class="theme-toggle" type="button" aria-pressed="false">تم تیره</button></div>
+      <div class="login-card-head"><div><span class="eyebrow">Selection Studio</span><h1 id="operatorLoginTitle">ورود گزینشگر</h1></div></div>
       <label>نام کاربری<input id="operatorUsername" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" /></label>
       <label>رمز عبور<input id="operatorPassword" name="password" type="password" autocomplete="current-password" /></label>
       <p id="operatorLoginError" class="login-error" role="alert" aria-live="polite"></p>
@@ -41,7 +39,6 @@ export function installOperatorAuth(){
   const password=document.getElementById("operatorPassword");
   const error=document.getElementById("operatorLoginError");
   const submit=document.getElementById("operatorLoginSubmit");
-  installThemeToggle(document.getElementById("operatorLoginThemeToggle"));
 
   const unlock=()=>{
     document.body.classList.remove("auth-locked");

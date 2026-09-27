@@ -61,15 +61,16 @@ test.describe("Selection Studio",()=>{
     await expectNoSeriousA11y(page);
     await expectNoHorizontalOverflow(page);
   });
-  test("theme and focus mode persist without reloading work state",async({page})=>{
-    await page.addInitScript(()=>sessionStorage.setItem("selection-studio-operator-auth-v1","admin"));
+  test("light theme is fixed while focus mode still persists",async({page})=>{
+    await page.addInitScript(()=>{
+      sessionStorage.setItem("selection-studio-operator-auth-v1","admin");
+      localStorage.setItem("testbank-ui-theme-v1","dark");
+    });
     await page.goto("/studio/");
     await expect(page.locator("#bootSplash")).toBeHidden({timeout:1800});
     await expect(page.locator("html")).toHaveAttribute("data-theme","light");
-
-    await page.locator("#themeToggle").click();
-    await expect(page.locator("html")).toHaveAttribute("data-theme","dark");
-    await expect(page.locator("#themeToggle")).toHaveText("تم روشن");
+    await expect(page.locator(".theme-toggle")).toHaveCount(0);
+    expect(await page.evaluate(()=>localStorage.getItem("testbank-ui-theme-v1"))).toBeNull();
 
     await page.locator("#focusToggle").click();
     await expect(page.locator("html")).toHaveAttribute("data-focus-mode","true");
@@ -78,28 +79,26 @@ test.describe("Selection Studio",()=>{
     await expect(page.locator("#saveQuestion")).toBeVisible();
 
     await page.reload();
-    await expect(page.locator("html")).toHaveAttribute("data-theme","dark");
+    await expect(page.locator("html")).toHaveAttribute("data-theme","light");
     await expect(page.locator("html")).toHaveAttribute("data-focus-mode","true");
+    await expect(page.locator(".theme-toggle")).toHaveCount(0);
   });
-  test("control boundaries and text keep required contrast in both themes",async({page})=>{
+  test("control boundaries and text keep required contrast in the fixed light theme",async({page})=>{
     await page.addInitScript(()=>sessionStorage.setItem("selection-studio-operator-auth-v1","admin"));
     await page.goto("/studio/");
     await expect(page.locator("#bootSplash")).toBeHidden({timeout:1800});
-    for(const theme of ["light","dark"]){
-      const vars=await page.evaluate(()=>{const c=getComputedStyle(document.documentElement);return{
-        border:c.getPropertyValue("--control-border").trim(),
-        subtle:c.getPropertyValue("--surface-subtle").trim(),
-        selection:c.getPropertyValue("--selection").trim(),
-        text:c.getPropertyValue("--text").trim(),
-        bg:c.getPropertyValue("--bg").trim(),
-        accent:c.getPropertyValue("--accent").trim()
-      }});
-      expect(contrastRatio(vars.border,vars.subtle)).toBeGreaterThanOrEqual(3);
-      expect(contrastRatio(vars.border,vars.selection)).toBeGreaterThanOrEqual(3);
-      expect(contrastRatio(vars.text,vars.bg)).toBeGreaterThanOrEqual(4.5);
-      expect(contrastRatio(vars.accent,vars.selection)).toBeGreaterThanOrEqual(3);
-      if(theme==="light")await page.locator("#themeToggle").click();
-    }
+    const vars=await page.evaluate(()=>{const c=getComputedStyle(document.documentElement);return{
+      border:c.getPropertyValue("--control-border").trim(),
+      subtle:c.getPropertyValue("--surface-subtle").trim(),
+      selection:c.getPropertyValue("--selection").trim(),
+      text:c.getPropertyValue("--text").trim(),
+      bg:c.getPropertyValue("--bg").trim(),
+      accent:c.getPropertyValue("--accent").trim()
+    }});
+    expect(contrastRatio(vars.border,vars.subtle)).toBeGreaterThanOrEqual(3);
+    expect(contrastRatio(vars.border,vars.selection)).toBeGreaterThanOrEqual(3);
+    expect(contrastRatio(vars.text,vars.bg)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(vars.accent,vars.selection)).toBeGreaterThanOrEqual(3);
   });
 
   test("legacy record ID page and bbox semantics remain unchanged",async({page})=>{
@@ -147,10 +146,7 @@ test.describe("Selection Studio",()=>{
     const nativeFileStyle=await page.locator("#questionPdf").evaluate(el=>({opacity:getComputedStyle(el).opacity,position:getComputedStyle(el).position}));
     expect(nativeFileStyle.opacity).toBe("0");
     expect(nativeFileStyle.position).toBe("absolute");
-    const themeBox=await page.locator("#themeToggle").boundingBox();
-    expect(themeBox).not.toBeNull();
-    expect(themeBox.x).toBeGreaterThanOrEqual(0);
-    expect(themeBox.x+themeBox.width).toBeLessThanOrEqual(390);
+    await expect(page.locator(".theme-toggle")).toHaveCount(0);
     await expectNoHorizontalOverflow(page);
   });
   test("360px mobile workbench keeps header and crop controls reachable",async({page},testInfo)=>{
@@ -163,11 +159,30 @@ test.describe("Selection Studio",()=>{
     await page.locator("#operatorLoginForm").press("Enter");
     await expect(page.locator("#operatorLogin")).toBeHidden({timeout:2500});
     await expect(page.locator("#qCropLock")).toBeVisible();
-    const themeBox=await page.locator("#themeToggle").boundingBox();
-    expect(themeBox).not.toBeNull();
-    expect(themeBox.x).toBeGreaterThanOrEqual(0);
-    expect(themeBox.x+themeBox.width).toBeLessThanOrEqual(360);
+    await expect(page.locator(".theme-toggle")).toHaveCount(0);
     await expectNoHorizontalOverflow(page);
+  });
+
+  test("biology UX only appears for biology questions",async({page})=>{
+    await page.addInitScript(()=>{sessionStorage.setItem("selection-studio-operator-auth-v1","admin");localStorage.removeItem("testbank-studio.sticky.v1")});
+    await page.goto("/studio/");
+    await expect(page.locator("#bootSplash")).toBeHidden({timeout:1800});
+    await page.locator("#subject").selectOption("CHEM");
+    await expect(page.locator("#bioCombinationPanel")).toBeHidden();
+    await expect(page.locator("#bioReadinessCheck")).toBeHidden();
+    await page.locator("#subject").selectOption("BIO");
+    await expect(page.locator("#bioCombinationPanel")).toBeVisible();
+    await expect(page.locator("#bioReadinessCheck")).toBeVisible();
+  });
+
+  test("guide omits golden rule and keeps the concise Windows shortcut note",async({page})=>{
+    await page.addInitScript(()=>sessionStorage.setItem("selection-studio-operator-auth-v1","admin"));
+    await page.goto("/studio/guide.html");
+    await expect(page.locator("body")).not.toContainText("قانون طلایی");
+    const card=page.locator(".guide-card").filter({hasText:"میانبر دسکتاپ ویندوز"});
+    await expect(card).toContainText("اگه از ویندوز استفاده میکنی، پایین صفحه اصلی پنل گزینش روی دکمه میانبرها کلیک کنید یا دکمه‌های Ctrl + K را فشار دهید.");
+    await expect(card.locator(".shortcut-table")).toHaveCount(0);
+    await expect(page.locator(".theme-toggle")).toHaveCount(0);
   });
 
   test("Windows Hotkeys panel replaces inline shortcut guide",async({page})=>{
