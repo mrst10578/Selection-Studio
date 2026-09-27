@@ -50,6 +50,7 @@ export class PdfCropper{
     this.region=null;
     this.regionsByPage=new Map();
     this.viewByPage=new Map();
+    this.mobileBrowseViewByPage=new Map();
     this.drag=null;
     this.renderTask=null;
     this.loadingTask=null;
@@ -158,8 +159,15 @@ export class PdfCropper{
 
   async toggleMobileCrop(){
     if(!this.pdf||!this.isMobile()||this.loading)return;
-    const anchor=this.captureViewAnchor();
-    this.mobileCropMode=!this.mobileCropMode;
+    const enteringCrop=!this.mobileCropMode;
+    let anchor=null;
+    if(enteringCrop){
+      anchor=this.captureViewAnchor();
+      if(anchor)this.mobileBrowseViewByPage.set(this.page,anchor);
+    }else{
+      anchor=this.mobileBrowseViewByPage.get(this.page)||this.viewByPage.get(this.page)||null;
+    }
+    this.mobileCropMode=enteringCrop;
     this.drag=null;
     this.syncInteractionMode();
     await this.render({anchor});
@@ -179,6 +187,7 @@ export class PdfCropper{
     this.region=null;
     this.regionsByPage.clear();
     this.viewByPage.clear();
+    this.mobileBrowseViewByPage.clear();
     this.drag=null;
     this.readyFrame=null;
     this.loading=false;
