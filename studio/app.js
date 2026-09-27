@@ -134,8 +134,15 @@ $("saveSession").onclick=async()=>{
   exam={id,provider,date:humanDate($("examDate").value),entered_by:operator,question_pdf_name:qCrop.file.name,answer_pdf_name:aCrop.file.name};
   saveExamDraft(exam); renderSession(); toast("آزمون آماده شد","ok");
 };
-async function loadPdfInput(input,crop,label){
+function updatePdfState(crop,stateId){
+  const host=$(stateId);
+  if(crop.loading){host.textContent="در حال بازکردن فایل تازه...";return}
+  if(crop.rendering){host.textContent="در حال آماده‌سازی صفحه...";return}
+  host.textContent=crop.file?.name?"سند فعال: "+crop.file.name:"فایلی فعال نیست.";
+}
+async function loadPdfInput(input,crop,label,stateId){
   const selected=input.files[0]||null;
+  updatePdfState(crop,stateId);
   try{
     const result=await crop.loadFile(selected);
     if(result?.status==="stale")return;
@@ -145,11 +152,12 @@ async function loadPdfInput(input,crop,label){
     const kept=crop.file?.name?" سند فعال قبلی «"+crop.file.name+"» حفظ شد.":"";
     toast(pdfViewerError(error)+kept,"error");
   }finally{
+    updatePdfState(crop,stateId);
     renderSession();
   }
 }
-$("questionPdf").onchange=()=>loadPdfInput($("questionPdf"),qCrop,"PDF سؤال");
-$("answerPdf").onchange=()=>loadPdfInput($("answerPdf"),aCrop,"PDF پاسخ");
+$("questionPdf").onchange=()=>loadPdfInput($("questionPdf"),qCrop,"PDF سؤال","questionPdfState");
+$("answerPdf").onchange=()=>loadPdfInput($("answerPdf"),aCrop,"PDF پاسخ","answerPdfState");
 
 function switchPane(name){
   activePane=name;
@@ -346,4 +354,4 @@ document.addEventListener("keydown",e=>{
   if(key==="l")location.href="./selected.html";
 });
 
-installDateField();restore();renderProviderWarning();renderSession();renderRecent();renderGate();
+installDateField();restore();renderProviderWarning();updatePdfState(qCrop,"questionPdfState");updatePdfState(aCrop,"answerPdfState");renderSession();renderRecent();renderGate();
