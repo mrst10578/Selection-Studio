@@ -48,6 +48,39 @@ test("real PDF.js renders an allowed mixed-script PDF with isolated LTR drawing 
   await page.locator("#saveSession").click();
   await expect(page.locator("#sessionSummary")).toContainText("قلمچی");
 
+  const box=await page.locator("#qCanvas").boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.move(box.x+box.width*.18,box.y+box.height*.22);
+  await page.mouse.down();
+  await page.mouse.move(box.x+box.width*.58,box.y+box.height*.52,{steps:6});
+  await page.mouse.up();
+  await expect(page.locator("#questionCropState")).toHaveText("ثبت شد");
+
+  const viewState=()=>page.evaluate(()=>{
+    const stage=document.querySelector("#qStage"),canvas=document.querySelector("#qCanvas"),crop=document.querySelector("#qStage .crop-box");
+    const cr=canvas.getBoundingClientRect(),br=crop.getBoundingClientRect();
+    return {
+      anchorY:(stage.scrollTop+stage.clientHeight/2-canvas.offsetTop)/cr.height,
+      maxScroll:stage.scrollHeight-stage.clientHeight,
+      crop:[(br.left-cr.left)/cr.width,(br.top-cr.top)/cr.height,(br.right-cr.left)/cr.width,(br.bottom-cr.top)/cr.height]
+    };
+  });
+  await page.evaluate(()=>{const stage=document.querySelector("#qStage");stage.scrollTop=Math.min(320,Math.max(0,stage.scrollHeight-stage.clientHeight-20))});
+  const beforeLayout=await viewState();
+  expect(beforeLayout.maxScroll).toBeGreaterThan(100);
+
+  await page.locator("#answerTab").click();
+  await page.locator("#questionTab").click();
+  await page.waitForTimeout(250);
+  await page.locator("#densityToggle").click();
+  await page.waitForTimeout(300);
+  await page.locator("#themeToggle").click();
+  await page.locator("#focusToggle").click();
+  await page.waitForTimeout(300);
+  const afterLayout=await viewState();
+  expect(Math.abs(afterLayout.anchorY-beforeLayout.anchorY)).toBeLessThan(.025);
+  for(let i=0;i<4;i++)expect(Math.abs(afterLayout.crop[i]-beforeLayout.crop[i])).toBeLessThan(.01);
+
   const sampleCanvas=()=>page.evaluate(()=>{const source=document.querySelector("#qCanvas");const probe=document.createElement("canvas");probe.width=32;probe.height=32;const x=probe.getContext("2d");x.drawImage(source,0,0,32,32);const data=x.getImageData(0,0,32,32).data;const out=[];for(let i=0;i<data.length;i+=4)out.push(Math.round((data[i]+data[i+1]+data[i+2])/3));return out});
   const before=await sampleCanvas();
   await page.setInputFiles("#questionPdf",{name:"broken.pdf",mimeType:"application/pdf",buffer:Buffer.from("not a pdf")});
