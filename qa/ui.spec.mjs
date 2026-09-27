@@ -133,6 +133,40 @@ test.describe("Selection Studio",()=>{
     await expect(page.locator("#examDay")).toHaveValue("07");
     await expect(page.locator("#examDate")).toHaveValue("1405/03/07");
   });
+  test("exam month and day reject values above 12 and 31",async({page})=>{
+    await page.addInitScript(()=>sessionStorage.setItem("selection-studio-operator-auth-v1","admin"));
+    await page.goto("/studio/");
+    await expect(page.locator("#bootSplash")).toBeHidden({timeout:1800});
+
+    const month=page.locator("#examMonth"),day=page.locator("#examDay");
+    await month.fill("13");
+    await expect(month).toHaveValue("");
+    await month.fill("12");
+    await expect(month).toHaveValue("12");
+
+    await day.fill("32");
+    await expect(day).toHaveValue("");
+    await day.fill("31");
+    await expect(day).toHaveValue("31");
+    await expect(page.locator("#examDate")).toHaveValue("1405/12/31");
+
+    await month.fill("3");
+    await day.fill("7");
+    await expect(page.locator("#examDate")).toHaveValue("1405/03/07");
+  });
+
+  test("question number readiness is independent from exam completion and accepts Persian digits",async({page})=>{
+    await page.addInitScript(()=>sessionStorage.setItem("selection-studio-operator-auth-v1","admin"));
+    await page.goto("/studio/");
+    await expect(page.locator("#bootSplash")).toBeHidden({timeout:1800});
+
+    await page.locator("#sourceNumber").fill("۱۲");
+    await expect(page.locator("#sourceNumber")).toHaveValue("12");
+    await expect(page.locator('[data-check="number"]')).toHaveClass(/done/);
+    await expect(page.locator("#questionIdentity")).toContainText("12");
+    await expect(page.locator('[data-check="exam"]')).not.toHaveClass(/done/);
+  });
+
   test("mobile PDF player exposes crop lock without overflowing",async({page})=>{
     await page.setViewportSize({width:390,height:844});
     await page.goto("/studio/");
