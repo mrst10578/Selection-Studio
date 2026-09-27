@@ -86,6 +86,7 @@ test("real PDF.js renders an allowed mixed-script PDF with isolated LTR drawing 
   await page.setInputFiles("#questionPdf",{name:"broken.pdf",mimeType:"application/pdf",buffer:Buffer.from("not a pdf")});
   await expect(page.locator(".global-toast")).toContainText("سند فعال قبلی «mixed-script.pdf» حفظ شد",{timeout:10000});
   await expect(page.locator("#questionPdf")).toHaveValue("");
+  await expect(page.locator("#questionPdfState")).toHaveText("سند فعال: mixed-script.pdf");
   await expect(page.locator("#qPage")).toHaveText("1/1");
   const after=await sampleCanvas();
   const meanAbsoluteDifference=after.reduce((sum,value,index)=>sum+Math.abs(value-before[index]),0)/after.length;
