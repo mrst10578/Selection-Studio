@@ -31,17 +31,19 @@ function syncCropFreezeButton(buttonId,clearId,locked){
   button.classList.toggle("locked",locked);
   button.classList.toggle("unlocked",!locked);
   button.setAttribute("aria-pressed",String(locked));
-  button.textContent=locked?"کراپ قفل است":"قفل کراپ";
+  button.textContent=locked?"کراپ قفل شد":"قفل کراپ";
+  button.disabled=locked;
   clear.disabled=locked;
 }
 function installCropFreeze(crop,buttonId,clearId){
   crop.onRegionLockChange=locked=>syncCropFreezeButton(buttonId,clearId,locked);
   $(buttonId).onclick=()=>{
-    if(!crop.isRegionLocked()&&!crop.isRegionReady()){
+    if(crop.isRegionLocked())return;
+    if(!crop.isRegionReady()){
       toast("اول محدودهٔ کراپ را مشخص کن.","error");
       return;
     }
-    crop.toggleRegionLock();
+    crop.setRegionLocked(true);
   };
   syncCropFreezeButton(buttonId,clearId,crop.isRegionLocked());
 }
