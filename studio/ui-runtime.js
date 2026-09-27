@@ -34,7 +34,9 @@ export function toast(message,type="info"){
     document.body.appendChild(host);
   }
   host.textContent=message; host.dataset.type=type; host.classList.add("show");
-  clearTimeout(toast.timer); toast.timer=setTimeout(()=>host.classList.remove("show"),1600);
+  clearTimeout(toast.timer);
+  const duration=type==="error"?4600:type==="ok"?2400:2800;
+  toast.timer=setTimeout(()=>host.classList.remove("show"),duration);
 }
 export function createCommandPalette({dialog,input,list,getCommands,onQuery=()=>[]}){
   let visible=[];

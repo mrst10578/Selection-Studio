@@ -11,9 +11,9 @@ async function expectNoHorizontalOverflow(page){
   expect(overflow).toBeLessThanOrEqual(2);
 }
 async function waitForStudioBoot(page){
-  await expect(page.locator("#bootSplash")).toBeVisible();
-  await expect(page.locator(".topbar")).toBeHidden();
-  await expect(page.locator("#bootSplash")).toBeHidden({timeout:4500});
+  const splash=page.locator("#bootSplash");
+  await expect(splash).toHaveCount(1);
+  if(await splash.isVisible())await expect(splash).toBeHidden({timeout:1800});
   await expect(page.locator("#operatorLogin")).toBeVisible();
 }
 
@@ -48,6 +48,26 @@ test.describe("Selection Studio",()=>{
     await expect(page.locator("html")).toHaveAttribute("dir","rtl");
     await expectNoSeriousA11y(page);
     await expectNoHorizontalOverflow(page);
+  });
+  test("theme and focus mode persist without reloading work state",async({page})=>{
+    await page.addInitScript(()=>sessionStorage.setItem("selection-studio-operator-auth-v1","admin"));
+    await page.goto("/studio/");
+    await expect(page.locator("#bootSplash")).toBeHidden({timeout:1800});
+    await expect(page.locator("html")).toHaveAttribute("data-theme","light");
+
+    await page.locator("#themeToggle").click();
+    await expect(page.locator("html")).toHaveAttribute("data-theme","dark");
+    await expect(page.locator("#themeToggle")).toHaveText("تم روشن");
+
+    await page.locator("#focusToggle").click();
+    await expect(page.locator("html")).toHaveAttribute("data-focus-mode","true");
+    await expect(page.locator(".recent")).toBeHidden();
+    await expect(page.locator("#sessionEditor")).toBeVisible();
+    await expect(page.locator("#saveQuestion")).toBeVisible();
+
+    await page.reload();
+    await expect(page.locator("html")).toHaveAttribute("data-theme","dark");
+    await expect(page.locator("html")).toHaveAttribute("data-focus-mode","true");
   });
   test("exam date starts at month, keeps 1405 fixed, and jumps to day after two digits",async({page})=>{
     await page.goto("/studio/");
@@ -87,7 +107,7 @@ test.describe("Selection Studio",()=>{
     await page.locator("#operatorPassword").fill("admin");
     await page.locator("#operatorLoginForm").press("Enter");
     await expect(page.locator(".shortcut-card")).toHaveCount(0);
-    await expect(page.locator("#hotkeysLauncher")).toHaveText("میانبرهای صفحه‌کلید");
+    await expect(page.locator("#hotkeysLauncher")).toHaveText("میانبرها");
     await page.locator("#hotkeysLauncher").click();
     await expect(page.locator("#hotkeysDialog")).toBeVisible();
     await expect(page.locator("#hotkeysDialog")).toContainText("Numpad 1–4");
@@ -120,7 +140,7 @@ test.describe("Selection Studio",()=>{
     await expect(page.locator(".question-card")).toHaveCount(2);
     await page.locator("#questionSearch").fill("2");
     await expect(page.locator(".question-card")).toHaveCount(1);
-    await expect(page.locator(".question-title strong")).toHaveText("سوال 2");
+    await expect(page.locator(".question-title strong")).toHaveText("سؤال 2");
     await page.locator("#questionSearch").fill("");
     await page.locator(".question-card").first().getByRole("button",{name:"انتقال به حذف‌شده‌ها"}).click();
     await expect(page.locator("#trashSection")).toBeVisible();

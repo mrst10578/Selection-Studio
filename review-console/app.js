@@ -3,6 +3,7 @@ import {createLocalReviewApi} from './api.js';
 import {difficultyLabel,subjectLabel,gradeLabel} from '../studio/store.js';
 import {mountBiologyCombinationEditor} from '../studio/biology-combination.js';
 import {installAdaptiveDensity,installDensityToggle,isTypingTarget,createCommandPalette,toast} from '../studio/ui-runtime.js';
+import {installThemeToggle} from '../studio/appearance.js';
 import {installWindowsMetadataShortcuts} from '../studio/windows-shortcuts.js';
 import {TAXONOMY,taxonomySummary,filterTaxonomyEntries} from '../studio/taxonomy-data.js';
 
@@ -61,7 +62,7 @@ function login(event){
   event?.preventDefault();
   const user=$('#adminUsername').value.trim(),pass=$('#adminPassword').value;
   if(user!==ADMIN_USERNAME||pass!==ADMIN_PASSWORD){
-    $('#adminLoginError').textContent='Username یا Password اشتباه است.';
+    $('#adminLoginError').textContent='نام کاربری یا رمز عبور اشتباه است.';
     $('#adminPassword').value='';
     $('#adminPassword').focus();
     return;
@@ -74,7 +75,7 @@ function login(event){
   $('#adminPassword').disabled=true;
   $('#loginBtn').disabled=true;
   $('#loginBtn').textContent='ورود موفق';
-  setTimeout(showAdmin,1500);
+  setTimeout(showAdmin,180);
 }
 $('#adminLoginForm').addEventListener('submit',login);
 
@@ -145,7 +146,7 @@ function renderBatch(){
   if(!indexes.length){host.innerHTML='<div class="empty-box">سوالی با این فیلتر نیست.</div>';return}
   for(const index of indexes){
     const q=model.batch.questions[index],frag=$('#questionItem').content.cloneNode(true),card=frag.querySelector('.review-question');
-    card.dataset.status=q.review_status||'pending';frag.querySelector('.q-title').textContent='سوال '+q.source_question_number;
+    card.dataset.status=q.review_status||'pending';frag.querySelector('.q-title').textContent='سؤال '+q.source_question_number;
     frag.querySelector('.status-badge').textContent=reviewStatusLabel(q.review_status||'pending');
     frag.querySelector('.q-meta').textContent=`${q.exam_id||'-'} · ${taxonomySummary(q)} · ${difficultyLabel(q.difficulty)} · کلید ${q.correct_option||'-'}`;
     frag.querySelector('.q-issues').innerHTML=questionIssues(q).map(x=>`<span>${x}</span>`).join('');
@@ -164,6 +165,14 @@ function syncExamFilter(){
   }
 }
 ['searchInput','statusFilter','examFilter','difficultyFilter','incompleteFilter'].forEach(id=>$('#'+id).addEventListener(id==='searchInput'?'input':'change',renderBatch));
+$('#clearReviewFilters').onclick=()=>{
+  $('#searchInput').value='';
+  $('#statusFilter').value='';
+  $('#examFilter').value='';
+  $('#difficultyFilter').value='';
+  $('#incompleteFilter').checked=false;
+  renderBatch();
+};
 
 function scheduleSave(){
   $('#autosaveState').textContent='در حال ذخیرهٔ محلی…';clearTimeout(autosaveTimer);autosaveTimer=setTimeout(()=>saveBatch().catch(e=>{$('#autosaveState').textContent='خطا';toast(e.message,'error')}),650);renderBatch();
@@ -192,7 +201,7 @@ function openQuick(index){
   quickIndex=index;const q=model.batch.questions[index];if(!q)return;
   $('#quickUndoBtn').disabled=model.undoStack.length===0;
   const visible=model.visibleIndexes(filters()),position=visible.indexOf(index);
-  $('#quickId').textContent=q.id;$('#quickPosition').textContent='سوال '+q.source_question_number+' · '+(position>=0?position+1:index+1)+'/'+(visible.length||model.batch.questions.length)+' در صف';
+  $('#quickId').textContent=q.id;$('#quickPosition').textContent='سؤال '+q.source_question_number+' · '+(position>=0?position+1:index+1)+'/'+(visible.length||model.batch.questions.length)+' در صف';
   $('#quickViewers').dataset.activeView='question';document.querySelectorAll('[data-review-view]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.reviewView==='question')));
   $('#quickSubject').value=q.subject;$('#quickGrade').value=String(q.grade);renderQuickTaxonomy({chapter:q.chapter||'',unit:q.unit||''});
   setQuickChoice('quickDifficulty',q.difficulty||'');setQuickChoice('quickOption',q.correct_option||'');quickBio.setValue(q.subject==='BIO'?q.biology_combination:null,false);
@@ -237,7 +246,7 @@ document.querySelectorAll('.image-expand').forEach(button=>button.addEventListen
   $('#reviewImageTitle').textContent=image.alt;$('#reviewImageDialog').showModal();
 }));
 $('#reviewImageClose').onclick=()=>$('#reviewImageDialog').close();
-$('#approveBtn').onclick=()=>{syncQuickMeta();if(questionIssues(model.batch.questions[quickIndex]).length){toast('سوال هنوز Quality Gate را رد نکرده است.','error');return}model.setStatus(quickIndex,'approved',reviewer());nextIndex(1)};
+$('#approveBtn').onclick=()=>{syncQuickMeta();if(questionIssues(model.batch.questions[quickIndex]).length){toast('سؤال هنوز شرط‌های کیفیت را کامل نکرده است.','error');return}model.setStatus(quickIndex,'approved',reviewer());nextIndex(1)};
 $('#rejectBtn').onclick=()=>{syncQuickMeta();model.setStatus(quickIndex,'rejected',reviewer());nextIndex(1)};
 $('#needsBtn').onclick=()=>{$('#correctionSheet').classList.remove('hidden')};
 function resetCorrection(){currentReason='';$('#correctionSheet').classList.add('hidden');$('#correctionNote').value='';document.querySelectorAll('[data-reason]').forEach(b=>b.classList.remove('active'))}
@@ -264,10 +273,12 @@ const palette=createCommandPalette({dialog:$('#commandPalette'),input:$('#comman
   const cmds=[{label:'بروزرسانی',run:()=>$('#refreshBtn').click()},{label:'شروع / ادامه بررسی',run:()=>$('#quickReviewBtn').click()}];
   if($('#quickDialog').open)cmds.unshift({label:'تایید سوال',shortcut:'A',run:()=>$('#approveBtn').click()},{label:'نیاز به اصلاح',shortcut:'F',run:()=>$('#needsBtn').click()},{label:'رد سوال',shortcut:'R',run:()=>$('#rejectBtn').click()});
   return cmds;
-},onQuery:q=>{const m=q.match(/(?:سوال|q|question)?\s*(\d{1,4})/i);if(!m||!model.batch)return[];const n=Number(m[1]),i=model.batch.questions.findIndex(x=>Number(x.source_question_number)===n&&!x.trashed_at);return i<0?[]:[{label:`باز کردن سوال ${n}`,run:()=>openQuick(i)}]}});
+},onQuery:q=>{const m=q.match(/(?:سوال|q|question)?\s*(\d{1,4})/i);if(!m||!model.batch)return[];const n=Number(m[1]),i=model.batch.questions.findIndex(x=>Number(x.source_question_number)===n&&!x.trashed_at);return i<0?[]:[{label:`باز کردن سؤال ${n}`,run:()=>openQuick(i)}]}});
 $('#commandLauncher').onclick=()=>palette.open();
 
 installAdaptiveDensity();
+installThemeToggle($('#adminLoginThemeToggle'));
+installThemeToggle($('#themeToggle'));
 installDensityToggle($('#densityToggle'));
 if(adminUser())showAdmin();
 else requestAnimationFrame(()=>$('#adminUsername').focus());

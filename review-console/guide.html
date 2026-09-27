@@ -1,13 +1,13 @@
 <!doctype html>
 <html lang="fa" dir="rtl">
-<head><meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /><title>راهنمای Review Console</title><link rel="stylesheet" href="./console.css" /></head>
+<head><meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /><meta name="theme-color" content="#F4F3F0" /><title>راهنمای پنل مدیریت</title><script>(()=>{const t=localStorage.getItem("testbank-ui-theme-v1");document.documentElement.dataset.theme=t==="dark"?"dark":"light"})()</script><link rel="stylesheet" href="../studio/design-system.css" /><link rel="stylesheet" href="./console.css" /></head>
 <body>
-<header class="review-header"><div><span class="eyebrow">REVIEW GUIDE</span><h1>راهنمای مدیریت بانک تست</h1></div><a href="./">بازگشت به مدیریت</a></header>
+<header class="review-header"><div><span class="eyebrow">راهنمای کار</span><h1>راهنمای مدیریت بانک تست</h1></div><div class="header-actions"><button id="themeToggle" class="theme-toggle" type="button" aria-pressed="false">تم تیره</button><a class="button-link" href="./">بازگشت به مدیریت</a></div></header>
 <main class="review-main" style="width:min(1050px,calc(100% - 20px));margin:14px auto 50px;display:grid;gap:10px">
-<section class="panel" style="padding:14px"><h2>مسیر سریع</h2><p>از صف «در حال بررسی» یک Batch را باز کن، Quick Review را شروع کن، سوال و پاسخ را مقایسه کن و برای هر سوال یکی از سه تصمیم تایید / اصلاح / رد را ثبت کن.</p></section>
-<section class="panel" style="padding:14px"><h2>قانون تایید</h2><p>تایید فقط وقتی مجاز است که Crop سوال و پاسخ، طبقه‌بندی، Level، کلید و در زیست UX ترکیبی کامل باشند. اگر منبع یا بازکاری لازم است، «نیاز به اصلاح» انتخاب کن؛ اگر سوال اساساً نامعتبر است، رد کن.</p></section>
-<section class="panel" style="padding:14px"><h2>میانبرهای دسکتاپ</h2><div class="shortcut-legend"><span><kbd>Numpad 1–4</kbd> کلید صحیح</span><span><kbd>F1–F5</kbd> Level</span><span><kbd>Ctrl+عدد</kbd> فصل</span><span><kbd>Alt+عدد</kbd> گفتار/مبحث</span><span><kbd>Shift+1/2/3</kbd> دهم/یازدهم/دوازدهم</span><span><kbd>A / F / R</kbd> تایید / اصلاح / رد</span></div></section>
-<section class="panel" style="padding:14px"><h2>زیست ترکیبی</h2><p>برای هر سوال زیست باید ترکیبی یا غیرترکیبی بودن مشخص باشد. سوال ترکیبی حداقل یک مبحث اضافه‌ی کامل می‌خواهد و نباید مبحث تکراری یا عین طبقه‌بندی اصلی داشته باشد.</p></section>
-<section class="panel" style="padding:14px"><h2>انتشار</h2><p>انتشار فقط سوال‌های تاییدشده و عبورکرده از Quality Gate را به بانک canonical می‌فرستد. سوال‌های Pending یا Needs Changes باعث می‌شوند Batch برای ادامه بررسی باقی بماند.</p></section>
+<section class="panel" style="padding:14px"><h2>مسیر سریع</h2><p>از صف «در حال بررسی» یک مجموعه را باز کن، بازبینی سریع را شروع کن، سؤال و پاسخ را مقایسه کن و برای هر سؤال یکی از سه تصمیم تایید / اصلاح / رد را ثبت کن.</p></section>
+<section class="panel" style="padding:14px"><h2>قانون تایید</h2><p>تایید فقط وقتی مجاز است که برش سؤال و پاسخ، طبقه‌بندی، سطح، کلید و در زیست اطلاعات ترکیبی کامل باشند. اگر منبع یا بازکاری لازم است، «نیاز به اصلاح» انتخاب کن؛ اگر سؤال اساساً نامعتبر است، رد کن.</p></section>
+<section class="panel" style="padding:14px"><h2>میانبرهای دسکتاپ</h2><div class="shortcut-legend"><span><kbd>Numpad 1–4</kbd> کلید صحیح</span><span><kbd>F1–F5</kbd> سطح</span><span><kbd>Ctrl+عدد</kbd> فصل</span><span><kbd>Alt+عدد</kbd> گفتار/مبحث</span><span><kbd>Shift+1/2/3</kbd> دهم/یازدهم/دوازدهم</span><span><kbd>A / F / R</kbd> تایید / اصلاح / رد</span></div></section>
+<section class="panel" style="padding:14px"><h2>زیست ترکیبی</h2><p>برای هر سؤال زیست باید ترکیبی یا غیرترکیبی بودن مشخص باشد. سؤال ترکیبی حداقل یک مبحث اضافه‌ی کامل می‌خواهد و نباید مبحث تکراری یا عین طبقه‌بندی اصلی داشته باشد.</p></section>
+<section class="panel" style="padding:14px"><h2>انتشار</h2><p>انتشار فقط سؤال‌های تاییدشده و عبورکرده از شرط‌های کیفیت را به بانک نهایی می‌فرستد. سؤال‌های بررسی‌نشده یا نیاز به اصلاح باعث می‌شوند مجموعه برای ادامه بررسی باقی بماند.</p></section>
 </main>
-</body></html>
+<script type="module">import {installThemeToggle} from "../studio/appearance.js";installThemeToggle(document.getElementById("themeToggle"));</script></body></html>

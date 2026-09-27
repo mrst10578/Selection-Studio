@@ -6,12 +6,16 @@ import {getPreview} from "./preview-db.js";
 import {validRegion} from "./pdf-crop.js";
 import {biologyIssues,mountBiologyCombinationEditor} from "./biology-combination.js";
 import {installAdaptiveDensity,installDensityToggle,toast} from "./ui-runtime.js";
+import {installThemeToggle} from "./appearance.js";
 import {TAXONOMY,taxonomySummary,filterTaxonomyEntries} from "./taxonomy-data.js";
 import "./operator-auth.js";
 
 const $=id=>document.getElementById(id);
 let records=loadRecords(),exam=loadExamDraft(),editIndex=-1;
 let lastBatch=loadLastBatch();
+const FILTERS_KEY="testbank-selected-filters-v1";
+function loadFilterState(){try{return JSON.parse(sessionStorage.getItem(FILTERS_KEY)||"{}")}catch{return {}}}
+function saveFilterState(){sessionStorage.setItem(FILTERS_KEY,JSON.stringify({search:$("questionSearch").value,quality:$("questionQuality").value}))}
 
 function fillEditSelect(el,items,selected=""){
   el.innerHTML='<option value="">انتخاب</option>'+items.map(([value,label])=>`<option value="${value}">${label}</option>`).join("");
@@ -55,10 +59,10 @@ function missing(record){
   if(![10,11,12].includes(Number(record.grade)))out.push("پایه");
   if(!record.chapter)out.push("فصل");
   if(!record.unit)out.push(record.subject==="BIO"?"گفتار":"مبحث");
-  if(!["level_1","level_2","level_3","level_4","level_5"].includes(record.difficulty))out.push("Level");
+  if(!["level_1","level_2","level_3","level_4","level_5"].includes(record.difficulty))out.push("سطح سؤال");
   if(![1,2,3,4].includes(Number(record.correct_option)))out.push("کلید");
-  if(!validRegion(record.question_regions?.[0]))out.push("Crop سوال");
-  if(!validRegion(record.answer_regions?.[0]))out.push("Crop پاسخ");
+  if(!validRegion(record.question_regions?.[0]))out.push("برش سؤال");
+  if(!validRegion(record.answer_regions?.[0]))out.push("برش پاسخ");
   if(record.subject==="BIO"){
     out.push(...biologyIssues({
       subject:"BIO",
@@ -83,7 +87,7 @@ function batchGate(){
   if(!qs.length)blockers.push("هیچ سوالی برای ارسال وجود ندارد.");
   if(!exam?.id)blockers.push("شناسنامه آزمون موجود نیست.");
   if(!s.workerUrl||!s.submittedBy||!s.key)blockers.push("Worker، کلید یا نام اپراتور تنظیم نشده است.");
-  if(incomplete.length)blockers.push(`${incomplete.length} سوال ناقص است.`);
+  if(incomplete.length)blockers.push(`${incomplete.length} سؤال ناقص است.`);
   const fingerprint=activeFingerprint(qs);
   const alreadySent=Boolean(lastBatch?.fingerprint&&lastBatch.fingerprint===fingerprint);
   if(alreadySent)blockers.push("این نسخه از مجموعه قبلاً با موفقیت ارسال شده است.");
@@ -111,9 +115,9 @@ async function render(){
   $("batchBadge").textContent=gate.ready?"آمادهٔ ارسال":gate.alreadySent?"ارسال‌شده":"نیاز به تکمیل";
   $("batchBadge").classList.toggle("ready",gate.ready);
   $("submitBatch").disabled=!gate.ready;
-  $("batchGateText").textContent=gate.ready?`${qs.length} سوال کامل است و Batch آماده ارسال است.`:gate.blockers.join(" ");
+  $("batchGateText").textContent=gate.ready?`${qs.length} سؤال کامل است و مجموعه آمادهٔ ارسال است.`:gate.blockers.join(" ");
   $("lastSubmission").textContent=lastBatch?.sent_at?`آخرین ارسال موفق: ${lastBatch.question_count} سؤال · ${new Date(lastBatch.sent_at).toLocaleString("fa-IR")} · شناسه ${lastBatch.id}`:"هنوز ارسالی ثبت نشده است.";
-  $("batchIssues").innerHTML=gate.incomplete.slice(0,8).map(x=>`<span>سوال ${x.r.source_question_number}: ${x.issues.join("، ")}</span>`).join("");
+  $("batchIssues").innerHTML=gate.incomplete.slice(0,8).map(x=>`<span>سؤال ${x.r.source_question_number}: ${x.issues.join("، ")}</span>`).join("");
 
   const host=$("questionList");
   host.innerHTML="";
@@ -132,7 +136,7 @@ async function render(){
     const card=frag.querySelector(".question-card");
     const issues=missing(record);
     card.dataset.quality=issues.length?"warn":"ok";
-    frag.querySelector(".question-title strong").textContent="سوال "+record.source_question_number;
+    frag.querySelector(".question-title strong").textContent="سؤال "+record.source_question_number;
     const badge=frag.querySelector(".quality-badge");
     badge.textContent=issues.length?"ناقص":"آماده";
     badge.className="quality-badge "+(issues.length?"warn":"ok");
@@ -144,7 +148,7 @@ async function render(){
     frag.querySelector(".delete-btn").onclick=async()=>{
       records[index]={...records[index],trashed_at:new Date().toISOString()};
       saveRecords(records);
-      toast("سوال به Trash رفت","ok");
+      toast("سؤال به Trash رفت","ok");
       await render();
     };
     preview(frag.querySelector(".q-preview"),record.id+":question");
@@ -165,12 +169,16 @@ function renderTrash(){
 }
 function openPreview(img){const dialog=$("previewDialog"),target=$("previewImage");target.src=img.src;target.alt=img.alt;$("previewTitle").textContent=img.alt;dialog.showModal()}
 $("previewClose").onclick=()=>$("previewDialog").close();
-document.querySelectorAll("#questionSearch,#questionQuality").forEach(el=>el.addEventListener(el.id==="questionSearch"?"input":"change",render));
+const savedFilters=loadFilterState();
+$("questionSearch").value=savedFilters.search||"";
+$("questionQuality").value=["","ready","incomplete"].includes(savedFilters.quality)?savedFilters.quality:"";
+document.querySelectorAll("#questionSearch,#questionQuality").forEach(el=>el.addEventListener(el.id==="questionSearch"?"input":"change",()=>{saveFilterState();render()}));
+$("clearQuestionFilters").onclick=()=>{$("questionSearch").value="";$("questionQuality").value="";saveFilterState();render()};
 
 function openEdit(index){
   editIndex=index;
   const r=records[index];
-  $("editTitle").textContent="‍ویرایش سوال "+r.source_question_number;
+  $("editTitle").textContent="‍ویرایش سؤال "+r.source_question_number;
   $("editNumber").value=r.source_question_number;
   $("editSubject").value=r.subject;
   $("editGrade").value=String(r.grade);
@@ -190,7 +198,7 @@ $("closeEdit").onclick=()=>$("editDialog").close();
 $("editForm").onsubmit=e=>{
   e.preventDefault();
   const old=records[editIndex],n=Number($("editNumber").value),newId=buildQuestionId(old.exam_id,n);
-  if(records.some((r,i)=>i!==editIndex&&!r.trashed_at&&r.id===newId)){toast("سوال تکراری است","error");return}
+  if(records.some((r,i)=>i!==editIndex&&!r.trashed_at&&r.id===newId)){toast("سؤال تکراری است","error");return}
   const next={
     ...old,
     id:newId,
@@ -239,7 +247,7 @@ $("submitBatch").onclick=async()=>{
     form.append("batch",new Blob([JSON.stringify(batch)],{type:"application/json"}),"batch.json");
     for(const question of batch.questions){
       const [qBlob,aBlob]=await Promise.all([getPreview(question.id+":question"),getPreview(question.id+":answer")]);
-      if(!qBlob||!aBlob)throw new Error("Crop محلی برای "+question.id+" کامل نیست.");
+      if(!qBlob||!aBlob)throw new Error("برش محلی برای "+question.id+" کامل نیست.");
       form.append("question__"+encodeURIComponent(question.id),qBlob,question.id+"-question.webp");
       form.append("answer__"+encodeURIComponent(question.id),aBlob,question.id+"-answer.webp");
     }
@@ -250,7 +258,7 @@ $("submitBatch").onclick=async()=>{
     });
     if(!response.ok)throw new Error((await response.text())||("HTTP "+response.status));
     rememberLastBatch(batch,gate.fingerprint);lastBatch=loadLastBatch();
-    toast("Batch و Cropها برای بررسی ارسال شد","ok");
+    toast("مجموعه و برش‌ها برای بررسی ارسال شد","ok");
   }catch(err){
     toast("ارسال ناموفق: "+err.message,"error");
   }finally{
@@ -270,5 +278,6 @@ $("exportExam").onclick=()=>downloadText(
 );
 
 installAdaptiveDensity();
+installThemeToggle($("themeToggle"));
 installDensityToggle($("densityToggle"));
 render();

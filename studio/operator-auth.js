@@ -1,3 +1,5 @@
+import {installThemeToggle} from "./appearance.js";
+
 const AUTH_KEY="selection-studio-operator-auth-v1";
 const USERNAME="admin";
 const PASSWORD="admin";
@@ -6,10 +8,9 @@ function loginMarkup(){
   return `
   <section id="operatorLogin" class="operator-login" role="dialog" aria-modal="true" aria-labelledby="operatorLoginTitle">
     <form id="operatorLoginForm" class="operator-login-card" autocomplete="off">
-      <span class="eyebrow">SELECTION STUDIO / LOGIN</span>
-      <h1 id="operatorLoginTitle">ورود گزینشگر</h1>
-      <label>Username<input id="operatorUsername" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" /></label>
-      <label>Password<input id="operatorPassword" name="password" type="password" autocomplete="current-password" /></label>
+      <div class="login-card-head"><div><span class="eyebrow">Selection Studio</span><h1 id="operatorLoginTitle">ورود گزینشگر</h1></div><button id="operatorLoginThemeToggle" class="theme-toggle" type="button" aria-pressed="false">تم تیره</button></div>
+      <label>نام کاربری<input id="operatorUsername" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" /></label>
+      <label>رمز عبور<input id="operatorPassword" name="password" type="password" autocomplete="current-password" /></label>
       <p id="operatorLoginError" class="login-error" role="alert" aria-live="polite"></p>
       <button id="operatorLoginSubmit" class="primary large" type="submit">ورود به پنل</button>
     </form>
@@ -22,26 +23,25 @@ export function isOperatorAuthenticated(){
 
 function finishBootSplash(){
   const splash=document.getElementById("bootSplash");
-  const started=Number(window.__studioBootStarted)||performance.now();
-  const elapsed=performance.now()-started;
-  const remaining=Math.max(0,2500-elapsed);
-  setTimeout(()=>{
+  requestAnimationFrame(()=>{
     document.body.classList.remove("booting");
     if(!splash)return;
     splash.classList.add("leaving");
-    setTimeout(()=>splash.classList.add("hidden"),360);
-  },remaining);
+    setTimeout(()=>splash.classList.add("hidden"),180);
+  });
 }
 
 export function installOperatorAuth(){
   if(document.getElementById("operatorLogin"))return;
   document.body.insertAdjacentHTML("afterbegin",loginMarkup());
+  document.body.classList.remove("auth-pending");
   const view=document.getElementById("operatorLogin");
   const form=document.getElementById("operatorLoginForm");
   const username=document.getElementById("operatorUsername");
   const password=document.getElementById("operatorPassword");
   const error=document.getElementById("operatorLoginError");
   const submit=document.getElementById("operatorLoginSubmit");
+  installThemeToggle(document.getElementById("operatorLoginThemeToggle"));
 
   const unlock=()=>{
     document.body.classList.remove("auth-locked");
@@ -58,7 +58,7 @@ export function installOperatorAuth(){
 
   document.body.classList.add("auth-locked");
   finishBootSplash();
-  setTimeout(()=>requestAnimationFrame(()=>username.focus()),2550);
+  setTimeout(()=>requestAnimationFrame(()=>username.focus()),180);
   form.addEventListener("submit",event=>{
     event.preventDefault();
     if(username.value.trim()===USERNAME&&password.value===PASSWORD){
@@ -70,10 +70,10 @@ export function installOperatorAuth(){
       password.disabled=true;
       submit.disabled=true;
       submit.textContent="ورود موفق";
-      setTimeout(unlock,1500);
+      setTimeout(unlock,180);
       return;
     }
-    error.textContent="Username یا Password اشتباه است.";
+    error.textContent="نام کاربری یا رمز عبور اشتباه است.";
     password.value="";
     password.focus();
   });

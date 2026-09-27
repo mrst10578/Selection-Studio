@@ -3,59 +3,53 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <meta name="theme-color" content="#0a0d12" />
+  <meta name="theme-color" content="#F4F3F0" />
   <title>Selection Studio</title>
-  <script>window.__studioBootStarted=performance.now()</script>
+  <script>(()=>{const t=localStorage.getItem("testbank-ui-theme-v1");document.documentElement.dataset.theme=t==="dark"?"dark":"light"})()</script>
   <style>
-    html,body{background:#05080c}
+    html{background:#F4F3F0}html[data-theme="dark"]{background:#1B1F23}
     body.booting{overflow:hidden}
     body.booting>*:not(#bootSplash){visibility:hidden!important}
-    #bootSplash{position:fixed;inset:0;z-index:1000;background:#05080c}
+    #bootSplash{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;gap:12px;padding:20px;background:#F4F3F0;color:#242A31;font-family:Tahoma,"Segoe UI",system-ui,sans-serif}
+    html[data-theme="dark"] #bootSplash{background:#1B1F23;color:#E7EBEF}
+    #bootSplash .boot-mark{width:44px;height:44px;display:grid;place-items:center;border:1px solid #828D99;border-radius:12px;font-weight:800}
+    #bootSplash>div:last-child{display:grid;gap:2px}#bootSplash span{font-size:12px;opacity:.72}
   </style>
+  <link rel="stylesheet" href="./design-system.css" />
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body class="booting">
-<section id="bootSplash" class="boot-splash" role="status" aria-live="polite" aria-label="در حال بارگذاری Selection Studio">
-  <div class="boot-grid" aria-hidden="true"></div>
-  <div class="boot-glow boot-glow-a" aria-hidden="true"></div>
-  <div class="boot-glow boot-glow-b" aria-hidden="true"></div>
-  <div class="boot-shell">
-    <div class="boot-emblem" aria-hidden="true">
-      <i class="boot-ring ring-a"></i><i class="boot-ring ring-b"></i><span>S</span>
-    </div>
-    <span class="boot-kicker">SELECTION STUDIO</span>
-    <h1>آماده‌سازی محیط گزینش</h1>
-    <div class="boot-progress" aria-hidden="true"><i></i></div>
-    <p class="boot-loading">Loading<span class="boot-dots" aria-hidden="true"><i>.</i><i>.</i><i>.</i></span></p>
-  </div>
+<section id="bootSplash" class="boot-splash" role="status" aria-live="polite" aria-label="در حال آماده‌سازی Selection Studio">
+  <div class="boot-mark" aria-hidden="true">S</div>
+  <div><strong>Selection Studio</strong><span>در حال آماده‌سازی محیط...</span></div>
 </section>
 <header class="topbar">
-  <div><span class="eyebrow">TESTBANK / OPERATOR</span><h1>Selection Studio</h1><p>سوال را Crop کن، شناسنامه بزن، کامل تحویل بده.</p></div>
-  <nav><a class="active" href="./">گزینش</a><a href="./selected.html">فهرست <b id="navCount">0</b></a><a href="./guide.html">راهنما</a><button id="densityToggle" type="button" aria-pressed="true">نمایش راحت</button></nav>
+  <div><span class="eyebrow">پنل گزینش</span><h1>Selection Studio</h1><p>انتخاب، برش و شناسنامه‌گذاری سؤال</p></div>
+  <nav><a class="active" href="./">گزینش</a><a href="./selected.html">فهرست <b id="navCount">0</b></a><a href="./guide.html">راهنما</a><button id="focusToggle" class="focus-toggle" type="button" aria-pressed="false">حالت تمرکز</button><button id="themeToggle" class="theme-toggle" type="button" aria-pressed="false">تم تیره</button><button id="densityToggle" class="density-toggle" type="button" aria-pressed="true">نمایش راحت</button></nav>
 </header>
 <main class="shell">
   <section class="panel session" id="sessionCard">
-    <div class="section-head"><div><span class="eyebrow">EXAM SESSION</span><h2>آزمون فعلی</h2><p id="sessionSummary">هنوز تنظیم نشده</p></div><button id="toggleSession" type="button" class="secondary">تنظیم آزمون</button></div>
+    <div class="section-head"><div><span class="eyebrow">جلسهٔ آزمون</span><h2>آزمون فعلی</h2><p id="sessionSummary">هنوز تنظیم نشده</p></div><button id="toggleSession" type="button" class="secondary">تنظیم آزمون</button></div>
     <div id="sessionEditor" class="session-editor">
       <label><span class="provider-label-line"><span>نام آزمون</span><small id="providerWarning" class="provider-warning hidden" role="status" aria-live="polite">(اسم حتما باید فارسی باشه)</small></span><input id="provider" autocomplete="off" placeholder="قلمچی" lang="fa" dir="rtl" /></label>
       <div class="session-field"><span class="field-label">تاریخ آزمون</span><div class="date-field" id="examDateField" dir="ltr"><input id="examYear" value="1405" readonly tabindex="-1" aria-label="سال آزمون، ثابت ۱۴۰۵" /><span class="date-separator" aria-hidden="true">/</span><input id="examMonth" inputmode="numeric" pattern="[0-9۰-۹]*" maxlength="2" placeholder="03" aria-label="ماه آزمون، دو رقمی" /><span class="date-separator" aria-hidden="true">/</span><input id="examDay" inputmode="numeric" pattern="[0-9۰-۹]*" maxlength="2" placeholder="07" aria-label="روز آزمون، دو رقمی" /></div><input id="examDate" type="hidden" /></div>
       <label>اپراتور<input id="operator" autocomplete="name" /></label>
-      <label class="file-label">PDF سوال<input id="questionPdf" type="file" accept="application/pdf" /></label>
+      <label class="file-label">PDF سؤال<input id="questionPdf" type="file" accept="application/pdf" /></label>
       <label class="file-label">PDF پاسخ<input id="answerPdf" type="file" accept="application/pdf" /></label>
       <button id="saveSession" class="primary" type="button">ثبت آزمون</button>
     </div>
   </section>
 
   <section class="workflow-rail" aria-label="وضعیت فرایند" tabindex="0">
-    <span data-step="exam"><i>1</i><b>آزمون</b></span><span data-step="question"><i>2</i><b>Crop سوال</b></span><span data-step="answer"><i>3</i><b>Crop پاسخ</b></span><span data-step="meta"><i>4</i><b>شناسنامه</b></span><span data-step="ready"><i>5</i><b>آماده</b></span>
+    <span data-step="exam"><i>1</i><b>آزمون</b></span><span data-step="question"><i>2</i><b>برش سؤال</b></span><span data-step="answer"><i>3</i><b>برش پاسخ</b></span><span data-step="meta"><i>4</i><b>مشخصات</b></span><span data-step="ready"><i>5</i><b>آماده</b></span>
   </section>
 
   <section class="workbench">
     <div class="viewer panel">
-      <div class="viewer-tabs"><button id="questionTab" class="active" type="button">سوال <span id="questionCropState">بدون Crop</span></button><button id="answerTab" type="button">پاسخ <span id="answerCropState">بدون Crop</span></button></div>
+      <div class="viewer-tabs"><button id="questionTab" class="active" type="button">سؤال <span id="questionCropState">بدون برش</span></button><button id="answerTab" type="button">پاسخ <span id="answerCropState">بدون برش</span></button></div>
       <div id="questionPane" class="pdf-pane">
         <div class="pdf-toolbar"><button id="qPrev" type="button">قبلی</button><span id="qPage">-</span><label class="page-jump">رفتن به صفحه<input id="qPageJump" type="number" min="1" inputmode="numeric" aria-label="رفتن به صفحهٔ سؤال" /></label><button id="qNext" type="button">بعدی</button><button id="qClear" type="button" class="secondary">پاک‌کردن برش</button></div><p id="qCropHelp" class="crop-help" aria-live="polite">برای جابه‌جایی صفحه، سند را بکش؛ برای برش، حالت انتخاب برش را فعال کن.</p>
-        <div class="pdf-stage" id="qStage"><button id="qCropLock" class="mobile-crop-lock" type="button" aria-label="قفل کردن PDF و فعال کردن کراپ" aria-pressed="false"></button><canvas id="qCanvas"></canvas><div class="pdf-empty">PDF سوال را انتخاب کن.</div></div>
+        <div class="pdf-stage" id="qStage"><button id="qCropLock" class="mobile-crop-lock" type="button" aria-label="قفل کردن PDF و فعال کردن کراپ" aria-pressed="false"></button><canvas id="qCanvas"></canvas><div class="pdf-empty">PDF سؤال را انتخاب کن.</div></div>
       </div>
       <div id="answerPane" class="pdf-pane hidden">
         <div class="pdf-toolbar"><button id="aPrev" type="button">قبلی</button><span id="aPage">-</span><label class="page-jump">رفتن به صفحه<input id="aPageJump" type="number" min="1" inputmode="numeric" aria-label="رفتن به صفحهٔ پاسخ" /></label><button id="aNext" type="button">بعدی</button><button id="aClear" type="button" class="secondary">پاک‌کردن برش</button></div><p id="aCropHelp" class="crop-help" aria-live="polite">برای جابه‌جایی صفحه، سند را بکش؛ برای برش، حالت انتخاب برش را فعال کن.</p>
@@ -64,9 +58,9 @@
     </div>
 
     <aside class="panel inspector">
-      <div class="section-head compact"><div><span class="eyebrow">INSPECTOR</span><h2>شناسنامه سوال</h2><p id="questionIdentity">سوال -</p></div><span id="gateBadge" class="gate-badge blocked">0/8</span></div>
+      <div class="section-head compact"><div><span class="eyebrow">مشخصات سؤال</span><h2>شناسنامه سؤال</h2><p id="questionIdentity">سؤال -</p></div><span id="gateBadge" class="gate-badge blocked">0/8</span></div>
       <form id="questionForm">
-        <label>شماره سوال<input id="sourceNumber" type="number" min="1" inputmode="numeric" required /></label>
+        <label>شماره سؤال<input id="sourceNumber" type="number" min="1" inputmode="numeric" required /></label>
         <div class="two" id="subjectGradeRow">
           <label>درس<select id="subject"><option value="BIO">زیست‌شناسی</option><option value="MATH">ریاضی</option><option value="PHY">فیزیک</option><option value="CHEM">شیمی</option></select></label>
           <label id="gradeField">پایه<select id="grade"><option value="10">دهم</option><option value="11">یازدهم</option><option value="12">دوازدهم</option></select></label>
@@ -77,39 +71,39 @@
           <label><span id="unitLabel">گفتار</span><select id="unit"><option value="">انتخاب</option></select></label>
         </div>
 
-        <fieldset class="choice"><legend>سطح سؤال</legend><input id="difficulty" type="hidden" value="" /><div class="segmented five" data-target="difficulty"><button type="button" data-value="level_1" aria-label="سطح ۱، یادآوری ساده">Level 1</button><button type="button" data-value="level_2" aria-label="سطح ۲، کاربرد کوتاه">Level 2</button><button type="button" data-value="level_3" aria-label="سطح ۳، حل چندمرحله‌ای">Level 3</button><button type="button" data-value="level_4" aria-label="سطح ۴، ترکیب چند مفهوم">Level 4</button><button type="button" data-value="level_5" aria-label="سطح ۵، دشوار و ترکیبی">Level 5</button></div></fieldset>
+        <fieldset class="choice"><legend>سطح سؤال</legend><input id="difficulty" type="hidden" value="" /><div class="segmented five" data-target="difficulty"><button type="button" data-value="level_1" aria-label="سطح ۱، یادآوری ساده">1</button><button type="button" data-value="level_2" aria-label="سطح ۲، کاربرد کوتاه">2</button><button type="button" data-value="level_3" aria-label="سطح ۳، حل چندمرحله‌ای">3</button><button type="button" data-value="level_4" aria-label="سطح ۴، ترکیب چند مفهوم">4</button><button type="button" data-value="level_5" aria-label="سطح ۵، دشوار و ترکیبی">5</button></div></fieldset>
         <fieldset class="choice"><legend>کلید صحیح</legend><input id="correctOption" type="hidden" value="" /><div class="segmented four" data-target="correctOption"><button type="button" data-value="1">1</button><button type="button" data-value="2">2</button><button type="button" data-value="3">3</button><button type="button" data-value="4">4</button></div></fieldset>
 
         <section id="bioCombinationPanel" class="bio-panel hidden" hidden></section>
 
         <section class="readiness" aria-live="polite">
-          <div class="readiness-head"><strong>آمادگی ثبت سوال</strong><small id="nextAction">مرحله بعد: تنظیم آزمون</small></div>
+          <div class="readiness-head"><strong>آمادگی ثبت سؤال</strong><small id="nextAction">مرحله بعد: تنظیم آزمون</small></div>
           <div class="check-grid">
             <button type="button" data-check="exam"><i></i>آزمون و فایل‌ها</button><button type="button" data-check="number"><i></i>شمارهٔ سؤال</button><button type="button" data-check="question"><i></i>برش سؤال</button><button type="button" data-check="answer"><i></i>برش پاسخ</button><button type="button" data-check="taxonomy"><i></i>درس و مبحث</button><button type="button" data-check="difficulty"><i></i>سطح سؤال</button><button type="button" data-check="key"><i></i>گزینهٔ درست</button><button type="button" data-check="biology"><i></i>ترکیبی‌بودن زیست</button>
           </div>
         </section>
-        <button id="saveQuestion" class="primary large" type="submit" disabled>ثبت سوال و رفتن به بعدی</button>
+        <button id="saveQuestion" class="primary large" type="submit" disabled>ثبت سؤال و رفتن به بعدی</button>
       </form>
 
     </aside>
   </section>
 
-  <section class="panel recent"><div class="section-head compact"><div><h2>آخرین سوال‌ها</h2><p><b id="recordCount">0</b> سوال ذخیره محلی</p></div><a class="button-link" href="./selected.html">مشاهده لیست</a></div><div id="recentList" class="recent-list"><div class="empty-box">هنوز سوالی ثبت نشده.</div></div></section>
+  <section class="panel recent"><div class="section-head compact"><div><h2>آخرین سؤال‌ها</h2><p><b id="recordCount">0</b> سؤال ذخیره محلی</p></div><a class="button-link" href="./selected.html">مشاهده لیست</a></div><div id="recentList" class="recent-list"><div class="empty-box">هنوز سؤالی ثبت نشده.</div></div></section>
 </main>
 
-<button id="hotkeysLauncher" class="command-launcher hotkeys-launcher" type="button">میانبرهای صفحه‌کلید</button>
+<button id="hotkeysLauncher" class="command-launcher hotkeys-launcher" type="button">میانبرها</button>
 <dialog id="hotkeysDialog" class="hotkeys-dialog">
   <div class="hotkeys-shell">
-    <div class="hotkeys-head"><div><span class="eyebrow">میانبرهای صفحه‌کلید</span><h2>میانبرهای دسکتاپ</h2></div><button id="hotkeysClose" type="button">بستن</button></div>
+    <div class="hotkeys-head"><div><span class="eyebrow">راهنمای سریع</span><h2>میانبرهای دسکتاپ</h2></div><button id="hotkeysClose" type="button">بستن</button></div>
     <div class="hotkeys-grid">
       <span><kbd>Numpad 1–4</kbd><b>کلید صحیح</b></span>
       <span><kbd>F1–F5</kbd><b>Level</b></span>
       <span><kbd>Ctrl + عدد</kbd><b>فصل / مبحث اصلی</b></span>
       <span><kbd>Alt + عدد</kbd><b>گفتار / مبحث / زیرعنوان</b></span>
       <span><kbd>Shift + 1/2/3</kbd><b>پایه، به‌جز ریاضی</b></span>
-      <span><kbd>Q / W</kbd><b>PDF سوال / پاسخ</b></span>
-      <span><kbd>N</kbd><b>شماره سوال</b></span>
-      <span><kbd>L</kbd><b>لیست سوالات</b></span>
+      <span><kbd>Q / W</kbd><b>PDF سؤال / پاسخ</b></span>
+      <span><kbd>N</kbd><b>شماره سؤال</b></span>
+      <span><kbd>L</kbd><b>فهرست سؤال‌ها</b></span>
       <span><kbd>Ctrl + K</kbd><b>باز کردن همین پنل</b></span>
     </div>
     <p class="hotkeys-note">برای فصل‌های دو رقمی، رقم‌ها را سریع پشت‌سرهم وارد کن.</p>
