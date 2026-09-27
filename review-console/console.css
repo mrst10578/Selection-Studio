@@ -347,3 +347,31 @@ html[data-density="comfortable"] .batch-overview{padding:16px}
   .quick-actions button{min-width:0;padding-inline:4px;font-size:.78rem}
   #densityToggle{display:none}
 }
+
+
+/* Uiverse-inspired admin micro polish */
+.subject-picker button{position:relative;overflow:hidden}
+.subject-picker button::after{
+  content:"";
+  position:absolute;
+  inset-inline-start:0;
+  bottom:0;
+  width:0;
+  height:2px;
+  background:var(--accent);
+  transition:width 160ms ease;
+}
+.subject-picker button:hover::after,.subject-picker button.active::after{width:100%}
+.progress-bar{box-shadow:inset 0 1px 2px rgba(20,28,36,.08)}
+.progress-bar i{
+  position:relative;
+  overflow:hidden;
+  background:linear-gradient(90deg,var(--accent),color-mix(in srgb,var(--accent) 68%,#fff),var(--accent));
+  background-size:180% 100%;
+  animation:reviewProgressFlow 2.6s ease-in-out infinite;
+}
+.open-review::after{content:" ←";display:inline-block;transition:transform 150ms ease}
+.open-review:hover::after{transform:translateX(-2px)}
+.quick-actions .approve,.quick-actions .needs,.quick-actions .reject{box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
+@keyframes reviewProgressFlow{50%{background-position:100% 0}}
+@media(prefers-reduced-motion:reduce){.progress-bar i{animation:none}.subject-picker button::after,.open-review::after{transition:none}}
