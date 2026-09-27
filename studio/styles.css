@@ -137,6 +137,7 @@ body{overflow-x:hidden}
   color:var(--text-muted);
   font-size:.82rem;
 }
+ .pdf-stage-shell{position:relative}
  .pdf-stage{
   position:relative;
   direction:ltr;
@@ -178,15 +179,17 @@ body{overflow-x:hidden}
 }
 .mobile-crop-lock{
   display:none;
-  z-index:8;
-  width:44px;
-  min-height:44px;
-  padding:10px;
+  z-index:20;
+  width:46px;
+  min-height:46px;
+  padding:11px;
+  border:1px solid var(--control-border);
   border-radius:50%;
   background:var(--surface-raised);
-  box-shadow:var(--shadow);
+  color:var(--text);
+  box-shadow:0 8px 24px rgba(0,0,0,.34);
 }
-.mobile-crop-lock svg{width:20px;height:20px;fill:currentColor}
+.mobile-crop-lock svg{display:block;width:22px;height:22px;fill:currentColor}
 .inspector{
   position:sticky;
   top:82px;
@@ -351,21 +354,6 @@ body{overflow-x:hidden}
 .login-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
 .auth-locked{overflow:hidden}
 .operator-login-card.auth-success{border-color:var(--success)}
-html[data-focus-mode="true"] .recent{display:none}
-html[data-focus-mode="true"] #sessionCard.ready .session-editor{display:none}
-html[data-focus-mode="true"] .shell{margin-bottom:24px}
-html[data-density="dense"] .shell{gap:9px}
-html[data-density="dense"] .session,
-html[data-density="dense"] .inspector,
-html[data-density="dense"] .recent,
-html[data-density="dense"] .batch-summary,
-html[data-density="dense"] .batch-gate,
-html[data-density="dense"] .list-panel{padding:10px}
-html[data-density="dense"] .workbench{grid-template-columns:minmax(0,1fr) 350px;gap:9px}
-html[data-density="comfortable"] .workbench{grid-template-columns:minmax(0,1fr) 410px;gap:16px}
-html[data-density="comfortable"] .shell{gap:16px}
-html[data-density="comfortable"] .inspector{padding:16px}
-
 /* Selected Questions */
 .selected-page{max-width:1380px}
 .batch-summary,.batch-gate,.list-panel,.trash-panel{padding:14px}
@@ -488,8 +476,6 @@ html[data-density="comfortable"] .inspector{padding:16px}
   .session-editor{grid-template-columns:repeat(3,minmax(0,1fr))}
   .workbench{grid-template-columns:1fr}
   .inspector{position:static;max-height:none}
-  html[data-density="dense"] .workbench,
-  html[data-density="comfortable"] .workbench{grid-template-columns:1fr}
   .recent-list{grid-template-columns:1fr 1fr}
 }
 @media(max-width:760px){
@@ -505,25 +491,17 @@ html[data-density="comfortable"] .inspector{padding:16px}
   .page-jump{width:100%;justify-content:center}
   .crop-help{display:block}
   .pdf-stage{height:calc(100dvh - 188px);min-height:500px}
-  .pdf-stage.mobile-browse-mode{display:block;overflow:auto;touch-action:pan-x pan-y;-webkit-overflow-scrolling:touch}
-  .pdf-stage.mobile-browse-mode canvas{margin:0 auto;cursor:grab}
-  .pdf-stage.mobile-browse-mode .mobile-crop-lock{
-    display:grid;
-    place-items:center;
-    position:sticky;
-    top:10px;
-    left:10px;
-    margin:10px 0 -54px 10px;
-  }
-  .pdf-stage.mobile-crop-mode{display:grid;place-items:center;overflow:hidden;touch-action:none}
-  .pdf-stage.mobile-crop-mode canvas{cursor:crosshair;touch-action:none}
-  .pdf-stage.mobile-crop-mode .mobile-crop-lock{
+  .pdf-stage-shell>.mobile-crop-lock{
     display:grid;
     place-items:center;
     position:absolute;
     top:10px;
     left:10px;
   }
+  .pdf-stage.mobile-browse-mode{display:block;overflow:auto;touch-action:pan-x pan-y;-webkit-overflow-scrolling:touch}
+  .pdf-stage.mobile-browse-mode canvas{margin:0 auto;cursor:grab}
+  .pdf-stage.mobile-crop-mode{display:grid;place-items:center;overflow:hidden;touch-action:none}
+  .pdf-stage.mobile-crop-mode canvas{cursor:crosshair;touch-action:none}
   .check-grid{grid-template-columns:1fr}
   .bio-topic{grid-template-columns:1fr}
   .bio-topic-head{grid-column:1}
@@ -536,7 +514,6 @@ html[data-density="comfortable"] .inspector{padding:16px}
   .trash-item{align-items:flex-start;flex-direction:column}
   .trash-item button{width:100%}
   .guide-grid,.shortcut-table{grid-template-columns:1fr 1fr}
-  #densityToggle{display:none}
 }
 @media(max-width:520px){
   .guide-grid,.shortcut-table{grid-template-columns:1fr}
