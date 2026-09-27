@@ -139,7 +139,7 @@ export class PdfCropper{
       this.modeBtn.title=this.mobileCropMode?"حالت برش فعال است":"فعال‌کردن انتخاب برش";
     }
     const help=document.getElementById(this.stage.id==="qStage"?"qCropHelp":"aCropHelp");
-    if(help)help.textContent=this.regionLocked?"کراپ قفل شده است و تا ثبت سؤال قابل تغییر نیست.":this.mobileCropMode?"حالت برش فعال است؛ محدوده را روی صفحه بکش. برای حرکت سند، این حالت را خاموش کن.":"برای جابه‌جایی صفحه، سند را بکش؛ برای برش، حالت انتخاب برش را فعال کن.";
+    if(help)help.textContent=this.regionLocked?"کراپ قفل شده است؛ برای ویرایش دوباره، قفل کراپ را باز کن.":this.mobileCropMode?"حالت برش فعال است؛ محدوده را روی صفحه بکش. برای حرکت سند، این حالت را خاموش کن.":"برای جابه‌جایی صفحه، سند را بکش؛ برای برش، حالت انتخاب برش را فعال کن.";
   }
 
   captureViewAnchor(){
