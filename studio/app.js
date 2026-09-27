@@ -210,10 +210,10 @@ function gateState(){
   const id=examId()&&Number.isInteger(source)&&source>0?buildQuestionId(examId(),source):null;
   const unique=Boolean(id&&!activeRecords().some(x=>x.id===id));
   const checks={
-    exam:Boolean(exam?.id&&qCrop.file&&aCrop.file&&$("operator").value.trim()),
+    exam:Boolean(exam?.id&&qCrop.isRenderReady()&&aCrop.isRenderReady()&&$("operator").value.trim()),
     number:Boolean(Number.isInteger(source)&&source>0&&unique),
-    question:validRegion(qCrop.region),
-    answer:validRegion(aCrop.region),
+    question:qCrop.isRegionReady(),
+    answer:aCrop.isRegionReady(),
     taxonomy:Boolean($("chapter").value&&$("unit").value&&[10,11,12].includes(Number($("grade").value))),
     difficulty:["level_1","level_2","level_3","level_4","level_5"].includes($("difficulty").value),
     key:[1,2,3,4].includes(Number($("correctOption").value)),
@@ -231,12 +231,12 @@ function renderGate(){
   const {checks,missing}=gateState(),complete=Object.values(checks).filter(Boolean).length,s=stage(checks);
   document.querySelectorAll("[data-check]").forEach(el=>el.classList.toggle("done",Boolean(checks[el.dataset.check])));
   $("gateBadge").textContent=missing.length?`${complete}/8`:"آماده"; $("gateBadge").classList.toggle("ready",!missing.length);$("gateBadge").classList.toggle("blocked",!!missing.length);
-  $("saveQuestion").disabled=!!missing.length;
+  $("saveQuestion").disabled=!!missing.length||submittingQuestion;
   const msg={exam:"مرحلهٔ بعد: آزمون و دو فایل",question:"مرحلهٔ بعد: برش سؤال",answer:"مرحلهٔ بعد: برش پاسخ",meta:"مرحلهٔ بعد: تکمیل شناسنامه",ready:"آمادهٔ ثبت"}[s];
   $("nextAction").textContent=msg;
   const order=["exam","question","answer","meta","ready"],idx=order.indexOf(s);
   document.querySelectorAll("[data-step]").forEach(el=>{const i=order.indexOf(el.dataset.step);el.classList.toggle("done",i>=0&&i<idx);el.classList.toggle("active",i===idx)});
-  $("questionCropState").textContent=qCrop.region?"ثبت شد":"بدون Crop"; $("answerCropState").textContent=aCrop.region?"ثبت شد":"بدون Crop";
+  $("questionCropState").textContent=qCrop.loading||qCrop.rendering?"در حال آماده‌سازی":qCrop.isRegionReady()?"ثبت شد":qCrop.region?"نیازمند رندر":"بدون برش";\n  $("answerCropState").textContent=aCrop.loading||aCrop.rendering?"در حال آماده‌سازی":aCrop.isRegionReady()?"ثبت شد":aCrop.region?"نیازمند رندر":"بدون برش";
   $("questionIdentity").textContent="سؤال "+($("sourceNumber").value||"-");
 }
 document.querySelectorAll("[data-check]").forEach(button=>button.addEventListener("click",()=>{
