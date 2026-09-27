@@ -40,6 +40,11 @@ test.describe("Selection Studio",()=>{
     await expect(page.locator(".topbar h1")).toHaveText("Selection Studio");
     await expect(page.locator('.topbar nav a[href*="admin"]')).toHaveCount(0);
     await expect(page.locator("#saveQuestion")).toBeDisabled();
+    await expect(page.locator("#taxonomySearch")).toHaveCount(0);
+    await expect(page.locator("#qRegionLock")).toHaveClass(/unlocked/);
+    await expect(page.locator("#aRegionLock")).toHaveClass(/unlocked/);
+    await expect(page.locator("#qRegionLock")).toHaveAttribute("aria-pressed","false");
+    await expect(page.locator("#aRegionLock")).toHaveAttribute("aria-pressed","false");
     await expect(page.locator(".date-separator")).toHaveCount(2);
     await expect(page.locator("#provider")).toHaveAttribute("placeholder","قلمچی");
     await expect(page.locator("#questionPdfState")).toHaveAttribute("data-state","empty");
@@ -214,6 +219,16 @@ test.describe("Selection Studio",()=>{
     await expect(page.locator("#hotkeysDialog")).toContainText("Ctrl + K");
     await expectNoHorizontalOverflow(page);
   });
+  test("taxonomy search controls are removed from selector, edit, and review surfaces",async({page})=>{
+    await page.addInitScript(()=>sessionStorage.setItem("selection-studio-operator-auth-v1","admin"));
+    await page.goto("/studio/");
+    await expect(page.locator("#taxonomySearch")).toHaveCount(0);
+    await page.goto("/studio/selected.html");
+    await expect(page.locator("#editTaxonomySearch")).toHaveCount(0);
+    await page.goto("/admin/");
+    await expect(page.locator("#quickTaxonomySearch")).toHaveCount(0);
+  });
+
   test("selected batch surface keeps exports and submit gate",async({page})=>{
     await page.addInitScript(()=>sessionStorage.setItem("selection-studio-operator-auth-v1","admin"));
     await page.goto("/studio/selected.html");
