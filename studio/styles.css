@@ -676,3 +676,257 @@ body{overflow-x:hidden}
 @media(max-width:600px){
   .command-launcher{display:none}
 }
+
+/* Premium operator workspace layer */
+.session{
+  position:relative;
+  overflow:hidden;
+  padding:16px;
+}
+.session::before{
+  content:"";
+  position:absolute;
+  inset-block:0 auto;
+  inset-inline:18px;
+  height:1px;
+  background:linear-gradient(90deg,transparent,rgba(118,183,255,.52),transparent);
+}
+.session .section-head{align-items:center}
+.session .section-head h2{font-size:1.08rem;letter-spacing:-.01em}
+.session-editor{gap:12px;margin-top:14px}
+.file-label{
+  border-style:solid;
+  border-color:#2C3A4B;
+  background:linear-gradient(180deg,#121B25,#0F171F);
+}
+.file-label:hover{
+  border-color:#46617D;
+  background:linear-gradient(180deg,#162230,#111A23);
+}
+.date-field{
+  border-color:#314052;
+  background:#0F161E;
+  box-shadow:inset 0 1px 2px rgba(0,0,0,.2);
+}
+.workflow-rail{
+  gap:6px;
+  padding:6px;
+  border-color:#243140;
+  background:rgba(12,18,25,.72);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.018);
+}
+.workflow-rail>span{
+  position:relative;
+  min-height:42px;
+  padding:7px 10px;
+  border:1px solid transparent;
+  border-radius:10px;
+  transition:background-color 150ms ease,border-color 150ms ease,color 150ms ease;
+}
+.workflow-rail>span.done{
+  border-color:rgba(120,214,165,.1);
+  background:rgba(16,41,31,.34);
+}
+.workflow-rail>span.active{
+  border-color:rgba(118,183,255,.32);
+  background:linear-gradient(180deg,rgba(32,64,94,.86),rgba(22,44,65,.82));
+  box-shadow:0 6px 18px rgba(13,37,61,.18),inset 0 1px 0 rgba(255,255,255,.035);
+}
+.workflow-rail i{
+  border-color:#314154;
+  background:#111923;
+  border-radius:7px;
+}
+.workflow-rail>span.active i{
+  border-color:#568DC2;
+  background:#0F1D2B;
+}
+.workbench{gap:14px}
+.viewer{
+  border-color:#243140;
+  background:#0B1016;
+  box-shadow:0 18px 44px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.02);
+}
+.viewer-tabs{
+  gap:6px;
+  padding:7px;
+  border-bottom-color:#222E3A;
+  background:#0E151D;
+}
+.viewer-tabs button{
+  min-height:40px;
+  border:1px solid transparent;
+  border-radius:10px;
+  background:transparent;
+}
+.viewer-tabs button.active{
+  border-color:#324256;
+  background:linear-gradient(180deg,#192431,#141D27);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.035),0 4px 14px rgba(0,0,0,.16);
+}
+.viewer-tabs button.active span{
+  background:#19324B;
+  color:#A9D2FF;
+}
+.pdf-pane{padding-top:10px;background:#0B1016}
+.pdf-toolbar{
+  gap:7px;
+  padding:0 12px 10px;
+}
+.pdf-toolbar button,
+.page-jump input{
+  min-height:36px;
+  border-radius:9px;
+}
+.pdf-toolbar>span{
+  color:#7F8EA1;
+  font-weight:700;
+}
+.pdf-stage{
+  border-top-color:#1D2834;
+  background:
+    linear-gradient(rgba(255,255,255,.012) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.012) 1px,transparent 1px),
+    #070B10;
+  background-size:28px 28px;
+}
+.pdf-stage canvas{
+  border-radius:2px;
+  box-shadow:0 18px 46px rgba(0,0,0,.46),0 0 0 1px rgba(255,255,255,.05);
+}
+.crop-box{
+  border:2px solid #72B7FF;
+  border-radius:6px;
+  background:rgba(69,154,241,.12);
+  box-shadow:0 0 0 1px rgba(7,16,25,.65),0 0 22px rgba(68,155,242,.13);
+}
+.mobile-crop-lock{
+  border-color:#43536A;
+  background:rgba(14,21,29,.94);
+  box-shadow:0 10px 28px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.04);
+}
+.crop-freeze-row{
+  padding:9px 10px 10px;
+  border-top-color:#202B37;
+  background:#0E151D;
+}
+.crop-freeze{
+  min-height:44px;
+  border-radius:10px;
+}
+.crop-freeze.unlocked{
+  border-color:#713A43;
+  background:linear-gradient(180deg,#351C21,#2B171C);
+  color:#FF9CA1;
+}
+.crop-freeze.locked{
+  border-color:#2D674A;
+  background:linear-gradient(180deg,#133323,#10291F);
+  color:#8BE0B2;
+}
+.inspector{
+  top:84px;
+  padding:16px;
+  border-color:#263342;
+  background:linear-gradient(180deg,#121A24,#101720);
+  box-shadow:0 18px 42px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.025);
+}
+.inspector .section-head{
+  padding-bottom:10px;
+  border-bottom:1px solid #202C39;
+}
+.inspector form{gap:13px;margin-top:14px}
+.inspector label{gap:7px}
+.segmented{gap:6px}
+.segmented button{
+  border-color:#304052;
+  background:#101821;
+  box-shadow:none;
+}
+.segmented button:hover{background:#16212D}
+.segmented button.active{
+  border-color:#4D8EC9;
+  background:linear-gradient(180deg,#1D3A54,#172E43);
+  color:#A9D2FF;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
+}
+.readiness{
+  gap:10px;
+  padding:11px;
+  border-color:#293746;
+  background:linear-gradient(180deg,#141D27,#111922);
+}
+.check-grid{gap:6px}
+.check-grid button{
+  border-color:#293746;
+  background:#101821;
+}
+.check-grid button.done{
+  border-color:#28583F;
+  background:#10291F;
+}
+.bio-panel{
+  border-color:#2A3949;
+  background:linear-gradient(180deg,#151F2A,#111922);
+}
+.recent{
+  padding:14px;
+  border-color:#243140;
+}
+.recent-list{gap:9px}
+.recent-item{
+  border-color:#283646;
+  background:linear-gradient(180deg,#151E29,#111922);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.018);
+}
+.recent-item strong{color:#ECF3F9}
+.command-launcher{
+  border-color:#35475C;
+  background:rgba(15,23,32,.94);
+  box-shadow:0 14px 36px rgba(0,0,0,.36),inset 0 1px 0 rgba(255,255,255,.035);
+  backdrop-filter:blur(12px);
+}
+.hotkeys-dialog,
+.settings-dialog{
+  border-color:#304052;
+  background:#101720;
+}
+.question-card{
+  border-color:#293746;
+  background:linear-gradient(180deg,#151E29,#111821);
+}
+.previews img{
+  border-color:#2B3948;
+  background:#090E14;
+}
+.guide-card{
+  border-color:#263443;
+  background:linear-gradient(180deg,#131C26,#101720);
+}
+@media(hover:hover){
+  .panel:hover{border-color:#2C3B4D}
+  .recent-item:hover,
+  .question-card:hover{
+    border-color:#39506A;
+    box-shadow:0 14px 32px rgba(0,0,0,.2);
+  }
+}
+@media(max-width:760px){
+  .shell{gap:10px}
+  .session{padding:12px}
+  .workflow-rail{padding:5px}
+  .workflow-rail>span{min-height:40px}
+  .viewer{border-radius:16px}
+  .viewer-tabs{padding:6px}
+  .pdf-toolbar{
+    padding-inline:8px;
+    padding-bottom:9px;
+  }
+  .pdf-stage{border-top-color:#1E2935}
+  .inspector{
+    padding:13px;
+    border-radius:16px;
+  }
+  .crop-freeze-row{padding:8px}
+  .crop-freeze{min-height:46px}
+}
