@@ -79,7 +79,15 @@ export class PdfCropper{
     canvas.addEventListener("pointercancel",()=>this.cancel());
     modeBtn?.addEventListener("click",()=>this.toggleMobileCrop());
 
-    this.resizeObserver=new ResizeObserver(()=>{
+    this.lastObservedStageWidth=Math.round(stage.clientWidth||stage.getBoundingClientRect().width||0);
+    this.resizeObserver=new ResizeObserver(entries=>{
+      const width=Math.round(entries?.[0]?.contentRect?.width||this.stage.clientWidth||0);
+      const widthChanged=Math.abs(width-this.lastObservedStageWidth)>=1;
+      this.lastObservedStageWidth=width;
+      if(!widthChanged){
+        this.paintRegion();
+        return;
+      }
       clearTimeout(this.resizeTimer);
       this.resizeTimer=setTimeout(()=>{
         if(this.pdf&&!this.loading&&this.stage.offsetParent!==null)this.render().catch(error=>this.reportError(error));
@@ -144,15 +152,15 @@ export class PdfCropper{
 
   captureViewAnchor(){
     if(!this.canvas.width||!this.canvas.style.width)return null;
-    const rect=this.canvas.getBoundingClientRect();
-    if(!rect.width||!rect.height)return null;
+    const width=this.canvas.clientWidth,height=this.canvas.clientHeight;
+    if(!width||!height)return null;
     const centerX=this.stage.scrollLeft+this.stage.clientWidth/2;
     const centerY=this.stage.scrollTop+this.stage.clientHeight/2;
     const left=this.canvas.offsetLeft;
     const top=this.canvas.offsetTop;
     return {
-      x:clamp((centerX-left)/rect.width,0,1),
-      y:clamp((centerY-top)/rect.height,0,1)
+      x:clamp((centerX-left)/width,0,1),
+      y:clamp((centerY-top)/height,0,1)
     };
   }
 
@@ -163,14 +171,14 @@ export class PdfCropper{
   }
 
   restoreView(anchor,{startAtTop=false}={}){
-    const rect=this.canvas.getBoundingClientRect();
-    if(!rect.width||!rect.height)return;
+    const width=this.canvas.clientWidth,height=this.canvas.clientHeight;
+    if(!width||!height)return;
     const canvasLeft=this.canvas.offsetLeft;
     const canvasTop=this.canvas.offsetTop;
     const x=anchor?.x??.5;
     const y=startAtTop?0:(anchor?.y??0);
-    const left=clamp(canvasLeft+x*rect.width-this.stage.clientWidth/2,0,Math.max(0,this.stage.scrollWidth-this.stage.clientWidth));
-    const top=startAtTop?0:clamp(canvasTop+y*rect.height-this.stage.clientHeight/2,0,Math.max(0,this.stage.scrollHeight-this.stage.clientHeight));
+    const left=clamp(canvasLeft+x*width-this.stage.clientWidth/2,0,Math.max(0,this.stage.scrollWidth-this.stage.clientWidth));
+    const top=startAtTop?0:clamp(canvasTop+y*height-this.stage.clientHeight/2,0,Math.max(0,this.stage.scrollHeight-this.stage.clientHeight));
     this.stage.scrollTo({left,top,behavior:"auto"});
   }
 
@@ -501,14 +509,14 @@ export class PdfCropper{
       this.box.classList.add("hidden");
       return;
     }
-    const r=this.canvas.getBoundingClientRect();
-    const sr=this.stage.getBoundingClientRect();
+    const width=this.canvas.clientWidth,height=this.canvas.clientHeight;
+    if(!width||!height){this.box.classList.add("hidden");return}
     const [x1,y1,x2,y2]=this.region.bbox_norm;
     Object.assign(this.box.style,{
-      left:(r.left-sr.left+this.stage.scrollLeft+x1*r.width)+"px",
-      top:(r.top-sr.top+this.stage.scrollTop+y1*r.height)+"px",
-      width:((x2-x1)*r.width)+"px",
-      height:((y2-y1)*r.height)+"px"
+      left:(this.canvas.offsetLeft+x1*width)+"px",
+      top:(this.canvas.offsetTop+y1*height)+"px",
+      width:((x2-x1)*width)+"px",
+      height:((y2-y1)*height)+"px"
     });
     this.box.classList.remove("hidden");
   }
