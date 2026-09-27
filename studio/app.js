@@ -79,7 +79,7 @@ function installDateField(){
   });
   month.addEventListener("input",()=>{
     month.value=normalizedDate(month.value).slice(0,2);
-    syncExamDate();renderGate();
+    syncExamDate();renderSession();
     if(month.value.length===2){
       day.focus();
       requestAnimationFrame(()=>day.select());
@@ -87,7 +87,7 @@ function installDateField(){
   });
   day.addEventListener("input",()=>{
     day.value=normalizedDate(day.value).slice(0,2);
-    syncExamDate();renderGate();
+    syncExamDate();renderSession();
   });
   day.addEventListener("keydown",e=>{
     if(e.key==="Backspace"&&!day.value){
@@ -281,8 +281,8 @@ $("grade").addEventListener("change",()=>{if(!isMath())renderTaxonomy();persistS
 $("chapter").addEventListener("change",()=>{renderUnits();persistSticky();renderGate()});
 $("unit").addEventListener("change",()=>{syncMathGradeFromUnit();persistSticky();renderGate()});
 $("sourceNumber").addEventListener("input",renderGate);
-$("provider").addEventListener("input",()=>{renderProviderWarning();renderGate()});
-$("operator").addEventListener("input",renderGate);
+$("provider").addEventListener("input",()=>{renderProviderWarning();renderSession()});
+$("operator").addEventListener("input",renderSession);
 
 $("questionForm").addEventListener("submit",async e=>{
   e.preventDefault();
