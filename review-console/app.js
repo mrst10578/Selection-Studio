@@ -4,7 +4,7 @@ import {difficultyLabel,subjectLabel,gradeLabel} from '../studio/store.js';
 import {mountBiologyCombinationEditor} from '../studio/biology-combination.js';
 import {isTypingTarget,createCommandPalette,toast} from '../studio/ui-runtime.js';
 import {installWindowsMetadataShortcuts} from '../studio/windows-shortcuts.js';
-import {TAXONOMY,taxonomySummary,filterTaxonomyEntries} from '../studio/taxonomy-data.js';
+import {TAXONOMY,taxonomySummary} from '../studio/taxonomy-data.js';
 
 const $=value=>String(value).startsWith("#")?document.querySelector(value):document.getElementById(value);
 const ADMIN_SESSION='selection-review-admin-user-v1';
@@ -32,7 +32,7 @@ function syncQuickMathGrade(){
 function renderQuickUnits(selected=""){
   const cfg=quickCfg(),chapter=$('#quickChapter').value;
   const units=quickIsMath()?cfg.topics?.[chapter]?.units:cfg.grades?.[$('#quickGrade').value]?.chapters?.[chapter]?.units;
-  fillQuickSelect($('#quickUnit'),filterTaxonomyEntries(Object.entries(units||{}).sort((a,b)=>Number(a[0])-Number(b[0])),$('#quickTaxonomySearch').value,selected).map(([id,item])=>[id,quickIsMath()?(item.label_fa||item.name_fa):`${Number(id)} — ${item.name_fa}`]),selected);
+  fillQuickSelect($('#quickUnit'),Object.entries(units||{}).sort((a,b)=>Number(a[0])-Number(b[0])).map(([id,item])=>[id,quickIsMath()?(item.label_fa||item.name_fa):`${Number(id)} — ${item.name_fa}`]),selected);
   syncQuickMathGrade();
 }
 function renderQuickTaxonomy({chapter="",unit=""}={}){
@@ -42,7 +42,7 @@ function renderQuickTaxonomy({chapter="",unit=""}={}){
   $('#quickChapterLabel').textContent=cfg.chapter_name_fa||'فصل';
   $('#quickUnitLabel').textContent=cfg.unit_name_fa||($('#quickSubject').value==='BIO'?'گفتار':'مبحث');
   const chapters=math?cfg.topics:cfg.grades?.[$('#quickGrade').value]?.chapters;
-  fillQuickSelect($('#quickChapter'),filterTaxonomyEntries(Object.entries(chapters||{}).sort((a,b)=>Number(a[0])-Number(b[0])),$('#quickTaxonomySearch').value,chapter).map(([id,item])=>[id,`${Number(id)} — ${item.name_fa}`]),chapter);
+  fillQuickSelect($('#quickChapter'),Object.entries(chapters||{}).sort((a,b)=>Number(a[0])-Number(b[0])).map(([id,item])=>[id,`${Number(id)} — ${item.name_fa}`]),chapter);
   renderQuickUnits(unit);
 }
 
@@ -193,7 +193,6 @@ function syncBiologyOnlyReviewUi(){
 $('#quickSubject').addEventListener('change',()=>{renderQuickTaxonomy();syncBiologyOnlyReviewUi();syncQuickMeta()});
 $('#quickGrade').addEventListener('change',()=>{if(!quickIsMath())renderQuickTaxonomy();syncQuickMeta()});
 $('#quickChapter').addEventListener('change',()=>{renderQuickUnits();syncQuickMeta()});
-$('#quickTaxonomySearch').addEventListener('input',()=>renderQuickTaxonomy({chapter:$('#quickChapter').value,unit:$('#quickUnit').value}));
 $('#quickUnit').addEventListener('change',()=>{syncQuickMathGrade();syncQuickMeta()});
 
 async function loadSource(img,kind){
