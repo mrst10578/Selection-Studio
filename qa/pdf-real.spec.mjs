@@ -74,7 +74,6 @@ test("real PDF.js renders an allowed mixed-script PDF with isolated LTR drawing 
   await page.waitForTimeout(250);
   await page.locator("#densityToggle").click();
   await page.waitForTimeout(300);
-  await page.locator("#themeToggle").click();
   await page.locator("#focusToggle").click();
   await page.waitForTimeout(300);
   const afterLayout=await viewState();
