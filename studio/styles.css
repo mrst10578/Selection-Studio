@@ -221,13 +221,6 @@ body{overflow-x:hidden}
   border-color:var(--success);
   background:color-mix(in srgb,var(--success-bg) 84%,var(--success));
 }
-.crop-freeze.locked:disabled{
-  opacity:1;
-  cursor:not-allowed;
-  border-color:var(--success);
-  background:var(--success-bg);
-  color:var(--success);
-}
 .inspector{
   position:sticky;
   top:82px;
