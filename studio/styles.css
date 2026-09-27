@@ -16,7 +16,7 @@ body{overflow-x:hidden}
 .session.collapsed .session-editor{display:none}
 .field-label{display:block}
 .provider-label-line{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.file-label input{padding:6px 8px;font-size:.8125rem}
+.file-label input{padding:6px 8px;font-size:.8125rem}.file-state{display:block;color:var(--text-muted);font-size:.75rem;font-weight:600;overflow-wrap:anywhere}
 .date-field{
   display:grid;
   grid-template-columns:minmax(64px,1.3fr) auto minmax(46px,.7fr) auto minmax(46px,.7fr);
