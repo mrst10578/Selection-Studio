@@ -5,13 +5,12 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="theme-color" content="#F4F3F0" />
   <title>Selection Studio</title>
-  <script>(()=>{const t=localStorage.getItem("testbank-ui-theme-v1");document.documentElement.dataset.theme=t==="dark"?"dark":"light"})()</script>
+  <script>(()=>{localStorage.removeItem("testbank-ui-theme-v1");document.documentElement.dataset.theme="light"})()</script>
   <style>
-    html{background:#F4F3F0}html[data-theme="dark"]{background:#1B1F23}
+    html{background:#F4F3F0}
     body.booting{overflow:hidden}
     body.booting>*:not(#bootSplash){visibility:hidden!important}
     #bootSplash{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;gap:12px;padding:20px;background:#F4F3F0;color:#242A31;font-family:Tahoma,"Segoe UI",system-ui,sans-serif}
-    html[data-theme="dark"] #bootSplash{background:#1B1F23;color:#E7EBEF}
     #bootSplash .boot-mark{width:44px;height:44px;display:grid;place-items:center;border:1px solid #828D99;border-radius:12px;font-weight:800}
     #bootSplash>div:last-child{display:grid;gap:2px}#bootSplash span{font-size:12px;opacity:.72}
   </style>
@@ -25,7 +24,7 @@
 </section>
 <header class="topbar">
   <div><span class="eyebrow">پنل گزینش</span><h1>Selection Studio</h1><p>انتخاب، برش و شناسنامه‌گذاری سؤال</p></div>
-  <nav><a class="active" href="./">گزینش</a><a href="./selected.html">فهرست <b id="navCount">0</b></a><a href="./guide.html">راهنما</a><button id="focusToggle" class="focus-toggle" type="button" aria-pressed="false">حالت تمرکز</button><button id="themeToggle" class="theme-toggle" type="button" aria-pressed="false">تم تیره</button><button id="densityToggle" class="density-toggle" type="button" aria-pressed="true">نمایش راحت</button></nav>
+  <nav><a class="active" href="./">گزینش</a><a href="./selected.html">فهرست <b id="navCount">0</b></a><a href="./guide.html">راهنما</a><button id="focusToggle" class="focus-toggle" type="button" aria-pressed="false">حالت تمرکز</button><button id="densityToggle" class="density-toggle" type="button" aria-pressed="true">نمایش راحت</button></nav>
 </header>
 <main class="shell">
   <section class="panel session" id="sessionCard">
@@ -79,7 +78,7 @@
         <section class="readiness" aria-live="polite">
           <div class="readiness-head"><strong>آمادگی ثبت سؤال</strong><small id="nextAction">مرحله بعد: تنظیم آزمون</small></div>
           <div class="check-grid">
-            <button type="button" data-check="exam"><i></i>آزمون و فایل‌ها</button><button type="button" data-check="number"><i></i>شمارهٔ سؤال</button><button type="button" data-check="question"><i></i>برش سؤال</button><button type="button" data-check="answer"><i></i>برش پاسخ</button><button type="button" data-check="taxonomy"><i></i>درس و مبحث</button><button type="button" data-check="difficulty"><i></i>سطح سؤال</button><button type="button" data-check="key"><i></i>گزینهٔ درست</button><button type="button" data-check="biology"><i></i>ترکیبی‌بودن زیست</button>
+            <button type="button" data-check="exam"><i></i>آزمون و فایل‌ها</button><button type="button" data-check="number"><i></i>شمارهٔ سؤال</button><button type="button" data-check="question"><i></i>برش سؤال</button><button type="button" data-check="answer"><i></i>برش پاسخ</button><button type="button" data-check="taxonomy"><i></i>درس و مبحث</button><button type="button" data-check="difficulty"><i></i>سطح سؤال</button><button type="button" data-check="key"><i></i>گزینهٔ درست</button><button id="bioReadinessCheck" type="button" data-check="biology"><i></i>ترکیبی‌بودن زیست</button>
           </div>
         </section>
         <button id="saveQuestion" class="primary large" type="submit" disabled>ثبت سؤال و رفتن به بعدی</button>
