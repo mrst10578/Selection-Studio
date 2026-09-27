@@ -143,6 +143,10 @@ test.describe("Selection Studio",()=>{
     await expect(page.locator("#qCropLock")).toBeVisible();
     await expect(page.locator("#qCropLock")).toHaveAttribute("aria-pressed","false");
     await expect(page.locator("#qStage")).toHaveClass(/mobile-browse-mode/);
+    await expect(page.locator("#hotkeysLauncher")).toBeHidden();
+    const nativeFileStyle=await page.locator("#questionPdf").evaluate(el=>({opacity:getComputedStyle(el).opacity,position:getComputedStyle(el).position}));
+    expect(nativeFileStyle.opacity).toBe("0");
+    expect(nativeFileStyle.position).toBe("absolute");
     const themeBox=await page.locator("#themeToggle").boundingBox();
     expect(themeBox).not.toBeNull();
     expect(themeBox.x).toBeGreaterThanOrEqual(0);
