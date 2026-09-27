@@ -544,3 +544,114 @@ html[data-density="comfortable"] .inspector{padding:16px}
   .summary-actions{display:grid;width:100%}
   .summary-actions>*{width:100%;text-align:center}
 }
+
+
+/* Uiverse-inspired PDF picker and progress details */
+.file-label{
+  position:relative;
+  gap:7px;
+  padding:9px;
+  border:1px dashed color-mix(in srgb,var(--control-border) 72%,var(--line));
+  border-radius:var(--radius-md);
+  background:color-mix(in srgb,var(--surface-raised) 86%,var(--selection));
+  transition:border-color 160ms ease,background-color 160ms ease,box-shadow 160ms ease,transform 160ms ease;
+}
+.file-label::before{
+  content:"PDF";
+  position:absolute;
+  inset-inline-end:9px;
+  top:8px;
+  display:grid;
+  place-items:center;
+  min-width:30px;
+  height:21px;
+  padding-inline:5px;
+  border-radius:6px;
+  background:var(--selection);
+  color:var(--accent);
+  font:800 9px/1 ui-monospace,SFMono-Regular,Consolas,monospace;
+  letter-spacing:.04em;
+}
+.file-label:focus-within{
+  border-style:solid;
+  border-color:var(--accent);
+  box-shadow:var(--focus);
+  background:var(--surface-raised);
+}
+.file-label input[type="file"]{
+  min-height:44px;
+  padding:5px;
+  border-color:transparent;
+  background:transparent;
+  cursor:pointer;
+}
+.file-label input[type="file"]::file-selector-button{
+  min-height:32px;
+  margin-inline-end:8px;
+  border:1px solid var(--control-border);
+  border-radius:8px;
+  background:var(--surface);
+  color:var(--text);
+  padding:6px 9px;
+  font:700 .75rem/1.2 var(--font-ui);
+  cursor:pointer;
+  transition:border-color 140ms ease,background-color 140ms ease,color 140ms ease;
+}
+.file-label input[type="file"]:hover::file-selector-button{border-color:var(--accent);background:var(--selection);color:var(--accent)}
+.file-state{
+  min-height:20px;
+  display:flex;
+  align-items:center;
+  gap:7px;
+  padding-inline-end:1px;
+}
+.file-state::before{
+  content:"";
+  width:8px;
+  height:8px;
+  flex:0 0 8px;
+  border-radius:50%;
+  border:1px solid var(--line-strong);
+  background:var(--surface);
+}
+.file-state[data-state="busy"]::before{
+  width:11px;
+  height:11px;
+  flex-basis:11px;
+  border:2px solid var(--line);
+  border-top-color:var(--accent);
+  background:transparent;
+  animation:fileStateSpin .72s linear infinite;
+}
+.file-state[data-state="active"]::before{border-color:var(--success);background:var(--success);box-shadow:0 0 0 3px color-mix(in srgb,var(--success) 12%,transparent)}
+.workflow-rail{position:relative;overflow:hidden}
+.workflow-rail::before{
+  content:"";
+  position:absolute;
+  inset-inline:8px;
+  top:50%;
+  height:1px;
+  background:linear-gradient(90deg,transparent,var(--line),var(--line),transparent);
+  z-index:0;
+}
+.workflow-rail>span{position:relative;z-index:1;border:1px solid transparent}
+.workflow-rail>span.active{border-color:color-mix(in srgb,var(--accent) 30%,var(--line));box-shadow:0 3px 12px color-mix(in srgb,var(--accent) 9%,transparent)}
+.workflow-rail>span.done i{position:relative;font-size:0}
+.workflow-rail>span.done i::after{content:"✓";font:800 11px/1 var(--font-ui)}
+.command-launcher{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  border-radius:999px;
+  background:color-mix(in srgb,var(--surface-raised) 94%,var(--selection));
+}
+.command-launcher::before{content:"⌨";font:700 15px/1 system-ui,sans-serif;color:var(--accent)}
+@keyframes fileStateSpin{to{transform:rotate(360deg)}}
+@media(hover:hover){
+  .file-label:hover{border-color:color-mix(in srgb,var(--accent) 58%,var(--control-border));background:var(--surface-raised);transform:translateY(-1px);box-shadow:0 8px 20px rgba(20,28,36,.05)}
+}
+@media(max-width:760px){
+  .file-label{padding:8px}
+  .workflow-rail::before{display:none}
+}
+@media(prefers-reduced-motion:reduce){.file-state[data-state="busy"]::before{animation:none}}

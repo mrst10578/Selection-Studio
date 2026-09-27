@@ -42,6 +42,8 @@ test.describe("Selection Studio",()=>{
     await expect(page.locator("#saveQuestion")).toBeDisabled();
     await expect(page.locator(".date-separator")).toHaveCount(2);
     await expect(page.locator("#provider")).toHaveAttribute("placeholder","قلمچی");
+    await expect(page.locator("#questionPdfState")).toHaveAttribute("data-state","empty");
+    await expect(page.locator("#answerPdfState")).toHaveAttribute("data-state","empty");
     await page.locator("#provider").fill("MAZ");
     await expect(page.locator("#providerWarning")).toBeVisible();
     await expect(page.locator("#providerWarning")).toHaveText("(اسم حتما باید فارسی باشه)");
