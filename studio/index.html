@@ -31,7 +31,7 @@
     <div class="section-head"><div><span class="eyebrow">جلسهٔ آزمون</span><h2>آزمون فعلی</h2><p id="sessionSummary">هنوز تنظیم نشده</p></div><button id="toggleSession" type="button" class="secondary">تنظیم آزمون</button></div>
     <div id="sessionEditor" class="session-editor">
       <label><span class="provider-label-line"><span>نام آزمون</span><small id="providerWarning" class="provider-warning hidden" role="status" aria-live="polite">(اسم حتما باید فارسی باشه)</small></span><input id="provider" autocomplete="off" placeholder="قلمچی" lang="fa" dir="rtl" /></label>
-      <div class="session-field"><span class="field-label">تاریخ آزمون</span><div class="date-field" id="examDateField" dir="ltr"><input id="examYear" value="1405" readonly tabindex="-1" aria-label="سال آزمون، ثابت ۱۴۰۵" /><span class="date-separator" aria-hidden="true">/</span><input id="examMonth" inputmode="numeric" pattern="[0-9۰-۹]*" maxlength="2" placeholder="03" aria-label="ماه آزمون، دو رقمی" /><span class="date-separator" aria-hidden="true">/</span><input id="examDay" inputmode="numeric" pattern="[0-9۰-۹]*" maxlength="2" placeholder="07" aria-label="روز آزمون، دو رقمی" /></div><input id="examDate" type="hidden" /></div>
+      <div class="session-field"><span class="field-label">تاریخ آزمون</span><div class="date-field" id="examDateField" dir="ltr"><input id="examYear" value="1405" readonly tabindex="-1" aria-label="سال آزمون، ثابت ۱۴۰۵" /><span class="date-separator" aria-hidden="true">/</span><input id="examMonth" inputmode="numeric" pattern="[0-9۰-۹٠-٩]*" maxlength="2" placeholder="03" aria-label="ماه آزمون، بین ۱ تا ۱۲" /><span class="date-separator" aria-hidden="true">/</span><input id="examDay" inputmode="numeric" pattern="[0-9۰-۹٠-٩]*" maxlength="2" placeholder="07" aria-label="روز آزمون، بین ۱ تا ۳۱" /></div><input id="examDate" type="hidden" /></div>
       <label>اپراتور<input id="operator" autocomplete="name" /></label>
       <label class="file-label">PDF سؤال<input id="questionPdf" type="file" accept="application/pdf" /><small id="questionPdfState" class="file-state" aria-live="polite">فایلی فعال نیست.</small></label>
       <label class="file-label">PDF پاسخ<input id="answerPdf" type="file" accept="application/pdf" /><small id="answerPdfState" class="file-state" aria-live="polite">فایلی فعال نیست.</small></label>
@@ -59,7 +59,7 @@
     <aside class="panel inspector">
       <div class="section-head compact"><div><span class="eyebrow">مشخصات سؤال</span><h2>شناسنامه سؤال</h2><p id="questionIdentity">سؤال -</p></div><span id="gateBadge" class="gate-badge blocked">0/8</span></div>
       <form id="questionForm">
-        <label>شماره سؤال<input id="sourceNumber" type="number" min="1" inputmode="numeric" required /></label>
+        <label>شماره سؤال<input id="sourceNumber" type="text" inputmode="numeric" pattern="[0-9۰-۹٠-٩]*" autocomplete="off" required /></label>
         <div class="two" id="subjectGradeRow">
           <label>درس<select id="subject"><option value="BIO">زیست‌شناسی</option><option value="MATH">ریاضی</option><option value="PHY">فیزیک</option><option value="CHEM">شیمی</option></select></label>
           <label id="gradeField">پایه<select id="grade"><option value="10">دهم</option><option value="11">یازدهم</option><option value="12">دوازدهم</option></select></label>
