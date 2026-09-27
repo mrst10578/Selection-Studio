@@ -267,7 +267,6 @@ export class PdfCropper{
       this.loadingTask=null;
       this.syncInteractionMode();
       this.onChange();
-      this.reportError(error);
       throw error;
     }
   }
