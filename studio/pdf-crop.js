@@ -132,7 +132,7 @@ export class PdfCropper{
     this.stage.classList.toggle("is-loading",this.loading||this.rendering);
     this.stage.classList.toggle("has-pdf",Boolean(this.file));
     if(this.modeBtn){
-      this.modeBtn.disabled=!this.pdf||this.loading||this.rendering||this.regionLocked;
+      this.modeBtn.disabled=!this.pdf||this.loading||this.rendering;
       this.modeBtn.innerHTML=this.mobileCropMode?LOCKED_ICON:UNLOCKED_ICON;
       this.modeBtn.setAttribute("aria-pressed",this.mobileCropMode?"true":"false");
       this.modeBtn.setAttribute("aria-label",this.mobileCropMode?"خاموش کردن حالت برش و فعال‌کردن حرکت سند":"فعال‌کردن حالت برش");
