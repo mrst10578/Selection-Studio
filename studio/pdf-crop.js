@@ -31,7 +31,7 @@ const cancelled=error=>error?.name==="RenderingCancelledException";
 export class PdfCropper{
   constructor({
     canvas,stage,pageLabel,prevBtn,nextBtn,modeBtn=null,
-    onChange=()=>{},onPageChange=()=>{},onError=()=>{},pdfLoader=loadPdfJs
+    onChange=()=>{},onPageChange=()=>{},onError=()=>{},onRegionLockChange=()=>{},pdfLoader=loadPdfJs
   }){
     this.canvas=canvas;
     this.stage=stage;
@@ -42,6 +42,7 @@ export class PdfCropper{
     this.onChange=onChange;
     this.onPageChange=onPageChange;
     this.onError=onError;
+    this.onRegionLockChange=onRegionLockChange;
     this.pdfLoader=pdfLoader;
     this.ctx=canvas.getContext("2d",{alpha:false});
     this.pdf=null;
@@ -61,6 +62,7 @@ export class PdfCropper{
     this.loading=false;
     this.rendering=false;
     this.mobileCropMode=false;
+    this.regionLocked=false;
     this.box=document.createElement("div");
     this.box.className="crop-box hidden";
     stage.appendChild(this.box);
@@ -93,7 +95,22 @@ export class PdfCropper{
   }
 
   isMobile(){return window.matchMedia("(pointer:coarse)").matches||window.innerWidth<=700}
-  canCrop(){return !this.isMobile()||this.mobileCropMode}
+  canCrop(){return !this.regionLocked&&(!this.isMobile()||this.mobileCropMode)}
+  isRegionLocked(){return this.regionLocked}
+  setRegionLocked(locked){
+    const next=Boolean(locked)&&validRegion(this.region);
+    if(next===this.regionLocked)return this.regionLocked;
+    this.regionLocked=next;
+    this.drag=null;
+    this.syncInteractionMode();
+    this.onRegionLockChange(this.regionLocked);
+    return this.regionLocked;
+  }
+  toggleRegionLock(){
+    if(!this.regionLocked&&!this.isRegionReady())return false;
+    this.setRegionLocked(!this.regionLocked);
+    return true;
+  }
 
   isRenderReady(){
     return Boolean(
@@ -122,7 +139,7 @@ export class PdfCropper{
       this.modeBtn.title=this.mobileCropMode?"حالت برش فعال است":"فعال‌کردن انتخاب برش";
     }
     const help=document.getElementById(this.stage.id==="qStage"?"qCropHelp":"aCropHelp");
-    if(help)help.textContent=this.mobileCropMode?"حالت برش فعال است؛ محدوده را روی صفحه بکش. برای حرکت سند، این حالت را خاموش کن.":"برای جابه‌جایی صفحه، سند را بکش؛ برای برش، حالت انتخاب برش را فعال کن.";
+    if(help)help.textContent=this.regionLocked?"کراپ قفل شده است؛ برای تغییر محدوده، ابتدا قفل کراپ را باز کن.":this.mobileCropMode?"حالت برش فعال است؛ محدوده را روی صفحه بکش. برای حرکت سند، این حالت را خاموش کن.":"برای جابه‌جایی صفحه، سند را بکش؛ برای برش، حالت انتخاب برش را فعال کن.";
   }
 
   captureViewAnchor(){
@@ -193,6 +210,7 @@ export class PdfCropper{
     this.loading=false;
     this.rendering=false;
     this.mobileCropMode=false;
+    this.regionLocked=false;
     this.box.classList.add("hidden");
     this.canvas.width=0;
     this.canvas.height=0;
@@ -203,6 +221,7 @@ export class PdfCropper{
     this.prevBtn.disabled=true;
     this.nextBtn.disabled=true;
     this.syncInteractionMode();
+    this.onRegionLockChange(false);
     this.onChange();
     return {status:"cleared"};
   }
@@ -258,6 +277,7 @@ export class PdfCropper{
       this.viewByPage.clear();
       this.drag=null;
       this.mobileCropMode=false;
+      this.regionLocked=false;
       this.loading=false;
       this.rendering=false;
       this.readyFrame=null;
@@ -265,6 +285,7 @@ export class PdfCropper{
       try{if(previous&&previous!==candidate)await previous.destroy?.()}catch{}
       this.loadingTask=null;
       this.syncInteractionMode();
+      this.onRegionLockChange(false);
       this.onChange();
       return {status:"ready",file:this.file};
     }catch(error){
@@ -492,11 +513,13 @@ export class PdfCropper{
     this.box.classList.remove("hidden");
   }
 
-  clearRegion(){
+  clearRegion({force=false}={}){
+    if(this.regionLocked&&!force)return false;
     this.region=null;
     this.regionsByPage.delete(this.page);
     this.box.classList.add("hidden");
     this.onChange(null);
+    return true;
   }
 
   async setRegion(region){

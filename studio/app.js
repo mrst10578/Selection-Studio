@@ -8,7 +8,7 @@ import {isTypingTarget,toast} from "./ui-runtime.js";
 import "./operator-auth.js";
 import {installWindowsMetadataShortcuts} from "./windows-shortcuts.js";
 import {mountBiologyCombinationEditor,biologyIssues} from "./biology-combination.js";
-import {TAXONOMY,taxonomySummary,filterTaxonomyEntries} from "./taxonomy-data.js";
+import {TAXONOMY,taxonomySummary} from "./taxonomy-data.js";
 
 const $=id=>document.getElementById(id);
 let records=loadRecords();
@@ -26,8 +26,28 @@ function pdfViewerError(error){
   return "بازکردن یا نمایش PDF ناموفق بود. فایل را دوباره انتخاب کن.";
 }
 const cropError=error=>toast(pdfViewerError(error),"error");
+function syncCropFreezeButton(buttonId,clearId,locked){
+  const button=$(buttonId),clear=$(clearId);
+  button.classList.toggle("locked",locked);
+  button.classList.toggle("unlocked",!locked);
+  button.setAttribute("aria-pressed",String(locked));
+  button.textContent=locked?"کراپ قفل است":"قفل کراپ";
+  clear.disabled=locked;
+}
+function installCropFreeze(crop,buttonId,clearId){
+  crop.onRegionLockChange=locked=>syncCropFreezeButton(buttonId,clearId,locked);
+  $(buttonId).onclick=()=>{
+    if(!crop.isRegionLocked()&&!crop.isRegionReady()){
+      toast("اول محدودهٔ کراپ را مشخص کن.","error");
+      return;
+    }
+    crop.toggleRegionLock();
+  };
+  syncCropFreezeButton(buttonId,clearId,crop.isRegionLocked());
+}
 const qCrop=new PdfCropper({canvas:$("qCanvas"),stage:$("qStage"),pageLabel:$("qPage"),prevBtn:$("qPrev"),nextBtn:$("qNext"),modeBtn:$("qCropLock"),onChange:()=>renderGate(),onPageChange:(page,total)=>updatePageJump("qPageJump",page,total),onError:cropError});
 const aCrop=new PdfCropper({canvas:$("aCanvas"),stage:$("aStage"),pageLabel:$("aPage"),prevBtn:$("aPrev"),nextBtn:$("aNext"),modeBtn:$("aCropLock"),onChange:()=>renderGate(),onPageChange:(page,total)=>updatePageJump("aPageJump",page,total),onError:cropError});
+installCropFreeze(qCrop,"qRegionLock","qClear");installCropFreeze(aCrop,"aRegionLock","aClear");
 function updatePageJump(id,page,total){const input=$(id);if(!input)return;input.value=page||"";input.max=total||"";input.disabled=!total}
 function installPageJump(id,crop){const input=$(id);input.addEventListener("change",()=>{const page=Number(input.value);if(Number.isInteger(page)&&page>=1&&page<=crop.pdf?.numPages)crop.go(page);else input.value=crop.page||""})}
 installPageJump("qPageJump",qCrop);installPageJump("aPageJump",aCrop);
@@ -207,7 +227,7 @@ function syncMathGradeFromUnit(){
 function renderUnits(selected=""){
   const cfg=subjectCfg(),chapter=$("chapter").value;
   const units=isMath()?cfg.topics?.[chapter]?.units:cfg.grades?.[$("grade").value]?.chapters?.[chapter]?.units;
-  const items=filterTaxonomyEntries(Object.entries(units||{}).sort((a,b)=>Number(a[0])-Number(b[0])),$("taxonomySearch").value,$("unit").value).map(([id,item])=>[
+  const items=Object.entries(units||{}).sort((a,b)=>Number(a[0])-Number(b[0])).map(([id,item])=>[
     id,
     isMath()?(item.label_fa||`${item.name_fa} (${gradeLabel(item.grade)})`):`${Number(id)} — ${item.name_fa}`
   ]);
@@ -220,7 +240,7 @@ function renderTaxonomy({chapter="",unit=""}={}){
   $("subjectGradeRow").classList.toggle("single",math);
   updateUnitLabel();
   const chapters=math?cfg.topics:cfg.grades?.[$("grade").value]?.chapters;
-  fillSelect($("chapter"),filterTaxonomyEntries(Object.entries(chapters||{}).sort((a,b)=>Number(a[0])-Number(b[0])),$("taxonomySearch").value,chapter).map(([id,item])=>[id,`${Number(id)} — ${item.name_fa}`]),chapter);
+  fillSelect($("chapter"),Object.entries(chapters||{}).sort((a,b)=>Number(a[0])-Number(b[0])).map(([id,item])=>[id,`${Number(id)} — ${item.name_fa}`]),chapter);
   renderUnits(unit);
 }
 const biologyEditor=mountBiologyCombinationEditor({
@@ -295,7 +315,6 @@ function restore(){
   const last=activeRecords().at(-1);$("sourceNumber").value=String((Number(last?.source_question_number)||0)+1||1);
 }
 $("subject").addEventListener("change",()=>{renderTaxonomy();persistSticky();renderGate()});
-$("taxonomySearch").addEventListener("input",()=>renderTaxonomy({chapter:$("chapter").value,unit:$("unit").value}));
 $("grade").addEventListener("change",()=>{if(!isMath())renderTaxonomy();persistSticky();renderGate()});
 $("chapter").addEventListener("change",()=>{renderUnits();persistSticky();renderGate()});
 $("unit").addEventListener("change",()=>{syncMathGradeFromUnit();persistSticky();renderGate()});
@@ -325,7 +344,7 @@ $("questionForm").addEventListener("submit",async e=>{
     records.push(record);
     saveRecords(records);
     $("sourceNumber").value=String(source+1);
-    qCrop.clearRegion();aCrop.clearRegion();setSegmented("difficulty","");setSegmented("correctOption","");biologyEditor.reset();switchPane("question");
+    qCrop.setRegionLocked(false);aCrop.setRegionLocked(false);qCrop.clearRegion();aCrop.clearRegion();setSegmented("difficulty","");setSegmented("correctOption","");biologyEditor.reset();switchPane("question");
     renderRecent();
     toast(`سؤال ${source} ثبت شد · ${activeRecords().length} سؤال در فهرست`,"ok");
   }catch(error){

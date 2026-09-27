@@ -212,6 +212,37 @@ test.describe("PdfCropper concurrency and crop integrity",()=>{
     expect(result.afterCancel).toEqual(result.original);
   });
 
+  test("locked crop cannot be changed or cleared until it is unlocked",async({page})=>{
+    await openHarness(page);
+    const result=await page.evaluate(async()=>{
+      const {PdfCropper}=await import("/studio/pdf-crop.js");
+      document.body.insertAdjacentHTML("beforeend",'<div id="lStage" style="position:relative;width:350px;height:300px;overflow:auto"><canvas id="lCanvas"></canvas></div><span id="lPage"></span><button id="lPrev"></button><button id="lNext"></button>');
+      const pdf={numPages:1,async getPage(){return{getViewport:({scale})=>({width:500*scale,height:800*scale}),render({canvasContext}){const promise=Promise.resolve().then(()=>{canvasContext.fillStyle="#fff";canvasContext.fillRect(0,0,canvasContext.canvas.width,canvasContext.canvas.height)});return{promise,cancel(){}}}}},async destroy(){}};
+      const loader=async()=>({base:"",lib:{getDocument(){return{promise:Promise.resolve(pdf),async destroy(){}}}}});
+      const crop=new PdfCropper({canvas:lCanvas,stage:lStage,pageLabel:lPage,prevBtn:lPrev,nextBtn:lNext,pdfLoader:loader});
+      crop.resizeObserver.disconnect();
+      await crop.loadFile({name:"lock.pdf",arrayBuffer:async()=>new Uint8Array([1]).buffer});
+      const original={page:1,bbox_norm:[.2,.2,.7,.7]};
+      crop.region=structuredClone(original);crop.regionsByPage.set(1,structuredClone(original));crop.paintRegion();
+      crop.setRegionLocked(true);
+      crop.down({button:0,preventDefault(){},clientX:20,clientY:20,pointerId:1});
+      const clearWhileLocked=crop.clearRegion();
+      const lockedRegion=structuredClone(crop.region);
+      const lockedState=crop.isRegionLocked();
+      const canCropLocked=crop.canCrop();
+      crop.setRegionLocked(false);
+      const clearAfterUnlock=crop.clearRegion();
+      return {original,lockedRegion,lockedState,canCropLocked,drag:crop.drag,clearWhileLocked,clearAfterUnlock,finalRegion:crop.region};
+    });
+    expect(result.lockedState).toBe(true);
+    expect(result.canCropLocked).toBe(false);
+    expect(result.drag).toBeNull();
+    expect(result.clearWhileLocked).toBe(false);
+    expect(result.lockedRegion).toEqual(result.original);
+    expect(result.clearAfterUnlock).toBe(true);
+    expect(result.finalRegion).toBeNull();
+  });
+
   test("PDF drawing surface is explicitly LTR while the app remains RTL",async({page})=>{
     await openHarness(page);
     const result=await page.evaluate(async()=>{
