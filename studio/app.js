@@ -2,7 +2,7 @@ import {
   RECORDS_KEY,loadRecords,saveRecords,loadSticky,saveSticky,loadExamDraft,saveExamDraft,
   buildQuestionId,difficultyLabel,subjectLabel,gradeLabel
 } from "./store.js";
-import {putPreview} from "./preview-db.js";
+import {putPreview,deletePreview} from "./preview-db.js";
 import {PdfCropper,validRegion} from "./pdf-crop.js";
 import {isTypingTarget,toast} from "./ui-runtime.js";
 import {isOperatorAuthenticated} from "./operator-auth.js";
@@ -390,13 +390,19 @@ $("questionForm").addEventListener("submit",async e=>{
       entered_by:$("operator").value.trim(),created_at:new Date().toISOString()
     };
     await Promise.all([putPreview(id+":question",qCapture.blob),putPreview(id+":answer",aCapture.blob)]);
-    records.push(record);
-    saveRecords(records);
+    const nextRecords=[...records,record];
+    try{saveRecords(nextRecords)}
+    catch(error){
+      await Promise.allSettled([deletePreview(id+":question"),deletePreview(id+":answer")]);
+      throw error;
+    }
+    records=nextRecords;
     $("sourceNumber").value=String(source+1);
     qCrop.setRegionLocked(false);aCrop.setRegionLocked(false);qCrop.clearRegion();aCrop.clearRegion();setSegmented("difficulty","");setSegmented("correctOption","");biologyEditor.reset();switchPane("question");
     renderRecent();
     toast(`سؤال ${source} ثبت شد · ${activeRecords().length} سؤال در فهرست`,"ok");
   }catch(error){
+    await Promise.allSettled([deletePreview(id+":question"),deletePreview(id+":answer")]);
     const message=String(error?.message||"");
     toast(message.startsWith("PDF_CROP_")?"برش PDF هنوز آماده نیست؛ بعد از کامل‌شدن نمایش دوباره ثبت کن.":"ثبت سؤال کامل نشد؛ هیچ رکورد ناقصی ذخیره نشد.","error");
   }finally{
