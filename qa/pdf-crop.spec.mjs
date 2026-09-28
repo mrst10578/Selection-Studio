@@ -158,6 +158,37 @@ test.describe("PdfCropper concurrency and crop integrity",()=>{
     expect(result.afterHash).toBe(result.beforeHash);
   });
 
+  test("hiding and restoring a PDF pane does not trigger a zero-width rerender",async({page})=>{
+    await openHarness(page);
+    const result=await page.evaluate(async()=>{
+      const {PdfCropper}=await import("/studio/pdf-crop.js");
+      document.body.insertAdjacentHTML("beforeend",'<div id="hWrap"><div id="hStage" style="position:relative;width:350px;height:300px;overflow:auto;display:block"><canvas id="hCanvas"></canvas></div></div><span id="hPage"></span><button id="hPrev"></button><button id="hNext"></button>');
+      const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+      const pdf={numPages:1,async getPage(){return{getViewport:({scale})=>({width:500*scale,height:1600*scale}),render({canvasContext}){const promise=Promise.resolve().then(()=>{canvasContext.fillStyle="#fff";canvasContext.fillRect(0,0,canvasContext.canvas.width,canvasContext.canvas.height)});return{promise,cancel(){}}}}},async destroy(){}};
+      const loader=async()=>({base:"",lib:{getDocument(){return{promise:Promise.resolve(pdf),async destroy(){}}}}});
+      const crop=new PdfCropper({canvas:hCanvas,stage:hStage,pageLabel:hPage,prevBtn:hPrev,nextBtn:hNext,pdfLoader:loader});
+      await crop.loadFile({name:"hidden.pdf",arrayBuffer:async()=>new Uint8Array([1]).buffer});
+      crop.region={page:1,bbox_norm:[.2,.25,.7,.65]};crop.regionsByPage.set(1,structuredClone(crop.region));crop.paintRegion();
+      hStage.scrollTop=360;
+      await sleep(180);
+      const before={seq:crop.renderSeq,width:crop.lastObservedStageWidth,anchor:crop.captureViewAnchor(),region:structuredClone(crop.region)};
+      hWrap.style.display="none";
+      await sleep(180);
+      const hidden={seq:crop.renderSeq,width:crop.lastObservedStageWidth};
+      hWrap.style.display="block";
+      await sleep(260);
+      const after={seq:crop.renderSeq,width:crop.lastObservedStageWidth,anchor:crop.captureViewAnchor(),region:structuredClone(crop.region)};
+      crop.resizeObserver.disconnect();
+      return {before,hidden,after};
+    });
+    expect(result.hidden.seq).toBe(result.before.seq);
+    expect(result.hidden.width).toBe(result.before.width);
+    expect(result.after.seq).toBe(result.before.seq);
+    expect(result.after.width).toBe(result.before.width);
+    expect(result.after.region).toEqual(result.before.region);
+    expect(Math.abs(result.after.anchor.y-result.before.anchor.y)).toBeLessThan(.005);
+  });
+
   test("mobile rotation preserves browse anchor and crop while staying in mobile interaction mode",async({page},testInfo)=>{
     test.skip(testInfo.project.name!=="mobile-chromium","Rotation contract is a mobile interaction test.");
     await page.setViewportSize({width:390,height:844});
