@@ -6,7 +6,7 @@ import {getPreview,putPreview,deletePreview} from "./preview-db.js";
 import {validRegion} from "./pdf-crop.js";
 import {biologyIssues,mountBiologyCombinationEditor} from "./biology-combination.js";
 import {toast} from "./ui-runtime.js";
-import {TAXONOMY,taxonomySummary} from "./taxonomy-data.js";
+import {TAXONOMY,taxonomySummary,taxonomyIssues} from "./taxonomy-data.js";
 import "./operator-auth.js";
 
 const $=id=>document.getElementById(id);
@@ -54,10 +54,7 @@ function missing(record){
   const out=[];
   if(!record.exam_id)out.push("آزمون");
   if(!Number.isInteger(Number(record.source_question_number))||Number(record.source_question_number)<1)out.push("شماره");
-  if(!["BIO","MATH","PHY","CHEM"].includes(record.subject))out.push("درس");
-  if(![10,11,12].includes(Number(record.grade)))out.push("پایه");
-  if(!record.chapter)out.push("فصل");
-  if(!record.unit)out.push(record.subject==="BIO"?"گفتار":"مبحث");
+  out.push(...taxonomyIssues(record));
   if(!["level_1","level_2","level_3","level_4","level_5"].includes(record.difficulty))out.push("سطح سؤال");
   if(![1,2,3,4].includes(Number(record.correct_option)))out.push("کلید");
   if(!validRegion(record.question_regions?.[0]))out.push("برش سؤال");
