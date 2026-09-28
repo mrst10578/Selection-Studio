@@ -34,11 +34,15 @@ test.describe("Selection Studio",()=>{
     await expect(page.locator("#operatorLoginTitle")).toHaveText("ورود گزینشگر");
     await page.goto("/admin/");
     await expect(page.locator("#loginView h1")).toHaveText("مدیریت بانک تست");
+    await page.keyboard.press("Control+K");
+    await expect(page.locator("#commandPalette")).not.toHaveAttribute("open","");
   });
 
   test("operator workbench requires temporary operator login",async({page})=>{
     await page.goto("/studio/");
     await waitForStudioBoot(page);
+    await page.keyboard.press("Control+K");
+    await expect(page.locator("#hotkeysDialog")).not.toHaveAttribute("open","");
     await page.locator("#operatorUsername").fill("admin");
     await page.locator("#operatorPassword").fill("admin");
     await page.locator("#operatorLoginForm").press("Enter");
