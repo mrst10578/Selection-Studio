@@ -241,7 +241,7 @@ $("editForm").onsubmit=async e=>{
   records[editIndex]=next;
   saveRecords(records);
   if(idChanged){
-    Promise.allSettled([deletePreview(old.id+":question"),deletePreview(old.id+":answer")]);
+    await Promise.allSettled([deletePreview(old.id+":question"),deletePreview(old.id+":answer")]);
   }
   $("editDialog").close();
   render();
