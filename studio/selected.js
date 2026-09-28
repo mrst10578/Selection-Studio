@@ -107,14 +107,18 @@ async function preview(img,key){
     if(!blob)throw new Error("PREVIEW_MISSING");
     img.classList.remove("missing");
     img.removeAttribute("aria-disabled");
+    img.setAttribute("role","button");
+    img.setAttribute("tabindex","0");
+    img.setAttribute("aria-label","باز کردن "+img.alt);
     const url=URL.createObjectURL(blob);
     img.src=url;
     img.onload=()=>URL.revokeObjectURL(url);
-    img.onerror=()=>{URL.revokeObjectURL(url);img.removeAttribute("src");img.classList.add("missing");img.setAttribute("aria-disabled","true")};
+    img.onerror=()=>{URL.revokeObjectURL(url);img.removeAttribute("src");img.classList.add("missing");img.setAttribute("aria-disabled","true");img.removeAttribute("role");img.removeAttribute("tabindex");img.removeAttribute("aria-label")};
   }catch{
     img.removeAttribute("src");
     img.classList.add("missing");
     img.setAttribute("aria-disabled","true");
+    img.removeAttribute("role");img.removeAttribute("tabindex");img.removeAttribute("aria-label");
   }
 }
 
@@ -166,7 +170,13 @@ async function render(){
     };
     preview(frag.querySelector(".q-preview"),record.id+":question");
     preview(frag.querySelector(".a-preview"),record.id+":answer");
-    frag.querySelectorAll(".previews img").forEach(img=>img.addEventListener("click",()=>openPreview(img)));
+    frag.querySelectorAll(".previews img").forEach(img=>{
+      img.addEventListener("click",()=>openPreview(img));
+      img.addEventListener("keydown",event=>{
+        if(event.key!=="Enter"&&event.key!==" ")return;
+        event.preventDefault();openPreview(img);
+      });
+    });
     host.appendChild(frag);
   }
   renderTrash();
