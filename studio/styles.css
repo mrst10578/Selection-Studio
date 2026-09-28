@@ -431,7 +431,7 @@ body{overflow-x:hidden}
   background:var(--document-bg);
   cursor:zoom-in;
 }
-.previews img.missing{min-height:108px}
+.previews img.missing{min-height:108px;cursor:default;opacity:.62}
 .question-main{display:grid;align-content:start;gap:7px}
 .question-title{display:flex;justify-content:space-between;gap:8px;align-items:center}
 .question-title strong{font-size:.95rem}
