@@ -5,7 +5,7 @@ import {
 import {putPreview} from "./preview-db.js";
 import {PdfCropper,validRegion} from "./pdf-crop.js";
 import {isTypingTarget,toast} from "./ui-runtime.js";
-import "./operator-auth.js";
+import {isOperatorAuthenticated} from "./operator-auth.js";
 import {installWindowsMetadataShortcuts} from "./windows-shortcuts.js";
 import {mountBiologyCombinationEditor,biologyIssues} from "./biology-combination.js";
 import {TAXONOMY,taxonomySummary} from "./taxonomy-data.js";
@@ -403,7 +403,7 @@ $("questionForm").addEventListener("submit",async e=>{
 });
 
 installWindowsMetadataShortcuts({
-  enabled:()=>matchMedia("(pointer:fine)").matches&&innerWidth>=900&&!hotkeysDialog.open,
+  enabled:()=>isOperatorAuthenticated()&&matchMedia("(pointer:fine)").matches&&innerWidth>=900&&!hotkeysDialog.open,
   setCorrectOption:n=>setSegmented("correctOption",n),
   setLevel:n=>setSegmented("difficulty","level_"+n),
   gradeEnabled:()=>!isMath(),
@@ -417,6 +417,7 @@ $("hotkeysLauncher").onclick=openHotkeys;
 $("hotkeysClose").onclick=()=>hotkeysDialog.close();
 hotkeysDialog.addEventListener("click",e=>{if(e.target===hotkeysDialog)hotkeysDialog.close()});
 document.addEventListener("keydown",e=>{
+  if(!isOperatorAuthenticated())return;
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="k"){e.preventDefault();openHotkeys();return}
   if(isTypingTarget(e.target)||hotkeysDialog.open)return;
   const key=e.key.toLowerCase();
