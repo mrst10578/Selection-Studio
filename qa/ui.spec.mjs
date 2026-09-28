@@ -311,12 +311,13 @@ test.describe("Selection Studio",()=>{
       localStorage.setItem("testbank-studio.exam-draft.v1",JSON.stringify({id:"EXAM-A",provider:"قلمچی",date:"1405/01/01",entered_by:"admin",question_pdf_name:"q.pdf",answer_pdf_name:"a.pdf"}));
       localStorage.setItem("testbank-studio.records.v1",JSON.stringify([
         {id:"EXAM-B-Q099",exam_id:"EXAM-B",source_question_number:99,subject:"PHY",grade:10,chapter:"01",unit:"01",difficulty:"level_2",correct_option:1},
-        {id:"EXAM-A-Q003",exam_id:"EXAM-A",source_question_number:3,subject:"PHY",grade:10,chapter:"01",unit:"01",difficulty:"level_2",correct_option:1}
+        {id:"EXAM-A-Q003",exam_id:"EXAM-A",source_question_number:3,subject:"PHY",grade:10,chapter:"01",unit:"01",difficulty:"level_2",correct_option:1},
+        {id:"EXAM-A-Q004",exam_id:"EXAM-A",source_question_number:4,subject:"PHY",grade:10,chapter:"01",unit:"01",difficulty:"level_2",correct_option:1,trashed_at:"2026-01-02T00:00:00.000Z"}
       ]));
     });
     await page.goto("/studio/");
     await expect(page.locator("#bootSplash")).toBeHidden({timeout:1800});
-    await expect(page.locator("#sourceNumber")).toHaveValue("4");
+    await expect(page.locator("#sourceNumber")).toHaveValue("5");
   });
 
   test("renaming a selected question preserves its IndexedDB previews and rejects missing numbers",async({page})=>{
@@ -490,7 +491,8 @@ test.describe("Review Console",()=>{
     await page.addInitScript(()=>{
       const region={page:1,bbox_norm:[0,0,.8,.8]};
       localStorage.setItem("testbank-studio.records.v1",JSON.stringify([
-        {id:"EXAM-P-Q1",exam_id:"EXAM-P",source_question_number:1,subject:"PHY",grade:10,chapter:"01",unit:"01",difficulty:"level_2",correct_option:1,question_regions:[region],answer_regions:[region],entered_by:"alice",review_status:"approved",status:"draft"}
+        {id:"EXAM-P-Q1",exam_id:"EXAM-P",source_question_number:1,subject:"PHY",grade:10,chapter:"01",unit:"01",difficulty:"level_2",correct_option:1,question_regions:[region],answer_regions:[region],entered_by:"alice",review_status:"approved",status:"draft"},
+        {id:"EXAM-P-Q2",exam_id:"EXAM-P",source_question_number:2,subject:"PHY",grade:10,chapter:"",unit:"",difficulty:"level_2",correct_option:1,question_regions:[region],answer_regions:[region],entered_by:"alice",review_status:"approved",status:"draft"}
       ]));
     });
     await page.goto("/review-console/");
@@ -500,7 +502,8 @@ test.describe("Review Console",()=>{
     page.once("dialog",dialog=>dialog.accept());
     await page.locator("#publishBtn").click();
     await expect(page.locator("#publishBtn")).toBeDisabled();
-    expect(await page.evaluate(()=>JSON.parse(localStorage.getItem("testbank-studio.records.v1")||"[]")[0]?.status)).toBe("published");
+    const statuses=await page.evaluate(()=>JSON.parse(localStorage.getItem("testbank-studio.records.v1")||"[]").map(x=>x.status));
+    expect(statuses).toEqual(["published","draft"]);
   });
 
   test("command palette accepts Persian digits for question lookup",async({page})=>{
