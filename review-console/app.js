@@ -93,7 +93,7 @@ $('#refreshBtn').onclick=async()=>{
 };
 
 function resetBrowser(){
-  selectedSubject='';selectedOperator='';operatorItems=[];model.batch=null;
+  selectedSubject='';selectedOperator='';operatorItems=[];model.batch=null;model.undoStack=[];syncUndoControls();
   document.querySelectorAll('[data-subject]').forEach(btn=>btn.classList.remove('active'));
   $('#operatorHint').textContent='اول درس را انتخاب کن.';
   $('#operatorList').innerHTML='<div class="empty-box">درسی انتخاب نشده.</div>';
@@ -103,7 +103,7 @@ function resetBrowser(){
 }
 document.querySelectorAll('[data-subject]').forEach(btn=>btn.onclick=async()=>{
   await flushPendingSave();
-  selectedSubject=btn.dataset.subject;selectedOperator='';model.batch=null;
+  selectedSubject=btn.dataset.subject;selectedOperator='';model.batch=null;model.undoStack=[];syncUndoControls();
   document.querySelectorAll('[data-subject]').forEach(x=>x.classList.toggle('active',x===btn));
   $('#batchEditor').classList.add('hidden');$('#emptyBatch').classList.remove('hidden');
   $('#emptyBatch').textContent='حالا username گزینشگر را انتخاب کن.';
@@ -129,10 +129,11 @@ async function loadOperators(subject){
 async function openOperator(username,{skipFlush=false}={}){
   try{
     if(!skipFlush)await flushPendingSave();
-    if(model.batch?.id)await api.unlock(model.batch.id,reviewer()).catch(()=>{});
-    selectedOperator=username;
+    const previousBatchId=model.batch?.id||null;
     const batch=await api.batch(selectedSubject,username);
     await api.lock(batch.id,reviewer()).catch(()=>{});
+    if(previousBatchId&&previousBatchId!==batch.id)await api.unlock(previousBatchId,reviewer()).catch(()=>{});
+    selectedOperator=username;
     model.load(batch);
     syncUndoControls();
     $('#emptyBatch').classList.add('hidden');$('#batchEditor').classList.remove('hidden');
