@@ -321,6 +321,7 @@ test.describe("Selection Studio",()=>{
     await page.addInitScript(()=>{
       sessionStorage.setItem("selection-studio-operator-auth-v1","admin");
       localStorage.setItem("testbank-studio.exam-draft.v1",JSON.stringify({id:"EXAM-A",provider:"قلمچی",date:"1405/01/01",entered_by:"admin",question_pdf_name:"q.pdf",answer_pdf_name:"a.pdf"}));
+      localStorage.setItem("testbank-studio.last-batch.v1",JSON.stringify({id:"EXAM-B-BATCH-OLD",exam_id:"EXAM-B",question_count:9,sent_at:"2026-01-03T00:00:00.000Z",fingerprint:"old"}));
       localStorage.setItem("testbank-studio.records.v1",JSON.stringify([
         {id:"EXAM-A-Q001",exam_id:"EXAM-A",source_question_number:1,subject:"PHY",grade:10,chapter:"01",unit:"01",difficulty:"level_2",correct_option:1,question_regions:[{page:1,bbox_norm:[0,0,.8,.8]}],answer_regions:[{page:1,bbox_norm:[0,0,.8,.8]}],entered_by:"admin"},
         {id:"EXAM-B-Q001",exam_id:"EXAM-B",source_question_number:1,subject:"PHY",grade:10,chapter:"01",unit:"01",difficulty:"level_2",correct_option:1,question_regions:[{page:1,bbox_norm:[0,0,.8,.8]}],answer_regions:[{page:1,bbox_norm:[0,0,.8,.8]}],entered_by:"admin"},
@@ -333,6 +334,7 @@ test.describe("Selection Studio",()=>{
     await expect(page.locator("#recentList")).toContainText("سؤال 1");
     await page.goto("/studio/selected.html");
     await expect(page.locator("#questionCount")).toHaveText("1");
+    await expect(page.locator("#lastSubmission")).toHaveText("هنوز ارسالی ثبت نشده است.");
     await expect(page.locator(".question-card")).toHaveCount(1);
     await expect(page.locator("#questionList")).toContainText("سؤال 1");
     await expect(page.locator("#trashSection")).toBeHidden();
