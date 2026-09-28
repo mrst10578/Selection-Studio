@@ -544,6 +544,7 @@ test.describe("Review Console",()=>{
     await page.locator(".operator-item").click();
     await page.locator("#quickReviewBtn").click();
     await expect(page.locator("#quickId")).toHaveText("EXAM-Q1");
+    await expectNoSeriousA11y(page);
     await page.locator("#nextBtn").click();
     await expect(page.locator("#quickId")).toHaveText("EXAM-Q3");
     await page.locator("#prevBtn").click();
