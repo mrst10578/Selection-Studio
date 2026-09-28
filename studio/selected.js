@@ -10,6 +10,7 @@ import {TAXONOMY,taxonomySummary,taxonomyIssues} from "./taxonomy-data.js";
 import "./operator-auth.js";
 
 const $=id=>document.getElementById(id);
+const asciiDigits=value=>String(value||"").replace(/[۰-۹]/g,ch=>"۰۱۲۳۴۵۶۷۸۹".indexOf(ch)).replace(/[٠-٩]/g,ch=>"٠١٢٣٤٥٦٧٨٩".indexOf(ch)).replace(/[^0-9]/g,"");
 let records=loadRecords(),exam=loadExamDraft(),editIndex=-1;
 let lastBatch=loadLastBatch();
 const FILTERS_KEY="testbank-selected-filters-v1";
@@ -221,6 +222,7 @@ function openEdit(index){
   editBio.setValue(r.subject==="BIO"?r.biology_combination:null,false);
   $("editDialog").showModal();
 }
+$("editNumber").addEventListener("input",()=>{$("editNumber").value=asciiDigits($("editNumber").value)});
 $("editSubject").onchange=()=>renderEditTaxonomy();
 $("editGrade").onchange=()=>{if(!editIsMath())renderEditTaxonomy()};
 $("editChapter").onchange=()=>renderEditUnits();
