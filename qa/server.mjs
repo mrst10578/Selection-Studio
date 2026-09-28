@@ -9,7 +9,11 @@ const types={".html":"text/html; charset=utf-8",".js":"text/javascript; charset=
 
 createServer(async(req,res)=>{
   try{
-    const url=new URL(req.url||"/","http://localhost"),pathname=decodeURIComponent(url.pathname);
+    const url=new URL(req.url||"/","http://localhost");
+    let pathname=decodeURIComponent(url.pathname);
+    if(pathname==="/")pathname="/studio/";
+    if(pathname==="/admin")pathname="/review-console/";
+    else if(pathname.startsWith("/admin/"))pathname="/review-console/"+pathname.slice("/admin/".length);
     let target=path.resolve(ROOT,"."+pathname);
     if(!target.startsWith(ROOT)){res.writeHead(403);res.end("Forbidden");return}
     let info=await stat(target).catch(()=>null);
