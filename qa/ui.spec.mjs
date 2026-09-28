@@ -28,6 +28,14 @@ function contrastRatio(a,b){
 }
 
 test.describe("Selection Studio",()=>{
+  test("production route aliases serve both public panels",async({page})=>{
+    await page.goto("/");
+    await waitForStudioBoot(page);
+    await expect(page.locator("#operatorLoginTitle")).toHaveText("ورود گزینشگر");
+    await page.goto("/admin/");
+    await expect(page.locator("#loginView h1")).toHaveText("مدیریت بانک تست");
+  });
+
   test("operator workbench requires temporary operator login",async({page})=>{
     await page.goto("/studio/");
     await waitForStudioBoot(page);
@@ -405,7 +413,7 @@ test.describe("Review Console",()=>{
       ];
       localStorage.setItem("testbank-studio.records.v1",JSON.stringify(records));
     });
-    await page.goto("/review-console/");
+    await page.goto("/admin/");
     await expect(page.locator("#loginView h1")).toHaveText("مدیریت بانک تست");
     await page.locator("#adminUsername").fill("admin");
     await page.locator("#adminPassword").fill("admin");
@@ -437,7 +445,7 @@ test.describe("Review Console",()=>{
         {id:"EXAM-Q1",exam_id:"EXAM",source_question_number:1,subject:"PHY",grade:10,chapter:"01",unit:"01",difficulty:"level_2",correct_option:1,question_regions:[region],answer_regions:[region],entered_by:"alice",review_status:"pending",revision_history:[]}
       ]));
     });
-    await page.goto("/review-console/");
+    await page.goto("/admin/");
     await page.locator("#adminUsername").fill("admin");await page.locator("#adminPassword").fill("admin");await page.locator("#adminLoginForm").press("Enter");
     await expect(page.locator("#appView")).toBeVisible({timeout:2500});
     await page.locator('[data-subject="PHY"]').click();await page.locator(".operator-item").click();
@@ -458,7 +466,7 @@ test.describe("Review Console",()=>{
         {id:"EXAM-B-Q1",exam_id:"EXAM-B",source_question_number:1,subject:"PHY",grade:10,chapter:"01",unit:"01",difficulty:"level_2",correct_option:1,question_regions:[region],answer_regions:[region],entered_by:"bob",review_status:"pending"}
       ]));
     });
-    await page.goto("/review-console/");
+    await page.goto("/admin/");
     await page.locator("#adminUsername").fill("admin");await page.locator("#adminPassword").fill("admin");await page.locator("#adminLoginForm").press("Enter");
     await page.locator('[data-subject="PHY"]').click();
     await page.locator(".operator-item",{hasText:"@alice"}).click();
@@ -479,7 +487,7 @@ test.describe("Review Console",()=>{
         {id:"EXAM-X-Q1",exam_id:"EXAM-X",source_question_number:1,subject:"CHEM",grade:10,chapter:"01",unit:"01",difficulty:"level_2",correct_option:1,question_regions:[region],answer_regions:[region],entered_by:"<img src=x onerror=window.__operatorXss=1>",review_status:"pending"}
       ]));
     });
-    await page.goto("/review-console/");
+    await page.goto("/admin/");
     await page.locator("#adminUsername").fill("admin");await page.locator("#adminPassword").fill("admin");await page.locator("#adminLoginForm").press("Enter");
     await page.locator('[data-subject="CHEM"]').click();
     await expect(page.locator("#operatorList .operator-item img")).toHaveCount(0);
@@ -495,7 +503,7 @@ test.describe("Review Console",()=>{
         {id:"EXAM-P-Q2",exam_id:"EXAM-P",source_question_number:2,subject:"PHY",grade:10,chapter:"",unit:"",difficulty:"level_2",correct_option:1,question_regions:[region],answer_regions:[region],entered_by:"alice",review_status:"approved",status:"draft"}
       ]));
     });
-    await page.goto("/review-console/");
+    await page.goto("/admin/");
     await page.locator("#adminUsername").fill("admin");await page.locator("#adminPassword").fill("admin");await page.locator("#adminLoginForm").press("Enter");
     await page.locator('[data-subject="PHY"]').click();await page.locator(".operator-item").click();
     await expect(page.locator("#publishBtn")).toBeEnabled();
@@ -513,7 +521,7 @@ test.describe("Review Console",()=>{
         {id:"EXAM-Q12",exam_id:"EXAM",source_question_number:12,subject:"PHY",grade:10,chapter:"01",unit:"01",difficulty:"level_2",correct_option:1,question_regions:[region],answer_regions:[region],entered_by:"alice",review_status:"pending"}
       ]));
     });
-    await page.goto("/review-console/");
+    await page.goto("/admin/");
     await page.locator("#adminUsername").fill("admin");await page.locator("#adminPassword").fill("admin");await page.locator("#adminLoginForm").press("Enter");
     await page.locator('[data-subject="PHY"]').click();await page.locator(".operator-item").click();
     await page.locator("#commandLauncher").click();
@@ -527,7 +535,7 @@ test.describe("Review Console",()=>{
       const questions=[1,2,3].map((number)=>({id:"EXAM-Q"+number,exam_id:"EXAM",source_question_number:number,subject:"PHY",grade:10,chapter:"01",unit:"01",difficulty:"level_2",correct_option:1,question_regions:[region],answer_regions:[region],entered_by:"alice",review_status:number===2?"approved":"pending"}));
       localStorage.setItem("testbank-studio.records.v1",JSON.stringify(questions));
     });
-    await page.goto("/review-console/");
+    await page.goto("/admin/");
     await page.locator("#adminUsername").fill("admin");
     await page.locator("#adminPassword").fill("admin");
     await page.locator("#adminLoginForm").press("Enter");
