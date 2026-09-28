@@ -175,13 +175,16 @@ function renderSession(){
 $("toggleSession").onclick=()=>$("sessionCard").classList.toggle("collapsed");
 $("saveSession").onclick=async()=>{
   const provider=providerName($("provider").value),operator=$("operator").value.trim();
+  const previousExamId=exam?.id||null;
   if(!validProviderName(provider)){toast("نام آزمون را فقط با حروف فارسی وارد کن؛ مثل قلمچی.","error");$("provider").focus();return}
   if(!validExamDateParts()){toast("ماه و روز آزمون را دو رقمی و معتبر وارد کن؛ مثل 03/07.","error");focusExamMonth();return}
   const id=examId();
   if(!id||!operator){toast("نام آزمون، تاریخ و اپراتور لازم است.","error");return}
   if(!qCrop.isRenderReady()||!aCrop.isRenderReady()){toast("هر دو PDF باید با موفقیت باز و آمادهٔ نمایش باشند.","error");return}
   exam={id,provider,date:humanDate($("examDate").value),entered_by:operator,question_pdf_name:qCrop.file.name,answer_pdf_name:aCrop.file.name};
-  saveExamDraft(exam); renderSession(); toast("آزمون آماده شد","ok");
+  saveExamDraft(exam);
+  if(previousExamId!==id)$("sourceNumber").value=String(nextSourceNumberFor(id));
+  renderSession(); toast("آزمون آماده شد","ok");
 };
 function updatePdfState(crop,stateId){
   const host=$(stateId);
@@ -279,6 +282,13 @@ const biologyEditor=mountBiologyCombinationEditor({
 });
 
 function activeRecords(){return records.filter(x=>!x.trashed_at)}
+function nextSourceNumberFor(examIdValue){
+  const numbers=activeRecords()
+    .filter(record=>record.exam_id===examIdValue)
+    .map(record=>Number(record.source_question_number))
+    .filter(value=>Number.isInteger(value)&&value>0);
+  return numbers.length?Math.max(...numbers)+1:1;
+}
 function sourceQuestionNumber(){
   const digits=normalizedDate($("sourceNumber").value);
   if(!/^\d+$/.test(digits))return null;
@@ -348,7 +358,7 @@ function restore(){
   if(sticky.grade)$("grade").value=sticky.grade;
   renderTaxonomy({chapter:sticky.chapter||"",unit:sticky.unit||""});
   biologyEditor.refresh();
-  const last=activeRecords().at(-1);$("sourceNumber").value=String((Number(last?.source_question_number)||0)+1||1);
+  $("sourceNumber").value=String(nextSourceNumberFor(exam?.id||""));
 }
 $("subject").addEventListener("change",()=>{renderTaxonomy();persistSticky();renderGate()});
 $("grade").addEventListener("change",()=>{if(!isMath())renderTaxonomy();persistSticky();renderGate()});
