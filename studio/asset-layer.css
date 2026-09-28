@@ -1,0 +1,195 @@
+/* Selection Studio optional asset layer.
+   Presentation-only, pointer-free, and intentionally cheap to paint. */
+html[data-assets="off"] .asset-art,
+html[data-assets="off"] .asset-save-spark{display:none!important}
+
+.asset-host{position:relative}
+.asset-art{
+  --asset-image:none;
+  display:inline-block;
+  flex:0 0 auto;
+  width:44px;
+  height:44px;
+  background-image:var(--asset-image);
+  background-repeat:no-repeat;
+  background-position:center;
+  background-size:contain;
+  pointer-events:none;
+  user-select:none;
+  opacity:.92;
+  transform:translateZ(0);
+}
+.asset-art.asset-inline{vertical-align:middle}
+.asset-art.asset-corner{
+  position:absolute;
+  inset-block-start:10px;
+  inset-inline-start:10px;
+  z-index:1;
+}
+.asset-art.asset-soft{opacity:.62}
+.asset-art.asset-tiny{width:28px;height:28px}
+.asset-art.asset-small{width:36px;height:36px}
+.asset-art.asset-medium{width:54px;height:54px}
+.asset-art.asset-large{width:78px;height:78px}
+.asset-art.asset-hero{width:112px;height:112px;opacity:.96}
+.asset-art.asset-subject{
+  position:absolute;
+  inset-block-start:9px;
+  inset-inline-end:10px;
+  width:48px;
+  height:48px;
+  opacity:.88;
+  z-index:1;
+}
+.asset-art.asset-pdf-empty{
+  display:block;
+  width:72px;
+  height:72px;
+  margin:0 auto 8px;
+  opacity:.78;
+}
+.asset-art.asset-step{
+  position:absolute;
+  inset-block-start:-10px;
+  inset-inline-start:12px;
+  width:38px;
+  height:38px;
+  opacity:.76;
+}
+.asset-art.asset-level{
+  position:absolute;
+  inset-block-start:4px;
+  inset-inline-start:8px;
+  width:60px;
+  height:36px;
+  opacity:.66;
+}
+.asset-art.asset-ready{
+  position:absolute;
+  inset-block-start:8px;
+  inset-inline-start:10px;
+  width:44px;
+  height:44px;
+  opacity:.42;
+  transition:opacity 150ms ease,transform 150ms ease;
+}
+.readiness.asset-ready-state .asset-ready{opacity:.95;transform:scale(1.04)}
+.asset-art.asset-separator{
+  display:block;
+  width:66px;
+  height:30px;
+  margin:-4px auto 8px;
+  opacity:.54;
+}
+.asset-art.asset-action{
+  width:25px;
+  height:25px;
+  margin-inline-end:5px;
+  vertical-align:middle;
+}
+.asset-art.asset-lock{
+  width:27px;
+  height:27px;
+  margin-inline-end:7px;
+  vertical-align:middle;
+}
+.asset-art.asset-crop{
+  position:absolute;
+  inset-block-start:12px;
+  inset-inline-end:12px;
+  width:34px;
+  height:34px;
+  z-index:2;
+  opacity:.52;
+}
+.asset-art.asset-hotkey{width:31px;height:31px;margin-inline-end:6px}
+.asset-art.asset-review{width:42px;height:42px;margin-inline-end:8px}
+.asset-art.asset-empty{
+  display:block;
+  width:72px;
+  height:72px;
+  margin:0 auto 8px;
+  opacity:.72;
+}
+
+.topbar.asset-host>div:first-child{padding-inline-start:58px}
+.topbar>.asset-art.asset-brand{
+  position:absolute;
+  inset-block-start:50%;
+  inset-inline-start:18px;
+  width:46px;
+  height:46px;
+  transform:translateY(-50%);
+}
+#sessionCard>.section-head{padding-inline-start:52px}
+#sessionCard>.section-head>.asset-art{inset-block-start:8px;inset-inline-start:8px}
+.inspector>.section-head{padding-inline-start:54px}
+.inspector>.section-head>.asset-art{inset-block-start:5px;inset-inline-start:5px}
+#subjectGradeRow.asset-host{padding-top:4px}
+fieldset.choice.asset-host,
+.quick-inspector fieldset.asset-host{padding-top:15px}
+.pdf-stage-shell.asset-host{position:relative}
+.pdf-empty.asset-host{padding-top:4px}
+.recent.asset-host{overflow:clip}
+.batch-summary.asset-host .section-head{padding-inline-start:72px}
+.batch-summary>.asset-art.asset-corner{width:62px;height:62px}
+.guide-card.asset-guide-hero{min-height:150px;padding-inline-start:132px}
+.guide-card.asset-guide-hero>.asset-art{inset-block-start:16px;inset-inline-start:16px}
+.login-card.asset-host,
+.operator-login-card.asset-host{padding-top:132px}
+.login-card>.asset-art.asset-hero,
+.operator-login-card>.asset-art.asset-hero{
+  position:absolute;
+  inset-block-start:12px;
+  inset-inline-start:50%;
+  transform:translateX(50%);
+}
+.review-header.asset-host>div:first-child{padding-inline-start:55px}
+.review-header>.asset-art.asset-review{
+  position:absolute;
+  inset-inline-start:16px;
+  inset-block-start:50%;
+  transform:translateY(-50%);
+}
+.quick-actions button.asset-host,
+.crop-freeze.asset-host{display:inline-flex;align-items:center;justify-content:center}
+#hotkeysLauncher.asset-host .asset-hotkey,
+#commandLauncher.asset-host .asset-action{vertical-align:middle}
+.empty-box.asset-host,
+.empty-review.asset-host{text-align:center}
+
+.asset-save-spark{
+  position:fixed;
+  inset-inline-end:20px;
+  inset-block-end:82px;
+  width:62px;
+  height:62px;
+  z-index:80;
+  background-image:var(--asset-24-question-saved-success-spark);
+  background-repeat:no-repeat;
+  background-position:center;
+  background-size:contain;
+  pointer-events:none;
+  opacity:0;
+  transform:translateY(8px) scale(.94);
+  transition:opacity 150ms ease,transform 150ms ease;
+}
+.asset-save-spark.show{opacity:1;transform:translateY(0) scale(1)}
+
+@media(max-width:760px){
+  .asset-art.asset-large{width:58px;height:58px}
+  .asset-art.asset-hero{width:88px;height:88px}
+  .topbar.asset-host>div:first-child{padding-inline-start:45px}
+  .topbar>.asset-art.asset-brand{width:38px;height:38px;inset-inline-start:10px}
+  #sessionCard>.section-head{padding-inline-start:42px}
+  .asset-art.asset-subject{width:40px;height:40px}
+  .asset-art.asset-level{width:48px;height:30px}
+  .guide-card.asset-guide-hero{min-height:128px;padding-inline-start:98px}
+  .guide-card.asset-guide-hero>.asset-art{width:78px;height:78px}
+  .batch-summary.asset-host .section-head{padding-inline-start:54px}
+  .batch-summary>.asset-art.asset-corner{width:48px;height:48px}
+  .asset-save-spark{width:52px;height:52px;inset-inline-end:12px;inset-block-end:72px}
+}
+@media(prefers-reduced-motion:reduce){
+  .asset-art,.asset-save-spark{transition:none!important}
+}
