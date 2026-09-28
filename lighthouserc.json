@@ -2,9 +2,9 @@
   "ci": {
     "collect": {
       "url": [
-        "http://127.0.0.1:4173/studio/",
+        "http://127.0.0.1:4173/",
         "http://127.0.0.1:4173/studio/selected.html",
-        "http://127.0.0.1:4173/review-console/"
+        "http://127.0.0.1:4173/admin/"
       ],
       "startServerCommand": "node qa/server.mjs",
       "startServerReadyPattern": "QA server",
