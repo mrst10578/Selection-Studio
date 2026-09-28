@@ -32,3 +32,12 @@ test("taxonomy search finds matching unit names and keeps the current selection 
   assert.deepEqual(filterTaxonomyEntries(entries,"نمونه").map(([id])=>id),["01"]);
   assert.deepEqual(filterTaxonomyEntries(entries,"ناموجود","02").map(([id])=>id),["02"]);
 });
+
+test("final review decisions clear stale correction reason and note",()=>{
+  const model=modelWith([{review_status:"needs_changes",review_reason:"taxonomy",review_note:"اصلاح فصل"}]);
+  model.setStatus(0,"approved","reviewer");
+  assert.equal(model.batch.questions[0].review_status,"approved");
+  assert.equal(model.batch.questions[0].review_reason,null);
+  assert.equal(model.batch.questions[0].review_note,null);
+});
+
