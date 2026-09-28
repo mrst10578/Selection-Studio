@@ -155,6 +155,24 @@ test.describe("Selection Studio",()=>{
     await expect(page.locator("#examDate")).toHaveValue("1405/03/07");
   });
 
+  test("Level active styling appears immediately on the same click",async({page})=>{
+    await page.addInitScript(()=>sessionStorage.setItem("selection-studio-operator-auth-v1","admin"));
+    await page.goto("/studio/");
+    await expect(page.locator("#bootSplash")).toBeHidden({timeout:1800});
+
+    const level=page.locator('[data-target="difficulty"] button[data-value="level_3"]');
+    await level.click();
+    await expect(page.locator("#difficulty")).toHaveValue("level_3");
+    await expect(level).toHaveClass(/active/);
+
+    const visual=await level.evaluate(el=>{
+      const style=getComputedStyle(el);
+      return {backgroundImage:style.backgroundImage,borderColor:style.borderColor,color:style.color};
+    });
+    expect(visual.backgroundImage).toContain("linear-gradient");
+    expect(visual.borderColor).not.toBe("rgb(117, 137, 160)");
+  });
+
   test("question number readiness is independent from exam completion and accepts Persian digits",async({page})=>{
     await page.addInitScript(()=>sessionStorage.setItem("selection-studio-operator-auth-v1","admin"));
     await page.goto("/studio/");

@@ -1222,6 +1222,14 @@ body{overflow-x:hidden}
   color:#D6ECFF;
   box-shadow:0 7px 18px rgba(24,65,101,.18),inset 0 1px 0 rgba(255,255,255,.055);
 }
+:root[data-theme="dark"] .segmented button.active,
+:root[data-theme="dark"] .segmented button.active:hover,
+:root[data-theme="dark"] .segmented button.active:focus-visible{
+  border-color:#72ACE3;
+  background:linear-gradient(135deg,#224463,#32345B);
+  color:#D6ECFF;
+  box-shadow:0 7px 18px rgba(24,65,101,.18),inset 0 1px 0 rgba(255,255,255,.055);
+}
 .bio-panel{
   padding:11px;
   border-color:#314357;
