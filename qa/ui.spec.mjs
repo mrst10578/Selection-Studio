@@ -207,7 +207,7 @@ test.describe("Selection Studio",()=>{
     await expect(page.locator(".theme-toggle")).toHaveCount(0);
     await expectNoHorizontalOverflow(page);
   });
-  test("coarse-pointer wide viewport still exposes PDF crop lock",async({page},testInfo})=>{
+  test("coarse-pointer wide viewport still exposes PDF crop lock",async({page},testInfo)=>{
     test.skip(testInfo.project.name!=="mobile-chromium","Requires coarse-pointer mobile context.");
     await page.setViewportSize({width:820,height:900});
     await page.goto("/studio/");
