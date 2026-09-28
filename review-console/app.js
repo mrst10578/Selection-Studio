@@ -253,7 +253,9 @@ $('#publishBtn').onclick=async()=>{
   try{
     await saveBatch();
     const r=await api.publish(model.batch.id,reviewer());
-    toast(`وضعیت انتشار آزمایشی در همین مرورگر ثبت شد: ${r?.published_count??0} سؤال`,'ok');
+    const published=r?.published_count??0,missing=r?.skipped_missing_source??0;
+    if(missing)toast(`${published} سؤال منتشر شد؛ ${missing} سؤال به‌دلیل نبودن فایل منبع منتشر نشد.`,published?'info':'error');
+    else toast(`وضعیت انتشار آزمایشی در همین مرورگر ثبت شد: ${published} سؤال`,'ok');
     await loadOperators(selectedSubject);
     await openOperator(selectedOperator,{skipFlush:true});
   }catch(e){toast('ثبت وضعیت ناموفق: '+e.message,'error')}
