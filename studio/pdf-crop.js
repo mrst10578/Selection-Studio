@@ -82,6 +82,7 @@ export class PdfCropper{
     this.lastObservedStageWidth=Math.round(stage.clientWidth||stage.getBoundingClientRect().width||0);
     this.resizeObserver=new ResizeObserver(entries=>{
       const width=Math.round(entries?.[0]?.contentRect?.width||this.stage.clientWidth||0);
+      if(this.stage.offsetParent===null||width<1)return;
       const widthChanged=Math.abs(width-this.lastObservedStageWidth)>=1;
       this.lastObservedStageWidth=width;
       if(!widthChanged){
