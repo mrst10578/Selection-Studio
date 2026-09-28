@@ -2,7 +2,7 @@ import {
   loadRecords,saveRecords,loadExamDraft,loadIntakeSettings,saveIntakeSettings,getSessionKey,setSessionKey,
   createBatch,rememberLastBatch,loadLastBatch,downloadText,subjectLabel,gradeLabel,difficultyLabel,buildQuestionId
 } from "./store.js";
-import {getPreview} from "./preview-db.js";
+import {getPreview,putPreview,deletePreview} from "./preview-db.js";
 import {validRegion} from "./pdf-crop.js";
 import {biologyIssues,mountBiologyCombinationEditor} from "./biology-combination.js";
 import {toast} from "./ui-runtime.js";
@@ -99,7 +99,14 @@ function activeFingerprint(qs=active()){
 
 async function preview(img,key){
   const blob=await getPreview(key);
-  if(!blob){img.removeAttribute("src");img.classList.add("missing");return}
+  if(!blob){
+    img.removeAttribute("src");
+    img.classList.add("missing");
+    img.setAttribute("aria-disabled","true");
+    return;
+  }
+  img.classList.remove("missing");
+  img.removeAttribute("aria-disabled");
   const url=URL.createObjectURL(blob);
   img.src=url;
   img.onload=()=>URL.revokeObjectURL(url);
@@ -166,7 +173,11 @@ function renderTrash(){
     frag.querySelector(".restore-btn").onclick=()=>{const restored={...records[index]};delete restored.trashed_at;records[index]=restored;saveRecords(records);toast("سؤال بازگردانده شد","ok");render()};host.appendChild(frag);
   }
 }
-function openPreview(img){const dialog=$("previewDialog"),target=$("previewImage");target.src=img.src;target.alt=img.alt;$("previewTitle").textContent=img.alt;dialog.showModal()}
+function openPreview(img){
+  if(!img?.getAttribute("src")||img.classList.contains("missing"))return;
+  const dialog=$("previewDialog"),target=$("previewImage");
+  target.src=img.src;target.alt=img.alt;$("previewTitle").textContent=img.alt;dialog.showModal();
+}
 $("previewClose").onclick=()=>$("previewDialog").close();
 const savedFilters=loadFilterState();
 $("questionSearch").value=savedFilters.search||"";
@@ -193,9 +204,12 @@ $("editChapter").onchange=()=>renderEditUnits();
 $("editUnit").onchange=syncEditMathGrade;
 $("closeEdit").onclick=()=>$("editDialog").close();
 
-$("editForm").onsubmit=e=>{
+$("editForm").onsubmit=async e=>{
   e.preventDefault();
-  const old=records[editIndex],n=Number($("editNumber").value),newId=buildQuestionId(old.exam_id,n);
+  const old=records[editIndex],n=Number($("editNumber").value);
+  if(!Number.isInteger(n)||n<1){toast("شماره سؤال باید یک عدد صحیح بزرگ‌تر از صفر باشد.","error");$("editNumber").focus();return}
+  let newId="";
+  try{newId=buildQuestionId(old.exam_id,n)}catch(error){toast(error.message||"شماره سؤال معتبر نیست.","error");return}
   if(records.some((r,i)=>i!==editIndex&&!r.trashed_at&&r.id===newId)){toast("سؤال تکراری است","error");return}
   const next={
     ...old,
@@ -209,8 +223,26 @@ $("editForm").onsubmit=e=>{
     correct_option:Number($("editOption").value)||null,
     biology_combination:$("editSubject").value==="BIO"?editBio.getValue():null
   };
+
+  const idChanged=newId!==old.id;
+  if(idChanged){
+    try{
+      const [questionBlob,answerBlob]=await Promise.all([getPreview(old.id+":question"),getPreview(old.id+":answer")]);
+      await Promise.all([
+        questionBlob?putPreview(newId+":question",questionBlob):Promise.resolve(),
+        answerBlob?putPreview(newId+":answer",answerBlob):Promise.resolve()
+      ]);
+    }catch{
+      toast("جابجایی پیش‌نمایش‌های سؤال ناموفق بود؛ تغییر ذخیره نشد.","error");
+      return;
+    }
+  }
+
   records[editIndex]=next;
   saveRecords(records);
+  if(idChanged){
+    Promise.allSettled([deletePreview(old.id+":question"),deletePreview(old.id+":answer")]);
+  }
   $("editDialog").close();
   render();
   toast("تغییرات ذخیره شد","ok");
