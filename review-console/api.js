@@ -1,5 +1,6 @@
 import {loadRecords,saveRecords} from "../studio/store.js";
 import {getPreview} from "../studio/preview-db.js";
+import {questionIssues} from "./model.js";
 
 const operatorName=record=>String(record?.entered_by||"legacy").trim()||"legacy";
 const scopedId=(subject,username)=>"LOCAL::"+subject+"::"+encodeURIComponent(username);
@@ -73,7 +74,7 @@ export function createLocalReviewApi(){
       let published=0;
       const now=new Date().toISOString();
       saveRecords(loadRecords().map(q=>{
-        if(q.trashed_at||q.subject!==scope.subject||operatorName(q)!==scope.username||(q.review_status||"pending")!=="approved"||q.status==="published")return q;
+        if(q.trashed_at||q.subject!==scope.subject||operatorName(q)!==scope.username||(q.review_status||"pending")!=="approved"||q.status==="published"||questionIssues(q).length)return q;
         published++;
         return {...q,status:"published",published_at:now,published_by:reviewer||"admin"};
       }));
