@@ -73,7 +73,7 @@ export function createLocalReviewApi(){
       let published=0;
       const now=new Date().toISOString();
       saveRecords(loadRecords().map(q=>{
-        if(q.trashed_at||q.subject!==scope.subject||operatorName(q)!==scope.username||(q.review_status||"pending")!=="approved")return q;
+        if(q.trashed_at||q.subject!==scope.subject||operatorName(q)!==scope.username||(q.review_status||"pending")!=="approved"||q.status==="published")return q;
         published++;
         return {...q,status:"published",published_at:now,published_by:reviewer||"admin"};
       }));
