@@ -281,7 +281,10 @@ const biologyEditor=mountBiologyCombinationEditor({
   onGateChange:value=>{biologyGate=value;renderGate()}
 });
 
-function activeRecords(){return records.filter(x=>!x.trashed_at)}
+function activeRecords(){
+  const active=records.filter(x=>!x.trashed_at);
+  return exam?.id?active.filter(record=>record.exam_id===exam.id):active;
+}
 function nextSourceNumberFor(examIdValue){
   const numbers=records
     .filter(record=>record.exam_id===examIdValue)
