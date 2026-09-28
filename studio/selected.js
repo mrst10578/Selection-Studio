@@ -49,6 +49,10 @@ const editBio=mountBiologyCombinationEditor({
   onGateChange:()=>{}
 });
 
+function commitRecords(next,message="ذخیره تغییرات محلی ناموفق بود."){
+  try{saveRecords(next);records=next;return true}
+  catch(error){toast(message+" "+String(error?.message||""),"error");return false}
+}
 function active(){
   const visible=records.filter(x=>!x.trashed_at);
   return exam?.id?visible.filter(record=>record.exam_id===exam.id):visible;
@@ -153,8 +157,8 @@ async function render(){
     frag.querySelector(".question-missing").innerHTML=issues.map(x=>`<span>${x}</span>`).join("");
     frag.querySelector(".edit-btn").onclick=()=>openEdit(index);
     frag.querySelector(".delete-btn").onclick=async()=>{
-      records[index]={...records[index],trashed_at:new Date().toISOString()};
-      saveRecords(records);
+      const next=records.map((item,i)=>i===index?{...item,trashed_at:new Date().toISOString()}:item);
+      if(!commitRecords(next,"انتقال سؤال به Trash ناموفق بود."))return;
       toast("سؤال به Trash رفت","ok");
       await render();
     };
@@ -173,7 +177,10 @@ function renderTrash(){
     const frag=$("trashItem").content.cloneNode(true);frag.querySelector("strong").textContent=`سؤال ${r.source_question_number} · ${subjectLabel(r.subject)}`;
     frag.querySelector(".restore-btn").onclick=()=>{
       if(records.some((item,i)=>i!==index&&!item.trashed_at&&item.id===r.id)){toast("این شماره سؤال دوباره استفاده شده و تا رفع تداخل قابل بازگردانی نیست.","error");return}
-      const restored={...records[index]};delete restored.trashed_at;records[index]=restored;saveRecords(records);toast("سؤال بازگردانده شد","ok");render()
+      const restored={...records[index]};delete restored.trashed_at;
+      const next=records.map((item,i)=>i===index?restored:item);
+      if(!commitRecords(next,"بازگردانی سؤال ناموفق بود."))return;
+      toast("سؤال بازگردانده شد","ok");render()
     };host.appendChild(frag);
   }
 }
@@ -242,8 +249,11 @@ $("editForm").onsubmit=async e=>{
     }
   }
 
-  records[editIndex]=next;
-  saveRecords(records);
+  const nextRecords=records.map((item,i)=>i===editIndex?next:item);
+  if(!commitRecords(nextRecords,"ذخیره ویرایش سؤال ناموفق بود.")){
+    if(idChanged)await Promise.allSettled([deletePreview(newId+":question"),deletePreview(newId+":answer")]);
+    return;
+  }
   if(idChanged){
     await Promise.allSettled([deletePreview(old.id+":question"),deletePreview(old.id+":answer")]);
   }
