@@ -290,7 +290,11 @@ async function loadSource(img,kind,generation){
     quickSourceReady[kind]=true;
     img.src=url;img.alt=baseAlt;zoom.disabled=false;renderQuickIssues();
     img.onload=()=>URL.revokeObjectURL(url);
-    img.onerror=()=>{URL.revokeObjectURL(url);quickSourceReady[kind]=false;zoom.disabled=true;renderQuickIssues()};
+    img.onerror=()=>{
+      URL.revokeObjectURL(url);
+      if(generation!==sourceLoadGeneration||model.batch?.id!==batchId||model.batch?.questions?.[quickIndex]?.id!==questionId)return;
+      quickSourceReady[kind]=false;zoom.disabled=true;renderQuickIssues();
+    };
   }catch{
     if(generation!==sourceLoadGeneration||model.batch?.id!==batchId||model.batch?.questions?.[quickIndex]?.id!==questionId)return;
     quickSourceReady[kind]=false;img.removeAttribute('src');img.alt='پیش‌نمایش در دسترس نیست';zoom.disabled=true;renderQuickIssues();
