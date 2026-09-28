@@ -2,14 +2,15 @@ import {
   loadRecords,saveRecords,loadExamDraft,loadIntakeSettings,saveIntakeSettings,getSessionKey,setSessionKey,
   createBatch,rememberLastBatch,loadLastBatch,downloadText,subjectLabel,gradeLabel,difficultyLabel,buildQuestionId
 } from "./store.js";
-import {getPreview} from "./preview-db.js";
+import {getPreview,putPreview,deletePreview} from "./preview-db.js";
 import {validRegion} from "./pdf-crop.js";
 import {biologyIssues,mountBiologyCombinationEditor} from "./biology-combination.js";
 import {toast} from "./ui-runtime.js";
-import {TAXONOMY,taxonomySummary} from "./taxonomy-data.js";
+import {TAXONOMY,taxonomySummary,taxonomyIssues} from "./taxonomy-data.js";
 import "./operator-auth.js";
 
 const $=id=>document.getElementById(id);
+const asciiDigits=value=>String(value||"").replace(/[۰-۹]/g,ch=>"۰۱۲۳۴۵۶۷۸۹".indexOf(ch)).replace(/[٠-٩]/g,ch=>"٠١٢٣٤٥٦٧٨٩".indexOf(ch)).replace(/[^0-9]/g,"");
 let records=loadRecords(),exam=loadExamDraft(),editIndex=-1;
 let lastBatch=loadLastBatch();
 const FILTERS_KEY="testbank-selected-filters-v1";
@@ -49,15 +50,19 @@ const editBio=mountBiologyCombinationEditor({
   onGateChange:()=>{}
 });
 
-function active(){return records.filter(x=>!x.trashed_at)}
+function commitRecords(next,message="ذخیره تغییرات محلی ناموفق بود."){
+  try{saveRecords(next);records=next;return true}
+  catch(error){toast(message+" "+String(error?.message||""),"error");return false}
+}
+function active(){
+  const visible=records.filter(x=>!x.trashed_at);
+  return exam?.id?visible.filter(record=>record.exam_id===exam.id):visible;
+}
 function missing(record){
   const out=[];
   if(!record.exam_id)out.push("آزمون");
   if(!Number.isInteger(Number(record.source_question_number))||Number(record.source_question_number)<1)out.push("شماره");
-  if(!["BIO","MATH","PHY","CHEM"].includes(record.subject))out.push("درس");
-  if(![10,11,12].includes(Number(record.grade)))out.push("پایه");
-  if(!record.chapter)out.push("فصل");
-  if(!record.unit)out.push(record.subject==="BIO"?"گفتار":"مبحث");
+  out.push(...taxonomyIssues(record));
   if(!["level_1","level_2","level_3","level_4","level_5"].includes(record.difficulty))out.push("سطح سؤال");
   if(![1,2,3,4].includes(Number(record.correct_option)))out.push("کلید");
   if(!validRegion(record.question_regions?.[0]))out.push("برش سؤال");
@@ -98,11 +103,24 @@ function activeFingerprint(qs=active()){
 }
 
 async function preview(img,key){
-  const blob=await getPreview(key);
-  if(!blob){img.removeAttribute("src");img.classList.add("missing");return}
-  const url=URL.createObjectURL(blob);
-  img.src=url;
-  img.onload=()=>URL.revokeObjectURL(url);
+  try{
+    const blob=await getPreview(key);
+    if(!blob)throw new Error("PREVIEW_MISSING");
+    img.classList.remove("missing");
+    img.removeAttribute("aria-disabled");
+    img.setAttribute("role","button");
+    img.setAttribute("tabindex","0");
+    img.setAttribute("aria-label","باز کردن "+img.alt);
+    const url=URL.createObjectURL(blob);
+    img.src=url;
+    img.onload=()=>URL.revokeObjectURL(url);
+    img.onerror=()=>{URL.revokeObjectURL(url);img.removeAttribute("src");img.classList.add("missing");img.setAttribute("aria-disabled","true");img.removeAttribute("role");img.removeAttribute("tabindex");img.removeAttribute("aria-label")};
+  }catch{
+    img.removeAttribute("src");
+    img.classList.add("missing");
+    img.setAttribute("aria-disabled","true");
+    img.removeAttribute("role");img.removeAttribute("tabindex");img.removeAttribute("aria-label");
+  }
 }
 
 async function render(){
@@ -115,7 +133,8 @@ async function render(){
   $("batchBadge").classList.toggle("ready",gate.ready);
   $("submitBatch").disabled=!gate.ready;
   $("batchGateText").textContent=gate.ready?`${qs.length} سؤال کامل است و مجموعه آمادهٔ ارسال است.`:gate.blockers.join(" ");
-  $("lastSubmission").textContent=lastBatch?.sent_at?`آخرین ارسال موفق: ${lastBatch.question_count} سؤال · ${new Date(lastBatch.sent_at).toLocaleString("fa-IR")} · شناسه ${lastBatch.id}`:"هنوز ارسالی ثبت نشده است.";
+  const relevantLastBatch=exam?.id?(lastBatch?.exam_id===exam.id?lastBatch:null):lastBatch;
+  $("lastSubmission").textContent=relevantLastBatch?.sent_at?`آخرین ارسال موفق: ${relevantLastBatch.question_count} سؤال · ${new Date(relevantLastBatch.sent_at).toLocaleString("fa-IR")} · شناسه ${relevantLastBatch.id}`:"هنوز ارسالی ثبت نشده است.";
   $("batchIssues").innerHTML=gate.incomplete.slice(0,8).map(x=>`<span>سؤال ${x.r.source_question_number}: ${x.issues.join("، ")}</span>`).join("");
 
   const host=$("questionList");
@@ -145,28 +164,44 @@ async function render(){
     frag.querySelector(".question-missing").innerHTML=issues.map(x=>`<span>${x}</span>`).join("");
     frag.querySelector(".edit-btn").onclick=()=>openEdit(index);
     frag.querySelector(".delete-btn").onclick=async()=>{
-      records[index]={...records[index],trashed_at:new Date().toISOString()};
-      saveRecords(records);
+      const next=records.map((item,i)=>i===index?{...item,trashed_at:new Date().toISOString()}:item);
+      if(!commitRecords(next,"انتقال سؤال به Trash ناموفق بود."))return;
       toast("سؤال به Trash رفت","ok");
       await render();
     };
     preview(frag.querySelector(".q-preview"),record.id+":question");
     preview(frag.querySelector(".a-preview"),record.id+":answer");
-    frag.querySelectorAll(".previews img").forEach(img=>img.addEventListener("click",()=>openPreview(img)));
+    frag.querySelectorAll(".previews img").forEach(img=>{
+      img.addEventListener("click",()=>openPreview(img));
+      img.addEventListener("keydown",event=>{
+        if(event.key!=="Enter"&&event.key!==" ")return;
+        event.preventDefault();openPreview(img);
+      });
+    });
     host.appendChild(frag);
   }
   renderTrash();
 }
 
 function renderTrash(){
-  const removed=records.map((r,index)=>({r,index})).filter(x=>x.r.trashed_at);
+  const removed=records.map((r,index)=>({r,index})).filter(x=>x.r.trashed_at&&(!exam?.id||x.r.exam_id===exam.id));
   const section=$("trashSection"),host=$("trashList");section.hidden=!removed.length;host.replaceChildren();
   for(const {r,index} of removed){
     const frag=$("trashItem").content.cloneNode(true);frag.querySelector("strong").textContent=`سؤال ${r.source_question_number} · ${subjectLabel(r.subject)}`;
-    frag.querySelector(".restore-btn").onclick=()=>{const restored={...records[index]};delete restored.trashed_at;records[index]=restored;saveRecords(records);toast("سؤال بازگردانده شد","ok");render()};host.appendChild(frag);
+    frag.querySelector(".restore-btn").onclick=()=>{
+      if(records.some((item,i)=>i!==index&&!item.trashed_at&&item.id===r.id)){toast("این شماره سؤال دوباره استفاده شده و تا رفع تداخل قابل بازگردانی نیست.","error");return}
+      const restored={...records[index]};delete restored.trashed_at;
+      const next=records.map((item,i)=>i===index?restored:item);
+      if(!commitRecords(next,"بازگردانی سؤال ناموفق بود."))return;
+      toast("سؤال بازگردانده شد","ok");render()
+    };host.appendChild(frag);
   }
 }
-function openPreview(img){const dialog=$("previewDialog"),target=$("previewImage");target.src=img.src;target.alt=img.alt;$("previewTitle").textContent=img.alt;dialog.showModal()}
+function openPreview(img){
+  if(!img?.getAttribute("src")||img.classList.contains("missing"))return;
+  const dialog=$("previewDialog"),target=$("previewImage");
+  target.src=img.src;target.alt=img.alt;$("previewTitle").textContent=img.alt;dialog.showModal();
+}
 $("previewClose").onclick=()=>$("previewDialog").close();
 const savedFilters=loadFilterState();
 $("questionSearch").value=savedFilters.search||"";
@@ -187,16 +222,20 @@ function openEdit(index){
   editBio.setValue(r.subject==="BIO"?r.biology_combination:null,false);
   $("editDialog").showModal();
 }
+$("editNumber").addEventListener("input",()=>{$("editNumber").value=asciiDigits($("editNumber").value)});
 $("editSubject").onchange=()=>renderEditTaxonomy();
 $("editGrade").onchange=()=>{if(!editIsMath())renderEditTaxonomy()};
 $("editChapter").onchange=()=>renderEditUnits();
 $("editUnit").onchange=syncEditMathGrade;
 $("closeEdit").onclick=()=>$("editDialog").close();
 
-$("editForm").onsubmit=e=>{
+$("editForm").onsubmit=async e=>{
   e.preventDefault();
-  const old=records[editIndex],n=Number($("editNumber").value),newId=buildQuestionId(old.exam_id,n);
-  if(records.some((r,i)=>i!==editIndex&&!r.trashed_at&&r.id===newId)){toast("سؤال تکراری است","error");return}
+  const old=records[editIndex],n=Number($("editNumber").value);
+  if(!Number.isInteger(n)||n<1){toast("شماره سؤال باید یک عدد صحیح بزرگ‌تر از صفر باشد.","error");$("editNumber").focus();return}
+  let newId="";
+  try{newId=buildQuestionId(old.exam_id,n)}catch(error){toast(error.message||"شماره سؤال معتبر نیست.","error");return}
+  if(records.some((r,i)=>i!==editIndex&&r.id===newId)){toast("این شماره قبلاً استفاده شده است؛ حتی سؤال‌های Trash شده تا زمان بازگردانی/اصلاح شماره رزرو می‌مانند.","error");return}
   const next={
     ...old,
     id:newId,
@@ -209,8 +248,29 @@ $("editForm").onsubmit=e=>{
     correct_option:Number($("editOption").value)||null,
     biology_combination:$("editSubject").value==="BIO"?editBio.getValue():null
   };
-  records[editIndex]=next;
-  saveRecords(records);
+
+  const idChanged=newId!==old.id;
+  if(idChanged){
+    try{
+      const [questionBlob,answerBlob]=await Promise.all([getPreview(old.id+":question"),getPreview(old.id+":answer")]);
+      await Promise.all([
+        questionBlob?putPreview(newId+":question",questionBlob):Promise.resolve(),
+        answerBlob?putPreview(newId+":answer",answerBlob):Promise.resolve()
+      ]);
+    }catch{
+      toast("جابجایی پیش‌نمایش‌های سؤال ناموفق بود؛ تغییر ذخیره نشد.","error");
+      return;
+    }
+  }
+
+  const nextRecords=records.map((item,i)=>i===editIndex?next:item);
+  if(!commitRecords(nextRecords,"ذخیره ویرایش سؤال ناموفق بود.")){
+    if(idChanged)await Promise.allSettled([deletePreview(newId+":question"),deletePreview(newId+":answer")]);
+    return;
+  }
+  if(idChanged){
+    await Promise.allSettled([deletePreview(old.id+":question"),deletePreview(old.id+":answer")]);
+  }
   $("editDialog").close();
   render();
   toast("تغییرات ذخیره شد","ok");

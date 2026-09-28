@@ -1447,6 +1447,31 @@ export const TAXONOMY = {
   }
 };
 
+export function taxonomyIssues(record){
+  const issues=[];
+  const subject=String(record?.subject||"");
+  const cfg=TAXONOMY.subjects?.[subject];
+  const grade=Number(record?.grade);
+  const chapter=String(record?.chapter||"");
+  const unit=String(record?.unit||"");
+  if(!cfg)return ["درس"];
+  if(![10,11,12].includes(grade))issues.push("پایه");
+  if(subject==="MATH"){
+    const topic=cfg.topics?.[chapter];
+    const unitCfg=topic?.units?.[unit];
+    if(!topic)issues.push(cfg.chapter_name_fa||"مبحث اصلی");
+    if(!unitCfg)issues.push(cfg.unit_name_fa||"زیرعنوان");
+    if(unitCfg?.grade&&Number(unitCfg.grade)!==grade&&!issues.includes("پایه"))issues.push("پایه");
+    return issues;
+  }
+  const gradeCfg=cfg.grades?.[String(grade)];
+  const chapterCfg=gradeCfg?.chapters?.[chapter];
+  const unitCfg=chapterCfg?.units?.[unit];
+  if(!chapterCfg)issues.push(cfg.chapter_name_fa||"فصل");
+  if(!unitCfg)issues.push(cfg.unit_name_fa||(subject==="BIO"?"گفتار":"مبحث"));
+  return issues;
+}
+
 export function taxonomySummary(record){
   const cfg=TAXONOMY.subjects?.[record?.subject];
   if(!cfg)return "";

@@ -1,5 +1,6 @@
 import {loadRecords,saveRecords} from "../studio/store.js";
 import {getPreview} from "../studio/preview-db.js";
+import {questionIssues} from "./model.js";
 
 const operatorName=record=>String(record?.entered_by||"legacy").trim()||"legacy";
 const scopedId=(subject,username)=>"LOCAL::"+subject+"::"+encodeURIComponent(username);
@@ -70,14 +71,17 @@ export function createLocalReviewApi(){
     async publish(batchId,reviewer){
       const scope=parseScope(batchId);
       if(!scope)throw new Error("محدوده گزینشگر نامعتبر است.");
-      let published=0;
-      const now=new Date().toISOString();
-      saveRecords(loadRecords().map(q=>{
-        if(q.trashed_at||q.subject!==scope.subject||operatorName(q)!==scope.username||(q.review_status||"pending")!=="approved")return q;
+      let published=0,skippedMissingSource=0;
+      const now=new Date().toISOString(),next=[];
+      for(const q of loadRecords()){
+        if(q.trashed_at||q.subject!==scope.subject||operatorName(q)!==scope.username||(q.review_status||"pending")!=="approved"||q.status==="published"||questionIssues(q).length){next.push(q);continue}
+        const [questionPreview,answerPreview]=await Promise.all([getPreview(q.id+":question"),getPreview(q.id+":answer")]);
+        if(!questionPreview||!answerPreview){skippedMissingSource++;next.push(q);continue}
         published++;
-        return {...q,status:"published",published_at:now,published_by:reviewer||"admin"};
-      }));
-      return {published_count:published};
+        next.push({...q,status:"published",published_at:now,published_by:reviewer||"admin"});
+      }
+      saveRecords(next);
+      return {published_count:published,skipped_missing_source:skippedMissingSource};
     },
     async lock(){return {ok:true}},
     async unlock(){return {ok:true}}

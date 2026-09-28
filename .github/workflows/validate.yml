@@ -39,6 +39,8 @@ jobs:
           fi
       - name: Test Worker core
         run: node --test worker/test/*.test.mjs
+      - name: Test Review model
+        run: node --test review-console/model.test.mjs
       - name: Install QA dependencies
         run: npm install --no-audit --no-fund
       - name: Install Playwright Chromium

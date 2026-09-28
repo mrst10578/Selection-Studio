@@ -2,10 +2,10 @@ import {
   RECORDS_KEY,loadRecords,saveRecords,loadSticky,saveSticky,loadExamDraft,saveExamDraft,
   buildQuestionId,difficultyLabel,subjectLabel,gradeLabel
 } from "./store.js";
-import {putPreview} from "./preview-db.js";
+import {putPreview,deletePreview} from "./preview-db.js";
 import {PdfCropper,validRegion} from "./pdf-crop.js";
 import {isTypingTarget,toast} from "./ui-runtime.js";
-import "./operator-auth.js";
+import {isOperatorAuthenticated} from "./operator-auth.js";
 import {installWindowsMetadataShortcuts} from "./windows-shortcuts.js";
 import {mountBiologyCombinationEditor,biologyIssues} from "./biology-combination.js";
 import {TAXONOMY,taxonomySummary} from "./taxonomy-data.js";
@@ -175,13 +175,16 @@ function renderSession(){
 $("toggleSession").onclick=()=>$("sessionCard").classList.toggle("collapsed");
 $("saveSession").onclick=async()=>{
   const provider=providerName($("provider").value),operator=$("operator").value.trim();
+  const previousExamId=exam?.id||null;
   if(!validProviderName(provider)){toast("نام آزمون را فقط با حروف فارسی وارد کن؛ مثل قلمچی.","error");$("provider").focus();return}
   if(!validExamDateParts()){toast("ماه و روز آزمون را دو رقمی و معتبر وارد کن؛ مثل 03/07.","error");focusExamMonth();return}
   const id=examId();
   if(!id||!operator){toast("نام آزمون، تاریخ و اپراتور لازم است.","error");return}
   if(!qCrop.isRenderReady()||!aCrop.isRenderReady()){toast("هر دو PDF باید با موفقیت باز و آمادهٔ نمایش باشند.","error");return}
   exam={id,provider,date:humanDate($("examDate").value),entered_by:operator,question_pdf_name:qCrop.file.name,answer_pdf_name:aCrop.file.name};
-  saveExamDraft(exam); renderSession(); toast("آزمون آماده شد","ok");
+  saveExamDraft(exam);
+  if(previousExamId!==id)$("sourceNumber").value=String(nextSourceNumberFor(id));
+  renderSession(); toast("آزمون آماده شد","ok");
 };
 function updatePdfState(crop,stateId){
   const host=$(stateId);
@@ -278,7 +281,17 @@ const biologyEditor=mountBiologyCombinationEditor({
   onGateChange:value=>{biologyGate=value;renderGate()}
 });
 
-function activeRecords(){return records.filter(x=>!x.trashed_at)}
+function activeRecords(){
+  const active=records.filter(x=>!x.trashed_at);
+  return exam?.id?active.filter(record=>record.exam_id===exam.id):active;
+}
+function nextSourceNumberFor(examIdValue){
+  const numbers=records
+    .filter(record=>record.exam_id===examIdValue)
+    .map(record=>Number(record.source_question_number))
+    .filter(value=>Number.isInteger(value)&&value>0);
+  return numbers.length?Math.max(...numbers)+1:1;
+}
 function sourceQuestionNumber(){
   const digits=normalizedDate($("sourceNumber").value);
   if(!/^\d+$/.test(digits))return null;
@@ -288,7 +301,7 @@ function sourceQuestionNumber(){
 function gateState(){
   const source=sourceQuestionNumber();
   const currentExamId=exam?.id||examId();
-  const unique=source!==null&&(!currentExamId||!activeRecords().some(x=>x.exam_id===currentExamId&&Number(x.source_question_number)===source));
+  const unique=source!==null&&(!currentExamId||!records.some(x=>x.exam_id===currentExamId&&Number(x.source_question_number)===source));
   const checks={
     exam:Boolean(sessionMatchesForm()&&qCrop.isRenderReady()&&aCrop.isRenderReady()),
     number:Boolean(source!==null&&unique),
@@ -348,7 +361,7 @@ function restore(){
   if(sticky.grade)$("grade").value=sticky.grade;
   renderTaxonomy({chapter:sticky.chapter||"",unit:sticky.unit||""});
   biologyEditor.refresh();
-  const last=activeRecords().at(-1);$("sourceNumber").value=String((Number(last?.source_question_number)||0)+1||1);
+  $("sourceNumber").value=String(nextSourceNumberFor(exam?.id||""));
 }
 $("subject").addEventListener("change",()=>{renderTaxonomy();persistSticky();renderGate()});
 $("grade").addEventListener("change",()=>{if(!isMath())renderTaxonomy();persistSticky();renderGate()});
@@ -366,6 +379,7 @@ $("questionForm").addEventListener("submit",async e=>{
   submittingQuestion=true;
   renderGate();
   const source=sourceQuestionNumber(),id=buildQuestionId(exam.id,source);
+  let committed=false;
   try{
     const [qCapture,aCapture]=await Promise.all([qCrop.captureCrop(),aCrop.captureCrop()]);
     const visualHash=await qCrop.visualHash(qCapture.blob);
@@ -377,13 +391,20 @@ $("questionForm").addEventListener("submit",async e=>{
       entered_by:$("operator").value.trim(),created_at:new Date().toISOString()
     };
     await Promise.all([putPreview(id+":question",qCapture.blob),putPreview(id+":answer",aCapture.blob)]);
-    records.push(record);
-    saveRecords(records);
+    const nextRecords=[...records,record];
+    try{saveRecords(nextRecords)}
+    catch(error){
+      await Promise.allSettled([deletePreview(id+":question"),deletePreview(id+":answer")]);
+      throw error;
+    }
+    records=nextRecords;
+    committed=true;
     $("sourceNumber").value=String(source+1);
     qCrop.setRegionLocked(false);aCrop.setRegionLocked(false);qCrop.clearRegion();aCrop.clearRegion();setSegmented("difficulty","");setSegmented("correctOption","");biologyEditor.reset();switchPane("question");
     renderRecent();
     toast(`سؤال ${source} ثبت شد · ${activeRecords().length} سؤال در فهرست`,"ok");
   }catch(error){
+    if(!committed)await Promise.allSettled([deletePreview(id+":question"),deletePreview(id+":answer")]);
     const message=String(error?.message||"");
     toast(message.startsWith("PDF_CROP_")?"برش PDF هنوز آماده نیست؛ بعد از کامل‌شدن نمایش دوباره ثبت کن.":"ثبت سؤال کامل نشد؛ هیچ رکورد ناقصی ذخیره نشد.","error");
   }finally{
@@ -393,7 +414,7 @@ $("questionForm").addEventListener("submit",async e=>{
 });
 
 installWindowsMetadataShortcuts({
-  enabled:()=>matchMedia("(pointer:fine)").matches&&innerWidth>=900&&!hotkeysDialog.open,
+  enabled:()=>isOperatorAuthenticated()&&matchMedia("(pointer:fine)").matches&&innerWidth>=900&&!hotkeysDialog.open,
   setCorrectOption:n=>setSegmented("correctOption",n),
   setLevel:n=>setSegmented("difficulty","level_"+n),
   gradeEnabled:()=>!isMath(),
@@ -407,6 +428,7 @@ $("hotkeysLauncher").onclick=openHotkeys;
 $("hotkeysClose").onclick=()=>hotkeysDialog.close();
 hotkeysDialog.addEventListener("click",e=>{if(e.target===hotkeysDialog)hotkeysDialog.close()});
 document.addEventListener("keydown",e=>{
+  if(!isOperatorAuthenticated())return;
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="k"){e.preventDefault();openHotkeys();return}
   if(isTypingTarget(e.target)||hotkeysDialog.open)return;
   const key=e.key.toLowerCase();

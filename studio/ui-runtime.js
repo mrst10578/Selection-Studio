@@ -15,10 +15,11 @@ export function toast(message,type="info"){
 export function createCommandPalette({dialog,input,list,getCommands,onQuery=()=>[]}){
   let visible=[];
   const escape=s=>String(s??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
+  const searchable=s=>String(s??"").replace(/[۰-۹]/g,ch=>"۰۱۲۳۴۵۶۷۸۹".indexOf(ch)).replace(/[٠-٩]/g,ch=>"٠١٢٣٤٥٦٧٨٩".indexOf(ch)).toLowerCase();
   function render(){
-    const q=input.value.trim().toLowerCase();
-    const all=[...onQuery(q),...(getCommands?.()||[])];
-    visible=all.filter(cmd=>!q||[cmd.label,cmd.hint,...(cmd.keywords||[])].filter(Boolean).join(" ").toLowerCase().includes(q)).slice(0,10);
+    const raw=input.value.trim(),q=searchable(raw);
+    const all=[...onQuery(raw),...(getCommands?.()||[])];
+    visible=all.filter(cmd=>!q||searchable([cmd.label,cmd.hint,...(cmd.keywords||[])].filter(Boolean).join(" ")).includes(q)).slice(0,10);
     list.innerHTML=visible.length?visible.map((cmd,i)=>`<button type="button" class="command-item ${i===0?"active":""}" data-i="${i}"><span><strong>${escape(cmd.label)}</strong><small>${escape(cmd.hint||"")}</small></span>${cmd.shortcut?`<kbd>${escape(cmd.shortcut)}</kbd>`:""}</button>`).join(""):`<div class="command-empty">فرمانی پیدا نشد.</div>`;
     list.querySelectorAll(".command-item").forEach(btn=>btn.addEventListener("click",()=>run(Number(btn.dataset.i))));
   }

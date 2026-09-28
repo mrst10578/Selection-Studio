@@ -1,9 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {ReviewModel} from "./model.js";
+import {ReviewModel,questionIssues} from "./model.js";
 import {filterTaxonomyEntries} from "../studio/taxonomy-data.js";
 
-const valid={id:"EXAM-Q001",source_question_number:1,subject:"PHY",grade:10,chapter:"01",unit:"01",difficulty:"level_2",correct_option:1,question_regions:[{page:1,bbox_norm:[0,0,1,1]}],answer_regions:[{page:1,bbox_norm:[0,0,1,1]}]};
+const valid={id:"EXAM-Q001",exam_id:"EXAM",source_question_number:1,subject:"PHY",grade:10,chapter:"01",unit:"01",difficulty:"level_2",correct_option:1,question_regions:[{page:1,bbox_norm:[0,0,1,1]}],answer_regions:[{page:1,bbox_norm:[0,0,1,1]}]};
 function modelWith(questions){const model=new ReviewModel();model.load({id:"batch",questions:questions.map(q=>({...valid,...q}))});return model}
 
 test("nextVisibleIndex stays inside the active review filter",()=>{
@@ -32,3 +32,20 @@ test("taxonomy search finds matching unit names and keeps the current selection 
   assert.deepEqual(filterTaxonomyEntries(entries,"نمونه").map(([id])=>id),["01"]);
   assert.deepEqual(filterTaxonomyEntries(entries,"ناموجود","02").map(([id])=>id),["02"]);
 });
+
+test("final review decisions clear stale correction reason and note",()=>{
+  const model=modelWith([{review_status:"needs_changes",review_reason:"taxonomy",review_note:"اصلاح فصل"}]);
+  model.setStatus(0,"approved","reviewer");
+  assert.equal(model.batch.questions[0].review_status,"approved");
+  assert.equal(model.batch.questions[0].review_reason,null);
+  assert.equal(model.batch.questions[0].review_note,null);
+});
+
+test("review gate rejects invalid canonical taxonomy and identity metadata",()=>{
+  assert.ok(questionIssues({...valid,chapter:"99"}).includes("فصل"));
+  assert.ok(questionIssues({...valid,unit:"99"}).includes("مبحث"));
+  assert.ok(questionIssues({...valid,grade:99}).includes("پایه"));
+  assert.ok(questionIssues({...valid,exam_id:""}).includes("آزمون"));
+  assert.ok(questionIssues({...valid,source_question_number:0}).includes("شماره"));
+});
+
