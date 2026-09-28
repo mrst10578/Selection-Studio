@@ -599,6 +599,20 @@ test.describe("Review Console",()=>{
     await page.goto("/admin/");
     await page.locator("#adminUsername").fill("admin");await page.locator("#adminPassword").fill("admin");await page.locator("#adminLoginForm").press("Enter");
     await page.locator('[data-subject="PHY"]').click();await page.locator(".operator-item").click();
+    await page.evaluate(async()=>{
+      const db=await new Promise((resolve,reject)=>{
+        const req=indexedDB.open("selection-studio-previews-v1",1);
+        req.onupgradeneeded=()=>req.result.createObjectStore("previews");
+        req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
+      });
+      const svg=new Blob(['<svg xmlns="http://www.w3.org/2000/svg" width="2" height="2"><rect width="2" height="2" fill="white"/></svg>'],{type:"image/svg+xml"});
+      await new Promise((resolve,reject)=>{
+        const tx=db.transaction("previews","readwrite"),store=tx.objectStore("previews");
+        store.put(svg,"EXAM-P-Q1:question");store.put(svg,"EXAM-P-Q1:answer");
+        tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);
+      });
+      db.close();
+    });
     await expect(page.locator("#publishBtn")).toBeEnabled();
     page.once("dialog",dialog=>dialog.accept());
     await page.locator("#publishBtn").click();
