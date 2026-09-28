@@ -485,6 +485,36 @@ test.describe("Review Console",()=>{
     await expect(page.locator('[data-target="quickDifficulty"] button[data-value="level_4"]')).toHaveClass(/active/);
   });
 
+  test("rapid subject and operator switches cannot paint stale review data",async({page})=>{
+    await page.addInitScript(()=>{
+      const region={page:1,bbox_norm:[0,0,.8,.8]};
+      localStorage.setItem("testbank-studio.records.v1",JSON.stringify([
+        {id:"BIO-A-Q1",exam_id:"BIO-A",source_question_number:1,subject:"BIO",grade:10,chapter:"01",unit:"01",difficulty:"level_2",correct_option:1,question_regions:[region],answer_regions:[region],entered_by:"bio-user",review_status:"pending",biology_combination:{is_combined:false,topics:[]}},
+        {id:"PHY-A-Q1",exam_id:"PHY-A",source_question_number:1,subject:"PHY",grade:10,chapter:"01",unit:"01",difficulty:"level_2",correct_option:1,question_regions:[region],answer_regions:[region],entered_by:"alice",review_status:"pending"},
+        {id:"PHY-B-Q1",exam_id:"PHY-B",source_question_number:1,subject:"PHY",grade:10,chapter:"01",unit:"01",difficulty:"level_2",correct_option:1,question_regions:[region],answer_regions:[region],entered_by:"bob",review_status:"pending"}
+      ]));
+    });
+    await page.goto("/admin/");
+    await page.locator("#adminUsername").fill("admin");await page.locator("#adminPassword").fill("admin");await page.locator("#adminLoginForm").press("Enter");
+    await expect(page.locator("#appView")).toBeVisible({timeout:2500});
+    await page.evaluate(()=>{
+      document.querySelector('[data-subject="BIO"]').click();
+      document.querySelector('[data-subject="PHY"]').click();
+    });
+    await expect(page.locator('[data-subject="PHY"]')).toHaveClass(/active/);
+    await expect(page.locator("#operatorList")).toContainText("@alice");
+    await expect(page.locator("#operatorList")).toContainText("@bob");
+    await expect(page.locator("#operatorList")).not.toContainText("@bio-user");
+    await page.evaluate(()=>{
+      const buttons=[...document.querySelectorAll(".operator-item")];
+      buttons.find(b=>b.textContent.includes("@alice"))?.click();
+      buttons.find(b=>b.textContent.includes("@bob"))?.click();
+    });
+    await expect(page.locator("#batchTitle")).toContainText("@bob");
+    await expect(page.locator("#questionList")).toContainText("PHY-B");
+    await expect(page.locator("#questionList")).not.toContainText("PHY-A");
+  });
+
   test("operator usernames render as text and cannot inject markup",async({page})=>{
     await page.addInitScript(()=>{
       const region={page:1,bbox_norm:[0,0,.8,.8]};
