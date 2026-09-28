@@ -476,7 +476,22 @@ test.describe("Review Console",()=>{
     await page.locator("#adminUsername").fill("admin");await page.locator("#adminPassword").fill("admin");await page.locator("#adminLoginForm").press("Enter");
     await expect(page.locator("#appView")).toBeVisible({timeout:2500});
     await page.locator('[data-subject="PHY"]').click();await page.locator(".operator-item").click();
+    await page.evaluate(async()=>{
+      const db=await new Promise((resolve,reject)=>{
+        const req=indexedDB.open("selection-studio-previews-v1",1);
+        req.onupgradeneeded=()=>req.result.createObjectStore("previews");
+        req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
+      });
+      const svg=new Blob(['<svg xmlns="http://www.w3.org/2000/svg" width="2" height="2"><rect width="2" height="2" fill="white"/></svg>'],{type:"image/svg+xml"});
+      await new Promise((resolve,reject)=>{
+        const tx=db.transaction("previews","readwrite"),store=tx.objectStore("previews");
+        store.put(svg,"EXAM-Q1:question");store.put(svg,"EXAM-Q1:answer");
+        tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);
+      });
+      db.close();
+    });
     await page.locator("#quickReviewBtn").click();
+    await expect(page.locator("#approveBtn")).toBeEnabled();
     await expect(page.locator("#quickUndoBtn")).toBeDisabled();
     await page.locator("#quickClose").click();
     await page.locator("#quickReviewBtn").click();
@@ -488,6 +503,21 @@ test.describe("Review Console",()=>{
     await expect(page.locator("#quickDialog")).not.toHaveAttribute("open","");
     await expect(page.locator("#pendingCount")).toHaveText("0");
     await expect(page.locator("#undoBtn")).toBeEnabled();
+  });
+
+  test("Quick Review cannot approve when source previews are missing",async({page})=>{
+    await page.addInitScript(()=>{
+      const region={page:1,bbox_norm:[0,0,.8,.8]};
+      localStorage.setItem("testbank-studio.records.v1",JSON.stringify([
+        {id:"EXAM-MISSING-Q1",exam_id:"EXAM-MISSING",source_question_number:1,subject:"PHY",grade:10,chapter:"01",unit:"01",difficulty:"level_2",correct_option:1,question_regions:[region],answer_regions:[region],entered_by:"alice",review_status:"pending"}
+      ]));
+    });
+    await page.goto("/admin/");
+    await page.locator("#adminUsername").fill("admin");await page.locator("#adminPassword").fill("admin");await page.locator("#adminLoginForm").press("Enter");
+    await page.locator('[data-subject="PHY"]').click();await page.locator(".operator-item").click();
+    await page.locator("#quickReviewBtn").click();
+    await expect(page.locator("#approveBtn")).toBeDisabled();
+    await expect(page.locator("#quickIssues")).toContainText("پیش‌نمایش سؤال و پاسخ باید در دسترس باشد");
   });
 
   test("autosave flushes the edited operator before an immediate operator switch",async({page})=>{
