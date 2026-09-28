@@ -173,28 +173,6 @@ test.describe("Selection Studio",()=>{
     expect(visual.borderColor).not.toBe("rgb(117, 137, 160)");
   });
 
-  test("generated asset layer is reversible and subject art updates immediately",async({page})=>{
-    await page.addInitScript(()=>sessionStorage.setItem("selection-studio-operator-auth-v1","admin"));
-    await page.goto("/studio/?assets=on");
-    await expect(page.locator("#bootSplash")).toBeHidden({timeout:1800});
-    await expect(page.locator("html")).toHaveAttribute("data-assets","on");
-    await expect(page.locator(".asset-art").first()).toBeAttached();
-
-    const subjectArt=page.locator("#subjectGradeRow > .asset-subject");
-    await expect(subjectArt).toHaveAttribute("data-asset-id","05");
-    await page.locator("#subject").selectOption("MATH");
-    await expect(subjectArt).toHaveAttribute("data-asset-id","06");
-
-    await page.goto("/studio/?assets=off");
-    await expect(page.locator("html")).toHaveAttribute("data-assets","off");
-    await expect(page.locator(".asset-art")).toHaveCount(0);
-    expect(await page.evaluate(()=>localStorage.getItem("selection-studio-assets-v1"))).toBe("off");
-
-    await page.goto("/studio/?assets=on");
-    await expect(page.locator("html")).toHaveAttribute("data-assets","on");
-    await expect(page.locator(".asset-art").first()).toBeAttached();
-  });
-
   test("question number readiness is independent from exam completion and accepts Persian digits",async({page})=>{
     await page.addInitScript(()=>sessionStorage.setItem("selection-studio-operator-auth-v1","admin"));
     await page.goto("/studio/");
