@@ -102,18 +102,20 @@ function activeFingerprint(qs=active()){
 }
 
 async function preview(img,key){
-  const blob=await getPreview(key);
-  if(!blob){
+  try{
+    const blob=await getPreview(key);
+    if(!blob)throw new Error("PREVIEW_MISSING");
+    img.classList.remove("missing");
+    img.removeAttribute("aria-disabled");
+    const url=URL.createObjectURL(blob);
+    img.src=url;
+    img.onload=()=>URL.revokeObjectURL(url);
+    img.onerror=()=>{URL.revokeObjectURL(url);img.removeAttribute("src");img.classList.add("missing");img.setAttribute("aria-disabled","true")};
+  }catch{
     img.removeAttribute("src");
     img.classList.add("missing");
     img.setAttribute("aria-disabled","true");
-    return;
   }
-  img.classList.remove("missing");
-  img.removeAttribute("aria-disabled");
-  const url=URL.createObjectURL(blob);
-  img.src=url;
-  img.onload=()=>URL.revokeObjectURL(url);
 }
 
 async function render(){
