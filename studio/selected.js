@@ -170,7 +170,10 @@ function renderTrash(){
   const section=$("trashSection"),host=$("trashList");section.hidden=!removed.length;host.replaceChildren();
   for(const {r,index} of removed){
     const frag=$("trashItem").content.cloneNode(true);frag.querySelector("strong").textContent=`سؤال ${r.source_question_number} · ${subjectLabel(r.subject)}`;
-    frag.querySelector(".restore-btn").onclick=()=>{const restored={...records[index]};delete restored.trashed_at;records[index]=restored;saveRecords(records);toast("سؤال بازگردانده شد","ok");render()};host.appendChild(frag);
+    frag.querySelector(".restore-btn").onclick=()=>{
+      if(records.some((item,i)=>i!==index&&!item.trashed_at&&item.id===r.id)){toast("این شماره سؤال دوباره استفاده شده و تا رفع تداخل قابل بازگردانی نیست.","error");return}
+      const restored={...records[index]};delete restored.trashed_at;records[index]=restored;saveRecords(records);toast("سؤال بازگردانده شد","ok");render()
+    };host.appendChild(frag);
   }
 }
 function openPreview(img){
@@ -210,7 +213,7 @@ $("editForm").onsubmit=async e=>{
   if(!Number.isInteger(n)||n<1){toast("شماره سؤال باید یک عدد صحیح بزرگ‌تر از صفر باشد.","error");$("editNumber").focus();return}
   let newId="";
   try{newId=buildQuestionId(old.exam_id,n)}catch(error){toast(error.message||"شماره سؤال معتبر نیست.","error");return}
-  if(records.some((r,i)=>i!==editIndex&&!r.trashed_at&&r.id===newId)){toast("سؤال تکراری است","error");return}
+  if(records.some((r,i)=>i!==editIndex&&r.id===newId)){toast("این شماره قبلاً استفاده شده است؛ حتی سؤال‌های Trash شده تا زمان بازگردانی/اصلاح شماره رزرو می‌مانند.","error");return}
   const next={
     ...old,
     id:newId,
