@@ -49,7 +49,10 @@ const editBio=mountBiologyCombinationEditor({
   onGateChange:()=>{}
 });
 
-function active(){return records.filter(x=>!x.trashed_at)}
+function active(){
+  const visible=records.filter(x=>!x.trashed_at);
+  return exam?.id?visible.filter(record=>record.exam_id===exam.id):visible;
+}
 function missing(record){
   const out=[];
   if(!record.exam_id)out.push("آزمون");
@@ -163,7 +166,7 @@ async function render(){
 }
 
 function renderTrash(){
-  const removed=records.map((r,index)=>({r,index})).filter(x=>x.r.trashed_at);
+  const removed=records.map((r,index)=>({r,index})).filter(x=>x.r.trashed_at&&(!exam?.id||x.r.exam_id===exam.id));
   const section=$("trashSection"),host=$("trashList");section.hidden=!removed.length;host.replaceChildren();
   for(const {r,index} of removed){
     const frag=$("trashItem").content.cloneNode(true);frag.querySelector("strong").textContent=`سؤال ${r.source_question_number} · ${subjectLabel(r.subject)}`;
