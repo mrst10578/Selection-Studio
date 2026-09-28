@@ -288,8 +288,10 @@ function openQuick(index){
 function syncQuickMeta(){
   if(quickIndex<0||!model.batch)return;const q=model.batch.questions[quickIndex];
   const values={subject:$('#quickSubject').value,grade:Number($('#quickGrade').value),chapter:$('#quickChapter').value,unit:$('#quickUnit').value,difficulty:$('#quickDifficulty').value,correct_option:Number($('#quickOption').value)||null,biology_combination:$('#quickSubject').value==='BIO'?quickBio.getValue():null};
-  if(JSON.stringify(values)!==JSON.stringify({subject:q.subject,grade:q.grade,chapter:q.chapter,unit:q.unit,difficulty:q.difficulty,correct_option:q.correct_option,biology_combination:q.biology_combination??null}))model.patch(quickIndex,values,reviewer());
+  const changed=JSON.stringify(values)!==JSON.stringify({subject:q.subject,grade:q.grade,chapter:q.chapter,unit:q.unit,difficulty:q.difficulty,correct_option:q.correct_option,biology_combination:q.biology_combination??null});
+  if(changed)model.patch(quickIndex,values,reviewer());
   renderQuickIssues();
+  if(changed)renderReviewHistory(model.batch.questions[quickIndex]);
 }
 function renderQuickIssues(){if(quickIndex<0||!model.batch)return;const issues=questionIssues(model.batch.questions[quickIndex]);$('#quickIssues').innerHTML=issues.length?issues.map(x=>'<span>'+x+'</span>').join(''):'<span class="issue-ready">همه موارد لازم کامل است.</span>'}
 function renderReviewHistory(q){
@@ -324,12 +326,21 @@ document.querySelectorAll('.image-expand').forEach(button=>button.addEventListen
   $('#reviewImageTitle').textContent=image.alt;$('#reviewImageDialog').showModal();
 }));
 $('#reviewImageClose').onclick=()=>$('#reviewImageDialog').close();
-$('#approveBtn').onclick=()=>{syncQuickMeta();if(questionIssues(model.batch.questions[quickIndex]).length){toast('سؤال هنوز شرط‌های کیفیت را کامل نکرده است.','error');return}model.setStatus(quickIndex,'approved',reviewer());nextIndex(1)};
-$('#rejectBtn').onclick=()=>{syncQuickMeta();model.setStatus(quickIndex,'rejected',reviewer());nextIndex(1)};
+function advanceAfterDecision(){
+  const next=model.nextVisibleIndex(quickIndex,1,filters());
+  if(next>=0){openQuick(next);return}
+  sourceLoadGeneration++;
+  resetCorrection();
+  $('#quickDialog').close();
+  renderBatch();
+  toast('به پایان این بخش از صف بررسی رسیدی.','ok');
+}
+$('#approveBtn').onclick=()=>{syncQuickMeta();if(questionIssues(model.batch.questions[quickIndex]).length){toast('سؤال هنوز شرط‌های کیفیت را کامل نکرده است.','error');return}model.setStatus(quickIndex,'approved',reviewer());advanceAfterDecision()};
+$('#rejectBtn').onclick=()=>{syncQuickMeta();model.setStatus(quickIndex,'rejected',reviewer());advanceAfterDecision()};
 $('#needsBtn').onclick=()=>{$('#correctionSheet').classList.remove('hidden')};
 function resetCorrection(){currentReason='';$('#correctionSheet').classList.add('hidden');$('#correctionNote').value='';document.querySelectorAll('[data-reason]').forEach(b=>b.classList.remove('active'))}
 document.querySelectorAll('[data-reason]').forEach(b=>b.onclick=()=>{currentReason=b.dataset.reason;document.querySelectorAll('[data-reason]').forEach(x=>x.classList.toggle('active',x===b))});
-$('#cancelCorrection').onclick=resetCorrection;$('#confirmCorrection').onclick=()=>{if(!currentReason){toast('علت اصلاح را انتخاب کن.','error');return}syncQuickMeta();model.setStatus(quickIndex,'needs_changes',reviewer(),$('#correctionNote').value.trim()||null,currentReason);resetCorrection();nextIndex(1)};
+$('#cancelCorrection').onclick=resetCorrection;$('#confirmCorrection').onclick=()=>{if(!currentReason){toast('علت اصلاح را انتخاب کن.','error');return}syncQuickMeta();model.setStatus(quickIndex,'needs_changes',reviewer(),$('#correctionNote').value.trim()||null,currentReason);resetCorrection();advanceAfterDecision()};
 $('#quickReviewBtn').onclick=()=>{const i=model.firstPending(filters());if(i<0){toast('در این صف سؤال بررسی‌نشده‌ای نیست.','ok');return}openQuick(i)};
 
 installWindowsMetadataShortcuts({
