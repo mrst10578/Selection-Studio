@@ -152,9 +152,9 @@ fieldset.choice.asset-host,
   transform:translateY(-50%);
 }
 .quick-actions button.asset-host,
-.crop-freeze.asset-host,
-#hotkeysLauncher.asset-host,
-#commandLauncher.asset-host{display:inline-flex;align-items:center;justify-content:center}
+.crop-freeze.asset-host{display:inline-flex;align-items:center;justify-content:center}
+#hotkeysLauncher.asset-host .asset-hotkey,
+#commandLauncher.asset-host .asset-action{vertical-align:middle}
 .empty-box.asset-host,
 .empty-review.asset-host{text-align:center}
 
