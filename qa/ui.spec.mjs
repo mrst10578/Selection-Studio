@@ -456,6 +456,11 @@ test.describe("Review Console",()=>{
     await expect(page.locator("#quickUndoBtn")).toBeDisabled();
     await page.locator('[data-target="quickDifficulty"] button[data-value="level_3"]').click();
     await expect(page.locator("#quickUndoBtn")).toBeEnabled();
+    await expect(page.locator("#reviewHistory")).toContainText("سطح");
+    await page.locator("#approveBtn").click();
+    await expect(page.locator("#quickDialog")).not.toHaveAttribute("open","");
+    await expect(page.locator("#pendingCount")).toHaveText("0");
+    await expect(page.locator("#undoBtn")).toBeEnabled();
   });
 
   test("autosave flushes the edited operator before an immediate operator switch",async({page})=>{
