@@ -317,6 +317,27 @@ test.describe("Selection Studio",()=>{
     await expectNoSeriousA11y(page);
     await expectNoHorizontalOverflow(page);
   });
+  test("Studio and selected batch stay scoped to the active exam",async({page})=>{
+    await page.addInitScript(()=>{
+      sessionStorage.setItem("selection-studio-operator-auth-v1","admin");
+      localStorage.setItem("testbank-studio.exam-draft.v1",JSON.stringify({id:"EXAM-A",provider:"قلمچی",date:"1405/01/01",entered_by:"admin",question_pdf_name:"q.pdf",answer_pdf_name:"a.pdf"}));
+      localStorage.setItem("testbank-studio.records.v1",JSON.stringify([
+        {id:"EXAM-A-Q001",exam_id:"EXAM-A",source_question_number:1,subject:"PHY",grade:10,chapter:"01",unit:"01",difficulty:"level_2",correct_option:1,question_regions:[{page:1,bbox_norm:[0,0,.8,.8]}],answer_regions:[{page:1,bbox_norm:[0,0,.8,.8]}],entered_by:"admin"},
+        {id:"EXAM-B-Q001",exam_id:"EXAM-B",source_question_number:1,subject:"PHY",grade:10,chapter:"01",unit:"01",difficulty:"level_2",correct_option:1,question_regions:[{page:1,bbox_norm:[0,0,.8,.8]}],answer_regions:[{page:1,bbox_norm:[0,0,.8,.8]}],entered_by:"admin"},
+        {id:"EXAM-B-Q002",exam_id:"EXAM-B",source_question_number:2,subject:"PHY",grade:10,chapter:"01",unit:"01",difficulty:"level_2",correct_option:1,trashed_at:"2026-01-02T00:00:00.000Z",entered_by:"admin"}
+      ]));
+    });
+    await page.goto("/studio/");
+    await expect(page.locator("#bootSplash")).toBeHidden({timeout:1800});
+    await expect(page.locator("#recordCount")).toHaveText("1");
+    await expect(page.locator("#recentList")).toContainText("سؤال 1");
+    await page.goto("/studio/selected.html");
+    await expect(page.locator("#questionCount")).toHaveText("1");
+    await expect(page.locator(".question-card")).toHaveCount(1);
+    await expect(page.locator("#questionList")).toContainText("سؤال 1");
+    await expect(page.locator("#trashSection")).toBeHidden();
+  });
+
   test("suggested next question number is scoped to the restored exam",async({page})=>{
     await page.addInitScript(()=>{
       sessionStorage.setItem("selection-studio-operator-auth-v1","admin");
