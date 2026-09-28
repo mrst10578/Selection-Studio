@@ -379,7 +379,8 @@ test.describe("Selection Studio",()=>{
     await page.reload();
     await page.locator(".edit-btn").click();
     await expect(page.locator("#editNumber")).toHaveAttribute("required","");
-    await page.locator("#editNumber").fill("2");
+    await page.locator("#editNumber").fill("۲");
+    await expect(page.locator("#editNumber")).toHaveValue("2");
     await page.locator("#editForm").evaluate(form=>form.requestSubmit());
     await expect(page.locator("#editDialog")).not.toHaveAttribute("open","");
     await expect.poll(()=>page.evaluate(()=>JSON.parse(localStorage.getItem("testbank-studio.records.v1")||"[]")[0]?.id)).toBe("EXAM-A-Q002");
