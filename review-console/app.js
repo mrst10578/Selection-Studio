@@ -10,7 +10,7 @@ const $=value=>String(value).startsWith("#")?document.querySelector(value):docum
 const ADMIN_SESSION='selection-review-admin-user-v1';
 const ADMIN_USERNAME='admin';
 const ADMIN_PASSWORD='admin';
-let selectedSubject='',selectedOperator='',operatorItems=[],quickIndex=-1,autosaveTimer=null,currentReason='',pendingSaveBatch=null,sourceLoadGeneration=0,operatorLoadGeneration=0,batchLoadGeneration=0,hydratingQuick=false;
+let selectedSubject='',selectedOperator='',operatorItems=[],quickIndex=-1,autosaveTimer=null,currentReason='',pendingSaveBatch=null,sourceLoadGeneration=0,operatorLoadGeneration=0,batchLoadGeneration=0,hydratingQuick=false,quickSourceReady={question:false,answer:false};
 
 function adminUser(){return sessionStorage.getItem(ADMIN_SESSION)||''}
 function reviewer(){return adminUser()||ADMIN_USERNAME}
@@ -279,19 +279,21 @@ $('#quickUnit').addEventListener('change',()=>{syncQuickMathGrade();syncQuickMet
 async function loadSource(img,kind,generation){
   const zoom=img.parentElement.querySelector('.image-expand');
   const baseAlt=kind==='question'?'برش سؤال':'برش پاسخ';
-  img.alt=baseAlt;img.removeAttribute('src');zoom.disabled=true;
+  quickSourceReady[kind]=false;
+  img.alt=baseAlt;img.removeAttribute('src');zoom.disabled=true;renderQuickIssues();
   if(!model.batch||quickIndex<0)return;
   const batchId=model.batch.id,q=model.batch.questions[quickIndex],questionId=q.id;
   try{
     const blob=await api.source(batchId,questionId,kind);
     if(generation!==sourceLoadGeneration||model.batch?.id!==batchId||model.batch?.questions?.[quickIndex]?.id!==questionId)return;
     const url=URL.createObjectURL(blob);
-    img.src=url;img.alt=baseAlt;zoom.disabled=false;
+    quickSourceReady[kind]=true;
+    img.src=url;img.alt=baseAlt;zoom.disabled=false;renderQuickIssues();
     img.onload=()=>URL.revokeObjectURL(url);
-    img.onerror=()=>{URL.revokeObjectURL(url);zoom.disabled=true};
+    img.onerror=()=>{URL.revokeObjectURL(url);quickSourceReady[kind]=false;zoom.disabled=true;renderQuickIssues()};
   }catch{
     if(generation!==sourceLoadGeneration||model.batch?.id!==batchId||model.batch?.questions?.[quickIndex]?.id!==questionId)return;
-    img.removeAttribute('src');img.alt='پیش‌نمایش در دسترس نیست';zoom.disabled=true;
+    quickSourceReady[kind]=false;img.removeAttribute('src');img.alt='پیش‌نمایش در دسترس نیست';zoom.disabled=true;renderQuickIssues();
   }
 }
 function openQuick(index){
@@ -306,6 +308,7 @@ function openQuick(index){
     setQuickChoice('quickDifficulty',q.difficulty||'');setQuickChoice('quickOption',q.correct_option||'');
     quickBio.setValue(q.subject==='BIO'?q.biology_combination:null,false);syncBiologyOnlyReviewUi();
   }finally{hydratingQuick=false}
+  quickSourceReady={question:false,answer:false};
   const generation=++sourceLoadGeneration;
   loadSource($('#quickQuestionImage'),'question',generation);loadSource($('#quickAnswerImage'),'answer',generation);
   resetCorrection();renderQuickIssues();renderReviewHistory(model.batch.questions[index]);
@@ -319,7 +322,14 @@ function syncQuickMeta(){
   renderQuickIssues();
   if(changed)renderReviewHistory(model.batch.questions[quickIndex]);
 }
-function renderQuickIssues(){if(quickIndex<0||!model.batch)return;const issues=questionIssues(model.batch.questions[quickIndex]);$('#quickIssues').innerHTML=issues.length?issues.map(x=>'<span>'+x+'</span>').join(''):'<span class="issue-ready">همه موارد لازم کامل است.</span>'}
+function renderQuickIssues(){
+  if(quickIndex<0||!model.batch)return;
+  const issues=questionIssues(model.batch.questions[quickIndex]);
+  const sourcesReady=quickSourceReady.question&&quickSourceReady.answer;
+  const displayed=[...issues,...(sourcesReady?[]:['پیش‌نمایش سؤال و پاسخ باید در دسترس باشد'])];
+  $('#quickIssues').innerHTML=displayed.length?displayed.map(x=>'<span>'+x+'</span>').join(''):'<span class="issue-ready">همه موارد لازم کامل است.</span>';
+  $('#approveBtn').disabled=Boolean(issues.length||!sourcesReady);
+}
 function renderReviewHistory(q){
   const events=(q.revision_history||[]).slice(-4).reverse();
   const host=$('#reviewHistory');host.replaceChildren();
@@ -341,7 +351,7 @@ function nextIndex(delta){
   if(next<0){toast(delta>0?'به پایان صف فعلی رسیدی.':'ابتدای صف فعلی است.','ok');return}
   openQuick(next);
 }
-$('#prevBtn').onclick=()=>nextIndex(-1);$('#nextBtn').onclick=()=>nextIndex(1);$('#quickClose').onclick=()=>{sourceLoadGeneration++;$('#quickDialog').close()};
+$('#prevBtn').onclick=()=>nextIndex(-1);$('#nextBtn').onclick=()=>nextIndex(1);$('#quickClose').onclick=()=>{sourceLoadGeneration++;quickSourceReady={question:false,answer:false};$('#quickDialog').close()};
 $('#quickUndoBtn').onclick=()=>{if(!model.undo()){toast('تغییری برای بازگردانی نیست.','ok');return}syncUndoControls();$('#quickDialog').close();openQuick(quickIndex)};
 document.querySelectorAll('[data-review-view]').forEach(button=>button.addEventListener('click',()=>{
   $('#quickViewers').dataset.activeView=button.dataset.reviewView;
@@ -361,7 +371,7 @@ function advanceAfterDecision(){
   renderBatch();
   toast('به پایان این بخش از صف بررسی رسیدی.','ok');
 }
-$('#approveBtn').onclick=()=>{syncQuickMeta();if(questionIssues(model.batch.questions[quickIndex]).length){toast('سؤال هنوز شرط‌های کیفیت را کامل نکرده است.','error');return}model.setStatus(quickIndex,'approved',reviewer());advanceAfterDecision()};
+$('#approveBtn').onclick=()=>{syncQuickMeta();if(questionIssues(model.batch.questions[quickIndex]).length||!quickSourceReady.question||!quickSourceReady.answer){toast('سؤال هنوز شرط‌های کیفیت یا فایل‌های منبع را کامل نکرده است.','error');return}model.setStatus(quickIndex,'approved',reviewer());advanceAfterDecision()};
 $('#rejectBtn').onclick=()=>{syncQuickMeta();model.setStatus(quickIndex,'rejected',reviewer());advanceAfterDecision()};
 $('#needsBtn').onclick=()=>{$('#correctionSheet').classList.remove('hidden')};
 function resetCorrection(){currentReason='';$('#correctionSheet').classList.add('hidden');$('#correctionNote').value='';document.querySelectorAll('[data-reason]').forEach(b=>b.classList.remove('active'))}
