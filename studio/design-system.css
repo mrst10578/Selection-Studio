@@ -556,3 +556,29 @@ button.primary,.primary{
     box-shadow:0 7px 24px rgba(0,0,0,.12);
   }
 }
+
+/* Scroll-performance hotfix
+   Avoid continuous repaint/compositing work while preserving the visual language. */
+:root[data-theme="dark"]{
+  --shadow:0 7px 18px rgba(0,0,0,.18),0 1px 0 rgba(255,255,255,.025) inset;
+}
+:root[data-theme="dark"] body{
+  background-attachment:scroll;
+}
+:root[data-theme="dark"] .topbar,
+:root[data-theme="dark"] .review-header{
+  background:#0C131D;
+  box-shadow:0 4px 14px rgba(0,0,0,.13);
+  backdrop-filter:none;
+}
+@media(max-width:760px){
+  :root[data-theme="dark"] body{
+    background:
+      radial-gradient(720px 420px at 84% -8%,rgba(143,200,255,.07),transparent 62%),
+      var(--bg);
+  }
+  :root[data-theme="dark"] .topbar,
+  :root[data-theme="dark"] .review-header{
+    box-shadow:0 2px 8px rgba(0,0,0,.1);
+  }
+}
