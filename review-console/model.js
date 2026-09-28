@@ -1,13 +1,15 @@
 import {biologyIssues} from "../studio/biology-combination.js";
+import {taxonomyIssues} from "../studio/taxonomy-data.js";
 
 export function clone(value){return structuredClone(value)}
 export function questionIssues(question){
   const issues=[];
   const region=r=>r&&Number.isInteger(Number(r.page))&&Number(r.page)>0&&Array.isArray(r.bbox_norm)&&r.bbox_norm.length===4&&r.bbox_norm.every(v=>Number.isFinite(Number(v))&&Number(v)>=0&&Number(v)<=1)&&Number(r.bbox_norm[2])>Number(r.bbox_norm[0])&&Number(r.bbox_norm[3])>Number(r.bbox_norm[1]);
+  if(!question?.exam_id)issues.push("آزمون");
+  if(!Number.isInteger(Number(question?.source_question_number))||Number(question.source_question_number)<1)issues.push("شماره");
+  issues.push(...taxonomyIssues(question));
   if(!region(question?.question_regions?.[0]))issues.push("برش سؤال");
   if(!region(question?.answer_regions?.[0]))issues.push("برش پاسخ");
-  if(!question?.chapter)issues.push("فصل");
-  if(!question?.unit)issues.push(question?.subject==="BIO"?"گفتار":"مبحث");
   if(!["level_1","level_2","level_3","level_4","level_5"].includes(question?.difficulty))issues.push("سطح سؤال");
   if(![1,2,3,4].includes(Number(question?.correct_option)))issues.push("کلید");
   if(question?.subject==="BIO")issues.push(...biologyIssues({subject:"BIO",combination:question.biology_combination,primaryGrade:question.grade,primaryChapter:question.chapter,primaryUnit:question.unit}).map(x=>"زیست: "+x));
