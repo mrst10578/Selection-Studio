@@ -283,7 +283,7 @@ const biologyEditor=mountBiologyCombinationEditor({
 
 function activeRecords(){return records.filter(x=>!x.trashed_at)}
 function nextSourceNumberFor(examIdValue){
-  const numbers=activeRecords()
+  const numbers=records
     .filter(record=>record.exam_id===examIdValue)
     .map(record=>Number(record.source_question_number))
     .filter(value=>Number.isInteger(value)&&value>0);
@@ -298,7 +298,7 @@ function sourceQuestionNumber(){
 function gateState(){
   const source=sourceQuestionNumber();
   const currentExamId=exam?.id||examId();
-  const unique=source!==null&&(!currentExamId||!activeRecords().some(x=>x.exam_id===currentExamId&&Number(x.source_question_number)===source));
+  const unique=source!==null&&(!currentExamId||!records.some(x=>x.exam_id===currentExamId&&Number(x.source_question_number)===source));
   const checks={
     exam:Boolean(sessionMatchesForm()&&qCrop.isRenderReady()&&aCrop.isRenderReady()),
     number:Boolean(source!==null&&unique),
