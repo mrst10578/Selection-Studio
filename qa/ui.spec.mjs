@@ -305,6 +305,71 @@ test.describe("Selection Studio",()=>{
     await expectNoSeriousA11y(page);
     await expectNoHorizontalOverflow(page);
   });
+  test("suggested next question number is scoped to the restored exam",async({page})=>{
+    await page.addInitScript(()=>{
+      sessionStorage.setItem("selection-studio-operator-auth-v1","admin");
+      localStorage.setItem("testbank-studio.exam-draft.v1",JSON.stringify({id:"EXAM-A",provider:"قلمچی",date:"1405/01/01",entered_by:"admin",question_pdf_name:"q.pdf",answer_pdf_name:"a.pdf"}));
+      localStorage.setItem("testbank-studio.records.v1",JSON.stringify([
+        {id:"EXAM-B-Q099",exam_id:"EXAM-B",source_question_number:99,subject:"PHY",grade:10,chapter:"01",unit:"01",difficulty:"level_2",correct_option:1},
+        {id:"EXAM-A-Q003",exam_id:"EXAM-A",source_question_number:3,subject:"PHY",grade:10,chapter:"01",unit:"01",difficulty:"level_2",correct_option:1}
+      ]));
+    });
+    await page.goto("/studio/");
+    await expect(page.locator("#bootSplash")).toBeHidden({timeout:1800});
+    await expect(page.locator("#sourceNumber")).toHaveValue("4");
+  });
+
+  test("renaming a selected question preserves its IndexedDB previews and rejects missing numbers",async({page})=>{
+    const record={id:"EXAM-A-Q001",exam_id:"EXAM-A",source_question_number:1,subject:"PHY",grade:10,chapter:"01",unit:"01",difficulty:"level_2",correct_option:1,question_regions:[{page:1,bbox_norm:[0,0,.5,.5]}],answer_regions:[{page:1,bbox_norm:[0,0,.5,.5]}],entered_by:"alice"};
+    await page.addInitScript(record=>{
+      sessionStorage.setItem("selection-studio-operator-auth-v1","admin");
+      localStorage.setItem("testbank-studio.records.v1",JSON.stringify([record]));
+    },record);
+    await page.goto("/studio/selected.html");
+    await page.evaluate(async()=>{
+      const db=await new Promise((resolve,reject)=>{
+        const req=indexedDB.open("selection-studio-previews-v1",1);
+        req.onupgradeneeded=()=>req.result.createObjectStore("previews");
+        req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
+      });
+      await new Promise((resolve,reject)=>{
+        const tx=db.transaction("previews","readwrite"),store=tx.objectStore("previews");
+        store.put(new Blob(["question"],{type:"image/webp"}),"EXAM-A-Q001:question");
+        store.put(new Blob(["answer"],{type:"image/webp"}),"EXAM-A-Q001:answer");
+        tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);
+      });
+      db.close();
+    });
+    await page.reload();
+    await page.locator(".edit-btn").click();
+    await expect(page.locator("#editNumber")).toHaveAttribute("required","");
+    await page.locator("#editNumber").fill("2");
+    await page.locator("#editForm").evaluate(form=>form.requestSubmit());
+    await expect(page.locator("#editDialog")).not.toHaveAttribute("open","");
+    await expect.poll(()=>page.evaluate(()=>JSON.parse(localStorage.getItem("testbank-studio.records.v1")||"[]")[0]?.id)).toBe("EXAM-A-Q002");
+    const previewState=await page.evaluate(async()=>{
+      const db=await new Promise((resolve,reject)=>{const req=indexedDB.open("selection-studio-previews-v1",1);req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)});
+      const get=key=>new Promise((resolve,reject)=>{const tx=db.transaction("previews","readonly"),req=tx.objectStore("previews").get(key);req.onsuccess=()=>resolve(Boolean(req.result));req.onerror=()=>reject(req.error)});
+      const result={newQ:await get("EXAM-A-Q002:question"),newA:await get("EXAM-A-Q002:answer"),oldQ:await get("EXAM-A-Q001:question"),oldA:await get("EXAM-A-Q001:answer")};
+      db.close();return result;
+    });
+    expect(previewState.newQ).toBe(true);expect(previewState.newA).toBe(true);
+    expect(previewState.oldQ).toBe(false);expect(previewState.oldA).toBe(false);
+  });
+
+  test("missing selected-question preview does not open the preview dialog",async({page})=>{
+    await page.addInitScript(()=>{
+      sessionStorage.setItem("selection-studio-operator-auth-v1","admin");
+      localStorage.setItem("testbank-studio.records.v1",JSON.stringify([
+        {id:"EXAM-A-Q001",exam_id:"EXAM-A",source_question_number:1,subject:"PHY",grade:10,chapter:"01",unit:"01",difficulty:"level_2",correct_option:1,question_regions:[{page:1,bbox_norm:[0,0,.5,.5]}],answer_regions:[{page:1,bbox_norm:[0,0,.5,.5]}],entered_by:"alice"}
+      ]));
+    });
+    await page.goto("/studio/selected.html");
+    await expect(page.locator(".q-preview")).toHaveClass(/missing/);
+    await page.locator(".q-preview").evaluate(img=>img.click());
+    await expect(page.locator("#previewDialog")).not.toHaveAttribute("open","");
+  });
+
   test("selected questions can be filtered and restored after soft delete",async({page})=>{
     await page.addInitScript(()=>{
       sessionStorage.setItem("selection-studio-operator-auth-v1","admin");
@@ -364,6 +429,95 @@ test.describe("Review Console",()=>{
     await expectNoSeriousA11y(page);
     await expectNoHorizontalOverflow(page);
   });
+  test("opening Quick Review is mutation-free and undo enables only after a real edit",async({page})=>{
+    await page.addInitScript(()=>{
+      const region={page:1,bbox_norm:[0,0,.8,.8]};
+      localStorage.setItem("testbank-studio.records.v1",JSON.stringify([
+        {id:"EXAM-Q1",exam_id:"EXAM",source_question_number:1,subject:"PHY",grade:10,chapter:"01",unit:"01",difficulty:"level_2",correct_option:1,question_regions:[region],answer_regions:[region],entered_by:"alice",review_status:"pending",revision_history:[]}
+      ]));
+    });
+    await page.goto("/review-console/");
+    await page.locator("#adminUsername").fill("admin");await page.locator("#adminPassword").fill("admin");await page.locator("#adminLoginForm").press("Enter");
+    await expect(page.locator("#appView")).toBeVisible({timeout:2500});
+    await page.locator('[data-subject="PHY"]').click();await page.locator(".operator-item").click();
+    await page.locator("#quickReviewBtn").click();
+    await expect(page.locator("#quickUndoBtn")).toBeDisabled();
+    await page.locator("#quickClose").click();
+    await page.locator("#quickReviewBtn").click();
+    await expect(page.locator("#quickUndoBtn")).toBeDisabled();
+    await page.locator('[data-target="quickDifficulty"] button[data-value="level_3"]').click();
+    await expect(page.locator("#quickUndoBtn")).toBeEnabled();
+  });
+
+  test("autosave flushes the edited operator before an immediate operator switch",async({page})=>{
+    await page.addInitScript(()=>{
+      const region={page:1,bbox_norm:[0,0,.8,.8]};
+      localStorage.setItem("testbank-studio.records.v1",JSON.stringify([
+        {id:"EXAM-A-Q1",exam_id:"EXAM-A",source_question_number:1,subject:"PHY",grade:10,chapter:"01",unit:"01",difficulty:"level_2",correct_option:1,question_regions:[region],answer_regions:[region],entered_by:"alice",review_status:"pending"},
+        {id:"EXAM-B-Q1",exam_id:"EXAM-B",source_question_number:1,subject:"PHY",grade:10,chapter:"01",unit:"01",difficulty:"level_2",correct_option:1,question_regions:[region],answer_regions:[region],entered_by:"bob",review_status:"pending"}
+      ]));
+    });
+    await page.goto("/review-console/");
+    await page.locator("#adminUsername").fill("admin");await page.locator("#adminPassword").fill("admin");await page.locator("#adminLoginForm").press("Enter");
+    await page.locator('[data-subject="PHY"]').click();
+    await page.locator(".operator-item",{hasText:"@alice"}).click();
+    await page.locator("#quickReviewBtn").click();
+    await page.locator('[data-target="quickDifficulty"] button[data-value="level_4"]').click();
+    await page.locator("#quickClose").click();
+    await page.locator(".operator-item",{hasText:"@bob"}).click();
+    await page.locator(".operator-item",{hasText:"@alice"}).click();
+    await page.locator("#quickReviewBtn").click();
+    await expect(page.locator("#quickDifficulty")).toHaveValue("level_4");
+    await expect(page.locator('[data-target="quickDifficulty"] button[data-value="level_4"]')).toHaveClass(/active/);
+  });
+
+  test("operator usernames render as text and cannot inject markup",async({page})=>{
+    await page.addInitScript(()=>{
+      const region={page:1,bbox_norm:[0,0,.8,.8]};
+      localStorage.setItem("testbank-studio.records.v1",JSON.stringify([
+        {id:"EXAM-X-Q1",exam_id:"EXAM-X",source_question_number:1,subject:"CHEM",grade:10,chapter:"01",unit:"01",difficulty:"level_2",correct_option:1,question_regions:[region],answer_regions:[region],entered_by:"<img src=x onerror=window.__operatorXss=1>",review_status:"pending"}
+      ]));
+    });
+    await page.goto("/review-console/");
+    await page.locator("#adminUsername").fill("admin");await page.locator("#adminPassword").fill("admin");await page.locator("#adminLoginForm").press("Enter");
+    await page.locator('[data-subject="CHEM"]').click();
+    await expect(page.locator("#operatorList .operator-item img")).toHaveCount(0);
+    await expect(page.locator("#operatorList")).toContainText("<img src=x onerror=window.__operatorXss=1>");
+    expect(await page.evaluate(()=>window.__operatorXss)).toBeUndefined();
+  });
+
+  test("local publish is one-shot for already published approved questions",async({page})=>{
+    await page.addInitScript(()=>{
+      const region={page:1,bbox_norm:[0,0,.8,.8]};
+      localStorage.setItem("testbank-studio.records.v1",JSON.stringify([
+        {id:"EXAM-P-Q1",exam_id:"EXAM-P",source_question_number:1,subject:"PHY",grade:10,chapter:"01",unit:"01",difficulty:"level_2",correct_option:1,question_regions:[region],answer_regions:[region],entered_by:"alice",review_status:"approved",status:"draft"}
+      ]));
+    });
+    await page.goto("/review-console/");
+    await page.locator("#adminUsername").fill("admin");await page.locator("#adminPassword").fill("admin");await page.locator("#adminLoginForm").press("Enter");
+    await page.locator('[data-subject="PHY"]').click();await page.locator(".operator-item").click();
+    await expect(page.locator("#publishBtn")).toBeEnabled();
+    page.once("dialog",dialog=>dialog.accept());
+    await page.locator("#publishBtn").click();
+    await expect(page.locator("#publishBtn")).toBeDisabled();
+    expect(await page.evaluate(()=>JSON.parse(localStorage.getItem("testbank-studio.records.v1")||"[]")[0]?.status)).toBe("published");
+  });
+
+  test("command palette accepts Persian digits for question lookup",async({page})=>{
+    await page.addInitScript(()=>{
+      const region={page:1,bbox_norm:[0,0,.8,.8]};
+      localStorage.setItem("testbank-studio.records.v1",JSON.stringify([
+        {id:"EXAM-Q12",exam_id:"EXAM",source_question_number:12,subject:"PHY",grade:10,chapter:"01",unit:"01",difficulty:"level_2",correct_option:1,question_regions:[region],answer_regions:[region],entered_by:"alice",review_status:"pending"}
+      ]));
+    });
+    await page.goto("/review-console/");
+    await page.locator("#adminUsername").fill("admin");await page.locator("#adminPassword").fill("admin");await page.locator("#adminLoginForm").press("Enter");
+    await page.locator('[data-subject="PHY"]').click();await page.locator(".operator-item").click();
+    await page.locator("#commandLauncher").click();
+    await page.locator("#commandInput").fill("۱۲");
+    await expect(page.locator("#commandList")).toContainText("باز کردن سؤال 12");
+  });
+
   test("quick review navigation stays inside the active pending queue",async({page})=>{
     await page.addInitScript(()=>{
       const region={page:1,bbox_norm:[0,0,1,1]};
