@@ -122,7 +122,8 @@ async function render(){
   $("batchBadge").classList.toggle("ready",gate.ready);
   $("submitBatch").disabled=!gate.ready;
   $("batchGateText").textContent=gate.ready?`${qs.length} سؤال کامل است و مجموعه آمادهٔ ارسال است.`:gate.blockers.join(" ");
-  $("lastSubmission").textContent=lastBatch?.sent_at?`آخرین ارسال موفق: ${lastBatch.question_count} سؤال · ${new Date(lastBatch.sent_at).toLocaleString("fa-IR")} · شناسه ${lastBatch.id}`:"هنوز ارسالی ثبت نشده است.";
+  const relevantLastBatch=exam?.id?(lastBatch?.exam_id===exam.id?lastBatch:null):lastBatch;
+  $("lastSubmission").textContent=relevantLastBatch?.sent_at?`آخرین ارسال موفق: ${relevantLastBatch.question_count} سؤال · ${new Date(relevantLastBatch.sent_at).toLocaleString("fa-IR")} · شناسه ${relevantLastBatch.id}`:"هنوز ارسالی ثبت نشده است.";
   $("batchIssues").innerHTML=gate.incomplete.slice(0,8).map(x=>`<span>سؤال ${x.r.source_question_number}: ${x.issues.join("، ")}</span>`).join("");
 
   const host=$("questionList");
