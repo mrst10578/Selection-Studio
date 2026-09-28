@@ -1458,3 +1458,47 @@ body{overflow-x:hidden}
   .question-filters{padding:9px}
   .guide-card{padding:14px}
 }
+
+/* Scroll-performance hotfix */
+.pdf-stage{
+  contain:paint;
+}
+.viewer{
+  box-shadow:0 9px 24px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.022);
+}
+.pdf-stage canvas{
+  box-shadow:0 7px 18px rgba(0,0,0,.3),0 0 0 1px rgba(255,255,255,.055);
+}
+.inspector{
+  box-shadow:0 8px 22px rgba(0,0,0,.17),inset 0 1px 0 rgba(255,255,255,.025);
+}
+.command-launcher{
+  backdrop-filter:none;
+}
+.recent,
+.batch-gate,
+.list-panel,
+.trash-panel,
+.guide-card{
+  content-visibility:auto;
+  contain-intrinsic-size:auto 260px;
+}
+@media(max-width:760px){
+  .panel,
+  .viewer,
+  .inspector,
+  .recent-item,
+  .question-card{
+    box-shadow:none;
+  }
+  .pdf-stage canvas{
+    box-shadow:0 0 0 1px rgba(255,255,255,.06);
+  }
+  .mobile-crop-lock{
+    box-shadow:0 4px 12px rgba(0,0,0,.26),inset 0 1px 0 rgba(255,255,255,.04);
+  }
+  .inspector #saveQuestion,
+  .inspector #saveQuestion:disabled{
+    box-shadow:none;
+  }
+}
