@@ -207,6 +207,20 @@ test.describe("Selection Studio",()=>{
     await expect(page.locator(".theme-toggle")).toHaveCount(0);
     await expectNoHorizontalOverflow(page);
   });
+  test("coarse-pointer wide viewport still exposes PDF crop lock",async({page},testInfo)=>{
+    test.skip(testInfo.project.name!=="mobile-chromium","Requires coarse-pointer mobile context.");
+    await page.setViewportSize({width:820,height:900});
+    await page.goto("/studio/");
+    await waitForStudioBoot(page);
+    await page.locator("#operatorUsername").fill("admin");
+    await page.locator("#operatorPassword").fill("admin");
+    await page.locator("#operatorLoginForm").press("Enter");
+    await expect(page.locator("#operatorLogin")).toBeHidden({timeout:2500});
+    await expect(page.locator("#qStage")).toHaveClass(/mobile-browse-mode/);
+    await expect(page.locator("#qCropLock")).toBeVisible();
+    await expect(page.locator("#qCropLock svg")).toHaveCount(1);
+  });
+
   test("360px mobile workbench keeps header and crop controls reachable",async({page},testInfo)=>{
     test.skip(testInfo.project.name!=="mobile-chromium","Explicit narrow-width mobile check.");
     await page.setViewportSize({width:360,height:800});

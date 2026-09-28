@@ -1510,3 +1510,15 @@ body{overflow-x:hidden}
     box-shadow:none;
   }
 }
+
+/* Keep the mobile crop-mode escape control visible whenever the JS treats the device as mobile. */
+@media (pointer:coarse), (max-width:760px){
+  .pdf-stage-shell>.mobile-crop-lock{
+    display:grid;
+    place-items:center;
+    position:absolute;
+    top:10px;
+    left:10px;
+    z-index:20;
+  }
+}
