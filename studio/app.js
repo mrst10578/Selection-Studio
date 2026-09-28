@@ -379,6 +379,7 @@ $("questionForm").addEventListener("submit",async e=>{
   submittingQuestion=true;
   renderGate();
   const source=sourceQuestionNumber(),id=buildQuestionId(exam.id,source);
+  let committed=false;
   try{
     const [qCapture,aCapture]=await Promise.all([qCrop.captureCrop(),aCrop.captureCrop()]);
     const visualHash=await qCrop.visualHash(qCapture.blob);
@@ -397,12 +398,13 @@ $("questionForm").addEventListener("submit",async e=>{
       throw error;
     }
     records=nextRecords;
+    committed=true;
     $("sourceNumber").value=String(source+1);
     qCrop.setRegionLocked(false);aCrop.setRegionLocked(false);qCrop.clearRegion();aCrop.clearRegion();setSegmented("difficulty","");setSegmented("correctOption","");biologyEditor.reset();switchPane("question");
     renderRecent();
     toast(`سؤال ${source} ثبت شد · ${activeRecords().length} سؤال در فهرست`,"ok");
   }catch(error){
-    await Promise.allSettled([deletePreview(id+":question"),deletePreview(id+":answer")]);
+    if(!committed)await Promise.allSettled([deletePreview(id+":question"),deletePreview(id+":answer")]);
     const message=String(error?.message||"");
     toast(message.startsWith("PDF_CROP_")?"برش PDF هنوز آماده نیست؛ بعد از کامل‌شدن نمایش دوباره ثبت کن.":"ثبت سؤال کامل نشد؛ هیچ رکورد ناقصی ذخیره نشد.","error");
   }finally{
