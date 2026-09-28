@@ -10,7 +10,7 @@ const $=value=>String(value).startsWith("#")?document.querySelector(value):docum
 const ADMIN_SESSION='selection-review-admin-user-v1';
 const ADMIN_USERNAME='admin';
 const ADMIN_PASSWORD='admin';
-let selectedSubject='',selectedOperator='',operatorItems=[],quickIndex=-1,autosaveTimer=null,currentReason='',pendingSaveBatch=null,sourceLoadGeneration=0,hydratingQuick=false;
+let selectedSubject='',selectedOperator='',operatorItems=[],quickIndex=-1,autosaveTimer=null,currentReason='',pendingSaveBatch=null,sourceLoadGeneration=0,operatorLoadGeneration=0,batchLoadGeneration=0,hydratingQuick=false;
 
 function adminUser(){return sessionStorage.getItem(ADMIN_SESSION)||''}
 function reviewer(){return adminUser()||ADMIN_USERNAME}
@@ -82,17 +82,22 @@ $('#adminLoginForm').addEventListener('submit',login);
 function statusClass(s){return s||'pending'}
 
 $('#logoutBtn').onclick=async()=>{
-  await flushPendingSave().catch(()=>{});
+  try{await flushPendingSave()}
+  catch(e){$('#autosaveState').textContent='خطا';toast('خروج متوقف شد؛ ذخیرهٔ تغییرها ناموفق بود: '+e.message,'error');return}
   sessionStorage.removeItem(ADMIN_SESSION);
   location.reload();
 };
 $('#refreshBtn').onclick=async()=>{
-  await flushPendingSave();
-  if(selectedSubject)await loadOperators(selectedSubject);
-  if(selectedSubject&&selectedOperator)await openOperator(selectedOperator,{skipFlush:true});
+  try{
+    await flushPendingSave();
+    const subject=selectedSubject,operator=selectedOperator;
+    if(subject)await loadOperators(subject);
+    if(subject&&operator&&selectedSubject===subject)await openOperator(operator,{skipFlush:true});
+  }catch(e){toast('بروزرسانی ناموفق: '+e.message,'error')}
 };
 
 function resetBrowser(){
+  operatorLoadGeneration++;batchLoadGeneration++;sourceLoadGeneration++;
   selectedSubject='';selectedOperator='';operatorItems=[];model.batch=null;model.undoStack=[];syncUndoControls();
   document.querySelectorAll('[data-subject]').forEach(btn=>btn.classList.remove('active'));
   $('#operatorHint').textContent='اول درس را انتخاب کن.';
@@ -102,19 +107,27 @@ function resetBrowser(){
   $('#batchEditor').classList.add('hidden');
 }
 document.querySelectorAll('[data-subject]').forEach(btn=>btn.onclick=async()=>{
-  await flushPendingSave();
+  try{await flushPendingSave()}
+  catch(e){$('#autosaveState').textContent='خطا';toast('تغییر درس متوقف شد؛ ذخیرهٔ تغییرها ناموفق بود: '+e.message,'error');return}
+  batchLoadGeneration++;sourceLoadGeneration++;
   selectedSubject=btn.dataset.subject;selectedOperator='';model.batch=null;model.undoStack=[];syncUndoControls();
   document.querySelectorAll('[data-subject]').forEach(x=>x.classList.toggle('active',x===btn));
   $('#batchEditor').classList.add('hidden');$('#emptyBatch').classList.remove('hidden');
   $('#emptyBatch').textContent='حالا username گزینشگر را انتخاب کن.';
-  await loadOperators(selectedSubject);
+  try{await loadOperators(selectedSubject)}
+  catch(e){toast('بارگذاری گزینشگرها ناموفق: '+e.message,'error')}
 });
 
 async function loadOperators(subject){
-  operatorItems=await api.operators(subject);
+  const request=++operatorLoadGeneration;
+  $('#operatorHint').textContent=subjectLabel(subject)+' · در حال بارگذاری…';
+  const host=$('#operatorList');host.innerHTML='<div class="empty-box">در حال بارگذاری گزینشگرها…</div>';
+  const items=await api.operators(subject);
+  if(request!==operatorLoadGeneration||selectedSubject!==subject)return false;
+  operatorItems=items;
   $('#operatorHint').textContent=subjectLabel(subject)+' · '+operatorItems.length+' گزینشگر';
-  const host=$('#operatorList');host.innerHTML='';
-  if(!operatorItems.length){host.innerHTML='<div class="empty-box">برای این درس هنوز گزینشگری تست ثبت نکرده.</div>';return}
+  host.innerHTML='';
+  if(!operatorItems.length){host.innerHTML='<div class="empty-box">برای این درس هنوز گزینشگری تست ثبت نکرده.</div>';return true}
   for(const item of operatorItems){
     const btn=document.createElement('button');
     btn.type='button';btn.className='operator-item';
@@ -125,21 +138,34 @@ async function loadOperators(subject){
     btn.onclick=()=>openOperator(item.username);
     host.appendChild(btn);
   }
+  return true;
 }
 async function openOperator(username,{skipFlush=false}={}){
+  const request=++batchLoadGeneration,subject=selectedSubject;
   try{
     if(!skipFlush)await flushPendingSave();
+    if(request!==batchLoadGeneration||selectedSubject!==subject)return false;
     const previousBatchId=model.batch?.id||null;
-    const batch=await api.batch(selectedSubject,username);
+    const batch=await api.batch(subject,username);
+    if(request!==batchLoadGeneration||selectedSubject!==subject)return false;
     await api.lock(batch.id,reviewer()).catch(()=>{});
+    if(request!==batchLoadGeneration||selectedSubject!==subject){
+      await api.unlock(batch.id,reviewer()).catch(()=>{});
+      return false;
+    }
     if(previousBatchId&&previousBatchId!==batch.id)await api.unlock(previousBatchId,reviewer()).catch(()=>{});
     selectedOperator=username;
     model.load(batch);
     syncUndoControls();
     $('#emptyBatch').classList.add('hidden');$('#batchEditor').classList.remove('hidden');
-    await loadOperators(selectedSubject);
+    await loadOperators(subject);
+    if(request!==batchLoadGeneration||selectedSubject!==subject)return false;
     renderBatch();
-  }catch(e){toast('باز کردن تست‌های گزینشگر ناموفق: '+e.message,'error')}
+    return true;
+  }catch(e){
+    if(request===batchLoadGeneration&&selectedSubject===subject)toast('باز کردن تست‌های گزینشگر ناموفق: '+e.message,'error');
+    return false;
+  }
 }
 
 function filters(){return {search:$('#searchInput').value,status:$('#statusFilter').value,difficulty:$('#difficultyFilter').value,exam:$('#examFilter').value,incomplete:$('#incompleteFilter').checked}}
