@@ -150,7 +150,7 @@ function renderBatch(){
   $('#batchMeta').textContent=`${total} تست گزینش‌شده توسط این گزینشگر`;
   $('#approvedCount').textContent=c.approved;$('#needsCount').textContent=c.needs_changes;$('#rejectedCount').textContent=c.rejected;$('#pendingCount').textContent=c.pending;
   $('#progressBar').style.width=(total?Math.round(reviewed/total*100):0)+'%';$('#completionState').classList.toggle('hidden',!(total>0&&c.pending===0));
-  const publishable=model.batch.questions.filter(q=>!q.trashed_at&&(q.review_status||'pending')==='approved'&&q.status!=='published').length;
+  const publishable=model.batch.questions.filter(q=>!q.trashed_at&&(q.review_status||'pending')==='approved'&&q.status!=='published'&&!questionIssues(q).length).length;
   $('#publishBtn').disabled=publishable===0;
   $('#publishBtn').dataset.publishable=String(publishable);
   syncExamFilter();
