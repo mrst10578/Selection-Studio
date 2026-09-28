@@ -379,6 +379,7 @@ installWindowsMetadataShortcuts({
 });
 
 document.addEventListener('keydown',e=>{
+  if(!adminUser())return;
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();palette.open();return}
   if(!$('#quickDialog').open||$('#commandPalette').open||isTypingTarget(e.target)||!$('#correctionSheet').classList.contains('hidden'))return;
   const k=e.key.toLowerCase();if(k==='a'){e.preventDefault();$('#approveBtn').click()}if(k==='f'){e.preventDefault();$('#needsBtn').click()}if(k==='r'){e.preventDefault();$('#rejectBtn').click()}if(e.key==='ArrowLeft'){e.preventDefault();$('#prevBtn').click()}if(e.key==='ArrowRight'){e.preventDefault();$('#nextBtn').click()}
