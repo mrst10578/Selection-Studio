@@ -1,0 +1,351 @@
+/* Selection Studio / Ember Atelier visual system
+   Presentation-only layer. Do not change PDF canvas dimensions, normalized crops,
+   metadata fields, auth, or browser storage semantics. */
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0B121D;--surface:#15202D;--surface-subtle:#222F3F;--surface-raised:#1C2A3B;
+  --text:#F2F6FA;--text-muted:#B5C3D2;--line:#384A5E;--line-strong:#899DB4;
+  --control-border:#91A8BF;--accent:#FFC094;--accent-hover:#FFD1AD;--accent-contrast:#1A1720;
+  --selection:#3A3035;--success:#A9E6C5;--success-bg:#1C4439;
+  --warning:#F5CE82;--warning-bg:#473821;--danger:#FFB0AF;--danger-bg:#48292F;
+  --document-bg:#0E1722;--shadow:0 12px 30px rgba(2,7,13,.24);
+  --shadow-dialog:0 34px 90px rgba(1,5,12,.65);
+  --focus:0 0 0 3px rgba(255,192,148,.32);
+  --radius-sm:10px;--radius-md:15px;--radius-lg:20px;
+  --ember:#FFB587;--ember-deep:#D87558;--aqua:#93DBD6;--ink:#0B121D;
+}
+html[data-theme="dark"]{background:#0B121D;scrollbar-color:#51687C #0D1621}
+body.atelier{background:
+  radial-gradient(ellipse 680px 350px at 0% 0%,rgba(255,147,88,.07),transparent 78%),
+  radial-gradient(ellipse 800px 510px at 100% 17%,rgba(89,179,183,.065),transparent 78%),
+  #0B121D;
+  color:var(--text);font-variant-numeric:tabular-nums;
+}
+body.atelier::before{content:"";position:absolute;top:100px;right:4%;left:4%;height:1px;pointer-events:none;background:linear-gradient(90deg,transparent,#DFA57733,transparent)}
+body.atelier button,body.atelier input,body.atelier select,body.atelier textarea{font-family:var(--font-ui)}
+body.atelier button:not(:disabled),body.atelier .button-link,body.atelier a{transition:background-color .16s ease,border-color .16s ease,box-shadow .16s ease,color .16s ease,transform .16s ease}
+body.atelier button:not(:disabled):active,body.atelier .button-link:active{transform:translateY(1px)}
+body.atelier button:focus-visible,body.atelier a:focus-visible,body.atelier input:focus-visible,body.atelier textarea:focus-visible,body.atelier select:focus-visible{outline:2px solid #FFD2A7;outline-offset:2px;box-shadow:var(--focus)}
+body.atelier :is(button,.button-link):not(.primary):not(.approve):not(.needs):not(.reject){border-color:#4B6076;color:#E2EBF4}
+body.atelier :is(button.primary,.primary,#saveQuestion):not(:disabled){
+  border:1px solid #FFD0A3;
+  color:#241A18;background:linear-gradient(115deg,#FFC697,#FFA875 60%,#F2936D);
+  box-shadow:inset 0 1px 0 #FFF0DC7D,0 7px 18px rgba(189,95,54,.14);
+  font-weight:800;
+}
+body.atelier :is(button.primary,.primary,#saveQuestion):not(:disabled):hover{
+  background:linear-gradient(110deg,#FFD8B4,#FFB786 67%,#F6A276);
+  box-shadow:inset 0 1px 0 #FFF1D4AA,0 9px 23px rgba(210,99,53,.22);
+}
+body.atelier :is(input,select,textarea){
+  color:#F1F5FA;background:#101B29;
+  border-color:#637991;
+  border-radius:10px;box-shadow:inset 0 2px 3px rgba(0,0,0,.12);
+}
+body.atelier :is(input,select,textarea):hover{border-color:#8AA0B5}
+body.atelier :is(input,select,textarea):focus-visible{background:#162538;border-color:#FFC18D}
+body.atelier input::placeholder,body.atelier textarea::placeholder{color:#94A6B9;opacity:1}
+body.atelier label,body.atelier .field-label{color:#D2DFEC}
+body.atelier .eyebrow{color:#F7BE98;font-size:.73rem;font-weight:850;letter-spacing:.06em}
+body.atelier :is(.panel,.ocr-panel,.review-sidebar,.review-question,.question-card,.guide-card){
+  border-color:#35475C;background:linear-gradient(154deg,#192739 0%,#121D2C 57%,#111B29 100%);
+  box-shadow:0 11px 26px rgba(0,5,12,.22),inset 0 1px 0 rgba(236,246,255,.055);
+}
+body.atelier :is(.panel,.ocr-panel,.review-sidebar,.question-card){border-radius:18px}
+body.atelier :is(.panel,.ocr-panel,.review-sidebar,.question-card):hover{border-color:#53677C}
+body.atelier :is(.topbar,.review-header,.ocr-header){
+  background:linear-gradient(95deg,rgba(17,27,40,.96),rgba(20,30,43,.96) 50%,rgba(27,33,45,.97));
+  border-bottom:1px solid #46566D;
+  box-shadow:0 10px 24px #01060E45,inset 0 -1px 0 #F4A5741A;
+  backdrop-filter:none;
+}
+body.atelier :is(.topbar,.review-header,.ocr-header)>div:first-child{
+  min-width:0;position:relative;padding-inline-start:62px;
+}
+body.atelier :is(.topbar,.review-header,.ocr-header)>div:first-child::before{
+  content:"S";position:absolute;right:0;top:50%;transform:translateY(-50%);
+  display:grid;place-items:center;width:47px;height:47px;
+  border-radius:15px;color:#FFE4C9;font-size:25px;font-weight:950;font-family:Georgia,serif;
+  border:1px solid #BE815D;background:
+    radial-gradient(circle at 25% 18%,rgba(255,226,178,.43),transparent 42%),
+    linear-gradient(145deg,#714437 0%,#3B303B 45%,#193340 100%);
+  box-shadow:inset 0 1px 0 #FFD6AE77,inset 0 -6px 12px #0914227D,0 7px 18px #0007;
+}
+body.atelier :is(.topbar,.review-header,.ocr-header) h1{letter-spacing:-.015em;color:#FFF8F1;font-size:clamp(1.1rem,1.55vw,1.42rem);font-weight:900}
+body.atelier :is(.topbar,.review-header,.ocr-header) p{color:#B9C5D4}
+body.atelier :is(.topbar nav,.header-actions,.ocr-header nav){gap:8px}
+body.atelier :is(.topbar nav a,.header-actions a,.ocr-header nav a){
+  border-radius:11px;background:#162437;border:1px solid #455C73;color:#E3EBF4;
+  padding:9px 13px;text-decoration:none;
+}
+body.atelier :is(.topbar nav a,.header-actions a,.ocr-header nav a):hover{border-color:#DDA477;color:#FFD5B8;background:#263247}
+body.atelier .topbar nav a.active{
+  color:#FFE7D3;background:linear-gradient(135deg,#513A37,#303344);
+  border-color:#A87962;box-shadow:inset 0 1px 0 #FFE6CD18;
+}
+body.atelier .topbar nav a::after{background:#FFC094}
+body.atelier .status-pill{background:#172838;border:1px solid #496579;color:#B4E7DF}
+body.atelier .status-pill::before{background:#A3E2CC;box-shadow:0 0 0 3px #8BD9C51D}
+
+/* Operator: a calm document work surface with strong action hierarchy */
+body.atelier-studio .shell{width:min(1540px,calc(100% - 30px));gap:16px}
+body.atelier-studio .session{
+  padding:18px 20px;border-color:#74574E;
+  background:linear-gradient(110deg,#262837 0%,#222633 55%,#172839 100%);
+  box-shadow:inset 0 1px 0 #EFBFA31C,0 14px 32px #01060D2E;
+}
+body.atelier-studio .session .section-head h2{font-size:1.12rem;color:#FFF4E8}
+body.atelier-studio .session-editor{gap:13px}
+body.atelier-studio .session .file-label{
+  border-color:#576879;background:linear-gradient(145deg,#151E2B,#1B2837);
+  border-radius:13px;
+}
+body.atelier-studio .workflow-rail{
+  border:1px solid #34495D;border-radius:16px;background:#0F1B2A;
+  padding:9px;box-shadow:inset 0 1px 0 #FFFFFF08;
+}
+body.atelier-studio .workflow-rail>span{
+  border-color:#36475A;background:#172334;color:#C3D1DE;border-radius:12px;
+}
+body.atelier-studio .workflow-rail>span i{border-radius:8px;border-color:#526B7C;background:#223246}
+body.atelier-studio .workflow-rail>span.active{
+  border-color:#DFAA80;color:#FFE1C4;
+  background:linear-gradient(140deg,#513B3C,#322F42);
+  box-shadow:inset 0 1px 0 #FFD5BC2B,0 5px 14px #0004;
+}
+body.atelier-studio .workflow-rail>span.active i{background:#6A453D;border-color:#DFAA80;color:#FFF2E7}
+body.atelier-studio .workflow-rail>span.done{
+  border-color:#38685D;background:#183B36;color:#B9EDDB;
+}
+body.atelier-studio .workbench{gap:17px}
+body.atelier-studio .viewer{
+  background:#0C1521;border-color:#52657B;
+  box-shadow:0 15px 33px #03091146,inset 0 1px 0 #FFFFFF13;
+}
+body.atelier-studio .viewer-tabs{
+  background:#142132;border-bottom-color:#35495E;padding:9px;
+}
+body.atelier-studio .viewer-tabs button{border-radius:11px}
+body.atelier-studio .viewer-tabs button.active{
+  border-color:#C99578;color:#FFE7D1;background:linear-gradient(145deg,#4D393B,#2B3545);
+}
+body.atelier-studio .viewer-tabs button.active span{background:#473735;border-color:#A77B68;color:#FFE4CA}
+body.atelier-studio .pdf-toolbar{padding-block:12px}
+body.atelier-studio .pdf-toolbar>span{color:#C8D6E3}
+body.atelier-studio .pdf-stage{
+  background:linear-gradient(0deg,#101B2A,#0A141F);
+  border-top:1px solid #385067;contain:paint;
+}
+body.atelier-studio .crop-box{
+  border:2px solid #FFC08D;background:#FFD3A620;
+  box-shadow:0 0 0 1px #100E14,0 0 0 5px #EEBA8B15;
+}
+body.atelier-studio .crop-freeze-row{background:#142131;border-top-color:#34495F}
+body.atelier-studio .inspector{
+  background:linear-gradient(165deg,#1C2B3B,#131E2D 67%);
+  border-color:#54677D;
+}
+body.atelier-studio .inspector .section-head{border-bottom-color:#45596D}
+body.atelier-studio .inspector .section-head h2{color:#FDF4EB}
+body.atelier-studio .inspector .two{background:#111D2D;border-color:#405468}
+body.atelier-studio .inspector fieldset{background:#142232;border-color:#40566A}
+body.atelier-studio .segmented button.active{
+  border-color:#DEAC82;background:linear-gradient(140deg,#6A443E,#393346);
+  box-shadow:inset 0 1px 0 #FFDAB43D;color:#FFE2C9;
+}
+body.atelier-studio .readiness{
+  background:linear-gradient(150deg,#172838,#112031);border-color:#405A6B;
+}
+body.atelier-studio .check-grid button.done{
+  background:linear-gradient(135deg,#214739,#17362E);
+  border-color:#4D8771;color:#C7F6E3;
+}
+body.atelier-studio .recent{border-color:#35475C}
+body.atelier-studio .recent-item{border-color:#3F5367;background:#142334}
+body.atelier-studio .recent-item:hover{background:#1D3043;border-color:#6F8FA3}
+
+/* Selected questions: visual scan order and stronger source previews */
+body.atelier-selected .selected-page{width:min(1420px,calc(100% - 32px));gap:15px}
+body.atelier-selected .batch-summary{
+  border-color:#82604E;background:linear-gradient(110deg,#2B2C38,#1C2B3A 80%);
+}
+body.atelier-selected .summary-actions{gap:8px}
+body.atelier-selected .batch-gate{border-color:#455C6D;background:#142635}
+body.atelier-selected .question-filters{background:#101C2A;border-color:#3F586D}
+body.atelier-selected .question-card{
+  border-color:#40556D;background:linear-gradient(140deg,#1B2938,#131D2C);
+}
+body.atelier-selected .question-card[data-quality="ok"]{border-inline-start-color:#9BDCB8}
+body.atelier-selected .question-card[data-quality="warn"]{border-inline-start-color:#EDC47A}
+body.atelier-selected .previews>div{border-radius:12px;overflow:hidden}
+body.atelier-selected .previews img{background:#0A131E;border-color:#52697A}
+body.atelier-selected .question-title strong{color:#FFF5ED}
+body.atelier-selected .quality-badge.ok{border-color:#578873}
+
+/* Admin: review command center */
+body.atelier-admin .review-header{min-height:78px}
+body.atelier-admin .review-layout{
+  width:min(1550px,calc(100% - 30px));gap:17px;margin-top:20px;
+  grid-template-columns:278px minmax(0,1fr);
+}
+body.atelier-admin .review-sidebar{
+  top:100px;background:linear-gradient(175deg,#1B2939,#121D2B);
+  border-color:#53667B;
+}
+body.atelier-admin .admin-step{
+  padding:17px 15px 8px;
+}
+body.atelier-admin .admin-step strong{font-size:1rem;color:#FFF5E9}
+body.atelier-admin .subject-picker{gap:9px}
+body.atelier-admin .subject-picker button{
+  background:#172638;border-color:#53677B;
+  border-radius:12px;min-height:47px;
+}
+body.atelier-admin .subject-picker button:hover{background:#23384B;border-color:#A8BBD1}
+body.atelier-admin .subject-picker button.active{
+  color:#FFE3C8;border-color:#E1AE84;
+  background:linear-gradient(135deg,#62453C,#30394A);
+}
+body.atelier-admin .operator-item{border-radius:12px;background:#182636;border-color:#435A70}
+body.atelier-admin .operator-item.active{background:#313745;border-color:#D1A181;color:#FFF0DF}
+body.atelier-admin .batch-overview{
+  border-color:#655448;background:linear-gradient(116deg,#242B39 0%,#192B3B 75%);
+  padding:20px;
+}
+body.atelier-admin .local-review-notice{border-color:#82664E;background:#342B29;color:#F2D6B5}
+body.atelier-admin .progress-grid>div{
+  min-height:86px;padding:14px;border-radius:14px;
+  background:linear-gradient(155deg,#182839,#111F2D);border-color:#43596C;
+}
+body.atelier-admin .progress-grid b{font-size:1.55rem;line-height:1.1;font-weight:900}
+body.atelier-admin .progress-grid>div:nth-child(1) b{color:#A9E6C5}
+body.atelier-admin .progress-grid>div:nth-child(2) b{color:#F5CE82}
+body.atelier-admin .progress-grid>div:nth-child(3) b{color:#FFB0AF}
+body.atelier-admin .progress-grid>div:nth-child(4) b{color:#C6D8EC}
+body.atelier-admin .progress-bar{background:#0D1826;border:1px solid #53677B}
+body.atelier-admin .progress-bar i{
+  animation:none;background:linear-gradient(90deg,#F5AA86,#ADDCD3);
+}
+body.atelier-admin .tools{padding:13px;background:#142333;border-color:#476077}
+body.atelier-admin .review-question-list{gap:12px}
+body.atelier-admin .review-question{
+  border-radius:15px;background:linear-gradient(145deg,#1D2B3B,#14202E);
+  border-color:#43586D;box-shadow:inset 0 1px 0 #FFFFFF08,0 7px 18px #0003;
+}
+body.atelier-admin .review-question:hover{background:linear-gradient(145deg,#243649,#192838);border-color:#9CAFC1}
+body.atelier-admin .open-review{color:#FFE4CD;background:#41383D;border-color:#A67D63}
+body.atelier-admin .quick-dialog{
+  background:#101A27;border-color:#66768B;
+  box-shadow:0 30px 80px #0009;
+}
+body.atelier-admin .quick-head{background:#192638;border-bottom-color:#44576D}
+body.atelier-admin .quick-viewers{background:#0B1420}
+body.atelier-admin .quick-viewers figure{background:#192636;border-color:#4A5E72}
+body.atelier-admin .quick-inspector{background:#182637;border-inline-start-color:#455C70}
+body.atelier-admin .quick-actions{background:#142130;border-top-color:#476077}
+body.atelier-admin .quick-head #openOcrStudio{
+  background:linear-gradient(120deg,#42353A,#292F3F);border-color:#AA8067;color:#FFE3CC;
+}
+
+/* OCR: visual editing desktop with a tactile reference worktop */
+body.atelier-ocr .ocr-header{min-height:90px}
+body.atelier-ocr .ocr-header nav a{min-height:42px;display:inline-flex;align-items:center}
+body.atelier-ocr .ocr-layout{
+  width:min(1610px,calc(100% - 30px));
+  grid-template-columns:240px minmax(0,1fr) 292px;gap:15px;margin-top:20px;
+}
+body.atelier-ocr .ocr-panel{background:linear-gradient(150deg,#1B293B,#111F2E);border-color:#486077;padding:17px}
+body.atelier-ocr .ocr-sidebar,body.atelier-ocr .ocr-settings{top:15px}
+body.atelier-ocr .ocr-sidebar h2,body.atelier-ocr .ocr-settings h2{color:#FFF4E9;font-size:1.08rem}
+body.atelier-ocr .ocr-list-row{gap:5px}
+body.atelier-ocr .ocr-list-row button{border-radius:9px}
+body.atelier-ocr .ocr-list-row .ocr-pick{background:#172638}
+body.atelier-ocr .ocr-list-row.active .ocr-pick{
+  color:#FFE8D2;border-color:#E0A980;
+  background:linear-gradient(120deg,#5C413E,#283C4A);
+}
+body.atelier-ocr .ocr-image-stage{
+  border:1px solid #71879D;
+  background:repeating-conic-gradient(#DDE4EA 0 25%,#E8EDF0 0 50%) 50%/24px 24px;
+  border-radius:14px;
+}
+body.atelier-ocr .ocr-work .ocr-panel:first-child{border-color:#5C6F7F}
+body.atelier-ocr .ocr-work .ocr-panel:nth-child(2){border-color:#6F625E}
+body.atelier-ocr .ocr-panel textarea{
+  background:#0E1A29;border-color:#647E95;line-height:2;font-size:1rem;
+}
+body.atelier-ocr .ocr-panel .ocr-note{color:#BFCAD7}
+body.atelier-ocr .ocr-actions button{min-height:43px}
+body.atelier-ocr #ocrStatus{
+  padding:10px 12px;border:1px solid #476D67;background:#19382F;
+  border-radius:10px;color:#B7E9D1;
+}
+body.atelier-ocr .ocr-settings hr{border-top-color:#476078}
+body.atelier-ocr .ocr-dialog{border-color:#667C91;background:#121F2D}
+body.atelier-ocr .ocr-paper{background:#FFFDF8;color:#181C20;border-radius:9px}
+
+/* Shared edge cases and motion budget */
+body.atelier :is(.empty-box,.empty-review){
+  border-color:#52677C;
+  background:linear-gradient(120deg,#172839,#111C2B);
+  color:#B9CDE0;
+}
+body.atelier :is(.gate-badge,.status-badge,.quality-badge){border-radius:999px}
+body.atelier :is(dialog,.settings-dialog,.hotkeys-dialog){border-color:#53677E}
+body.atelier :is(.login-card,.operator-login-card){
+  border-color:#5E6273;background:linear-gradient(140deg,#1D2A3B,#202837 56%,#2A2934);
+  box-shadow:0 26px 55px #0005,inset 0 1px 0 #F4C7A326;
+}
+body.atelier .login-card h1{color:#FFE2C9}
+@media(max-width:1180px){
+  body.atelier-ocr .ocr-layout{grid-template-columns:220px minmax(0,1fr)}
+  body.atelier-ocr .ocr-settings{grid-column:1/-1;position:static;max-height:none}
+}
+@media(max-width:1050px){
+  body.atelier-admin .review-layout{grid-template-columns:1fr;gap:12px}
+  body.atelier-admin .review-sidebar{position:static;max-height:none}
+}
+@media(max-width:760px){
+  body.atelier::before{display:none}
+  body.atelier :is(.topbar,.review-header,.ocr-header){padding:12px 14px;gap:12px;position:relative}
+  body.atelier :is(.topbar,.review-header,.ocr-header)>div:first-child{padding-inline-start:52px}
+  body.atelier :is(.topbar,.review-header,.ocr-header)>div:first-child::before{
+    width:39px;height:39px;border-radius:12px;font-size:21px
+  }
+  body.atelier :is(.topbar,.review-header,.ocr-header) h1{font-size:1.07rem}
+  body.atelier :is(.topbar,.review-header,.ocr-header) p{font-size:.76rem}
+  body.atelier .topbar nav{width:100%;gap:5px;grid-template-columns:repeat(3,minmax(0,1fr))}
+  body.atelier .topbar nav a{padding:9px 6px;justify-content:center}
+  body.atelier-studio .shell,body.atelier-selected .selected-page,
+  body.atelier-admin .review-layout,body.atelier-ocr .ocr-layout{width:calc(100% - 18px);margin-top:10px}
+  body.atelier-studio .session{padding:14px}
+  body.atelier-studio .workflow-rail{padding:6px;gap:5px}
+  body.atelier-studio .workflow-rail>span{flex-basis:118px}
+  body.atelier-studio .workbench{gap:10px}
+  body.atelier-studio .viewer,body.atelier-studio .inspector{box-shadow:none}
+  body.atelier-admin .review-layout{gap:10px}
+  body.atelier-admin .progress-grid>div{min-height:70px;padding:11px}
+  body.atelier-admin .progress-grid b{font-size:1.2rem}
+  body.atelier-admin .quick-dialog{width:100vw;height:100svh;border-radius:0}
+  body.atelier-ocr .ocr-layout{grid-template-columns:1fr;gap:11px}
+  body.atelier-ocr .ocr-sidebar,body.atelier-ocr .ocr-settings{position:static;max-height:none}
+  body.atelier-ocr .ocr-panel{padding:13px}
+  body.atelier-ocr .ocr-header nav{width:100%;justify-content:space-between}
+}
+@media(pointer:coarse){body.atelier :is(button,.button-link){min-height:44px}}
+@media(hover:hover) and (prefers-reduced-motion:no-preference){
+  body.atelier .question-card:hover,body.atelier-admin .review-question:hover{
+    transform:translateY(-1px);
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  body.atelier *,body.atelier *::before,body.atelier *::after{
+    animation:none!important;transition:none!important;scroll-behavior:auto!important;
+  }
+}
+@media print{
+  body.atelier{background:white!important;color:black!important}
+  body.atelier-ocr #printContainer{display:block!important;background:white;color:black}
+  body.atelier-ocr #printContainer .ocr-paper{background:white!important;color:black!important;box-shadow:none!important}
+  body.atelier-ocr>*:not(#printContainer){display:none!important}
+}
