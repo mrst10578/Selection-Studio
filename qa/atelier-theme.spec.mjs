@@ -21,7 +21,7 @@ test.describe("Ember Atelier premium theme",()=>{
   test("renders accessible theme on "+s.path,async({page})=>{
    await page.goto(s.path);
    await expect(page.locator("body")).toHaveClass(new RegExp(s.body));
-   await expect(page.locator(s.selector)).toBeVisible();
+   await expect(page.locator(s.selector).first()).toBeVisible();
    const state=await page.evaluate(()=>{
     const root=getComputedStyle(document.documentElement);
     return {
