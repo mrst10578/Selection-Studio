@@ -62,6 +62,40 @@ function optionTail(lines,width,height){
  const stemSpace=tail[0].top-prior.at(-1).bottom;
  return validHeight&&validSpacing&&validAnchor&&validWidth&&stemSpace>=2;
 }
+function columnSegments(data,width,line){
+ const counts=new Uint16Array(width);
+ for(let y=line.top;y<=line.bottom;y++){
+  for(let x=0;x<width;x++){
+   const index=(y*width+x)*4;
+   if(data[index+3]<128)continue;
+   const gray=data[index]*.2126+data[index+1]*.7152+data[index+2]*.0722;
+   if(gray<185)counts[x]++;
+  }
+ }
+ const ranges=[];let left=-1,last=-1;
+ const gapLimit=Math.max(20,Math.round(width*.072));
+ const commit=()=>{if(left>=0&&last-left>width*.055)ranges.push({left,right:last,top:line.top,bottom:line.bottom})};
+ for(let x=0;x<width;x++){
+  if(counts[x]>0){if(left<0)left=x;last=x}
+  else if(left>=0&&x-last>gapLimit){commit();left=-1;last=-1}
+ }
+ commit();
+ return ranges;
+}
+function twoColumnOptionTail(lines,data,width,height){
+ if(lines.length<3)return null;
+ const last=lines.slice(-2);
+ const first=columnSegments(data,width,last[0]);
+ const second=columnSegments(data,width,last[1]);
+ if(first.length!==2||second.length!==2)return null;
+ const [leftA,rightA]=first,[leftB,rightB]=second;
+ const spread=Math.max(Math.abs(leftA.left-leftB.left),Math.abs(rightA.left-rightB.left));
+ const middle=Math.min(rightA.left-leftA.right,rightB.left-leftB.right);
+ const gap=last[1].top-last[0].bottom-1;
+ if(spread>width*.13||middle<width*.09||gap<0||gap>Math.max(30,height*.035))return null;
+ // RTL reading order: right cell of first row, left cell, then next row.
+ return [rightA,leftA,rightB,leftB];
+}
 export function detectQuestionLayout(data,width,height,{maxCandidates=12}={}){
  if(!Number.isInteger(width)||!Number.isInteger(height)||width<24||height<24||
     !data||data.length<width*height*4)return [];
@@ -89,7 +123,13 @@ export function detectQuestionLayout(data,width,height,{maxCandidates=12}={}){
     proposals.push({kind:'option',label:'گزینه احتمالی '+(index+1),confidence:.58,bbox_norm:boxOf([line],width,height)});
    });
   }else{
-   proposals.push({kind:'block',label:'بخش احتمالی سؤال',confidence:.45,bbox_norm:boxOf(lines,width,height)});
+   const cells=twoColumnOptionTail(lines,data,width,height);
+   if(cells){
+    proposals.push({kind:'question',label:'متن احتمالی سؤال',confidence:.65,bbox_norm:boxOf(lines.slice(0,-2),width,height)});
+    cells.forEach((cell,index)=>proposals.push({kind:'option',label:'گزینه احتمالی '+(index+1),confidence:.5,bbox_norm:boxOf([cell],width,height)}));
+   }else{
+    proposals.push({kind:'block',label:'بخش احتمالی سؤال',confidence:.45,bbox_norm:boxOf(lines,width,height)});
+   }
   }
  }
  return proposals.filter(p=>p.bbox_norm[2]>p.bbox_norm[0]&&p.bbox_norm[3]>p.bbox_norm[1])
