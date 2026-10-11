@@ -89,7 +89,10 @@ test.describe("ZH-73 multi-crop and navigation",()=>{
   await page.locator("#questionPane .studio-crop-queue").getByRole("button",{name:"+ افزودن این برش"}).click();
   await expect(page.locator("#questionPane .studio-crop-chip")).toHaveCount(2);
   await page.locator("#answerTab").click();
+  await expect(page.locator("#aStage")).not.toHaveClass(/is-loading/);
+  await page.waitForTimeout(250);
   await drag("#aCanvas");
+  await expect(page.locator("#answerCropState")).toHaveText("ثبت شد");
   await page.locator("#answerPane .studio-crop-queue").getByRole("button",{name:"+ افزودن این برش"}).click();
   await expect(page.locator('[data-check="answer"]')).toHaveClass(/done/);
   await page.locator("#subject").selectOption("PHY");
