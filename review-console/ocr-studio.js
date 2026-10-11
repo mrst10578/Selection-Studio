@@ -35,7 +35,7 @@ async function importHandoff(){
  try{
   const meta=JSON.parse(raw),blob=await getPreview("examforge:handoff");
   if(!blob)throw Error("تصویر انتقالی پیدا نشد.");
-  const q=await addBlob(blob,meta.title||("سؤال "+(meta.sourceNumber||"")),meta.questionId||newId());
+  const q=await addBlob(blob,meta.title||("سؤال "+(meta.sourceNumber||"")),newId());
   q.sourceName=String(meta.questionId||meta.title||"");
   snapshot();notice("تصویر سؤال از مدیریت وارد شد؛ مرجع اصلی تغییر نکرد.");
   await deletePreview("examforge:handoff");
@@ -90,6 +90,7 @@ $("removeFigure").onclick=()=>{const q=selected();if(!q)return;q.figure="";snaps
 
 function alignCanvas(){
  const img=$("referenceImage"),canvas=$("figureCanvas"),stage=$("imageStage");
+ if(!state.figureMode){canvas.hidden=true;return}
  if(img.hidden||!img.complete||!img.naturalWidth){canvas.hidden=true;return}
  const box=img.getBoundingClientRect(),outer=stage.getBoundingClientRect();
  canvas.style.left=(box.left-outer.left)+"px";canvas.style.top=(box.top-outer.top)+"px";
@@ -170,9 +171,10 @@ function exportHtml(){
 }
 function download(blob,name){const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),15000)}
 $("htmlExport").onclick=()=>{if(verifyExport())download(new Blob([exportHtml()],{type:"text/html;charset=utf-8"}),"TestBank_Typed.html")};
-$("previewAll").onclick=()=>{if(!verifyExport())return;const host=$("previewContent");host.replaceChildren();const h=document.createElement("h1");h.textContent=$("bankTitle").value;host.append(h);state.items.forEach((q,i)=>{const article=document.createElement("article"),title=document.createElement("strong"),body=document.createElement("p");title.textContent="سؤال "+digits(i+1);body.textContent=q.text;article.append(title,body);if(q.figure){const image=new Image();image.src=cleanImage(q.figure);image.alt="شکل مرتبط";article.append(image)}host.append(article)});host.style.fontFamily=$("fontFamily").value;host.style.fontSize=$("fontSize").value+"px";host.style.lineHeight=$("lineHeight").value;$("previewDialog").showModal()};
+$("previewAll").onclick=()=>{if(!verifyExport())return;buildPreview()};
+function buildPreview(){const host=$("previewContent");host.replaceChildren();const h=document.createElement("h1");h.textContent=$("bankTitle").value;host.append(h);state.items.forEach((q,i)=>{const article=document.createElement("article"),title=document.createElement("strong"),body=document.createElement("p");title.textContent="سؤال "+digits(i+1);body.textContent=q.text;article.append(title,body);if(q.figure){const image=new Image();image.src=cleanImage(q.figure);image.alt="شکل مرتبط";article.append(image)}host.append(article)});host.style.fontFamily=$("fontFamily").value;host.style.fontSize=$("fontSize").value+"px";host.style.lineHeight=$("lineHeight").value;$("previewDialog").showModal()}
 $("closePreview").onclick=()=>$("previewDialog").close();
-$("printBtn").onclick=()=>{if(!verifyExport())return;$("previewAll").click();if(!$("previewDialog").open)return;const el=$("printContainer");el.replaceChildren($("previewContent").cloneNode(true));$("previewDialog").close();window.print()};
+$("printBtn").onclick=()=>{if(!verifyExport())return;buildPreview();if(!$("previewDialog").open)return;const el=$("printContainer");el.replaceChildren($("previewContent").cloneNode(true));$("previewDialog").close();window.print()};
 $("fontSize").oninput=()=>{$("fontSizeValue").textContent=digits($("fontSize").value)};
 async function blobToData(blob){return new Promise((res,rej)=>{const reader=new FileReader();reader.onload=()=>res(reader.result);reader.onerror=()=>rej(reader.error);reader.readAsDataURL(blob)})}
 $("saveProject").onclick=()=>guarded(async()=>{const entries=[];for(const q of state.items){const blob=await getPreview(SOURCE_KEY+q.id);entries.push({...q,image:blob?await blobToData(blob):null})}download(new Blob([JSON.stringify({type:"selection-studio-ocr-draft",version:1,items:entries})],{type:"application/json"}),"Selection_OCR_Draft.json");notice("پیش‌نویس OCR به‌طور مستقل صادر شد.")});
