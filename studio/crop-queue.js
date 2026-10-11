@@ -9,7 +9,7 @@ export function uniqueRegions(regions){
   seen.add(key);return true;
  }).map(region=>structuredClone(region));
 }
-export function createCropQueue({question,answer,switchPane,onNotice=()=>{}}){
+export function createCropQueue({question,answer,switchPane,onNotice=()=>{},onChange=()=>{}}){
  const croppers={question,answer};
  const queued={question:[],answer:[]};
  const views={};
@@ -17,6 +17,13 @@ export function createCropQueue({question,answer,switchPane,onNotice=()=>{}}){
  const current=kind=>croppers[kind];
  const selections=kind=>uniqueRegions([...queued[kind],current(kind).region]);
  const notify=(text)=>onNotice(text);
+ const changed=()=>onChange();
+ function shift(kind,index,delta){
+  const items=queued[kind],next=index+delta;
+  if(next<0||next>=items.length)return false;
+  [items[index],items[next]]=[items[next],items[index]];
+  update(kind);changed();return true;
+ }
  function update(kind){
   const host=views[kind];
   if(!host)return;
@@ -29,8 +36,10 @@ export function createCropQueue({question,answer,switchPane,onNotice=()=>{}}){
    const jump=document.createElement('button');jump.type='button';jump.textContent='برش '+(index+1)+' · صفحه '+item.page;
    jump.title='بازکردن محدوده ثبت‌شده';jump.addEventListener('click',()=>{void activate(kind,item)});
    const remove=document.createElement('button');remove.type='button';remove.className='studio-chip-remove';remove.textContent='×';
-   remove.setAttribute('aria-label','حذف برش '+(index+1));remove.addEventListener('click',()=>{queued[kind].splice(index,1);update(kind)});
-   group.append(jump,remove);list.append(group);
+   remove.setAttribute('aria-label','حذف برش '+(index+1));remove.addEventListener('click',()=>{queued[kind].splice(index,1);update(kind);changed()});
+   const up=document.createElement('button');up.type='button';up.textContent='↑';up.disabled=index===0;up.setAttribute('aria-label','بالا بردن برش '+(index+1));up.addEventListener('click',()=>shift(kind,index,-1));
+   const down=document.createElement('button');down.type='button';down.textContent='↓';down.disabled=index===items.length-1;down.setAttribute('aria-label','پایین بردن برش '+(index+1));down.addEventListener('click',()=>shift(kind,index,1));
+   group.append(jump,up,down,remove);list.append(group);
   }
  }
  async function activate(kind,item){
@@ -49,9 +58,9 @@ export function createCropQueue({question,answer,switchPane,onNotice=()=>{}}){
   queued[kind]=merged;
   if(crop.isRegionLocked())crop.setRegionLocked(false);
   crop.clearRegion();
-  update(kind);notify('برش به صف اضافه شد. کادر بعدی را انتخاب کن.');return true;
+  update(kind);changed();notify('برش به صف اضافه شد. کادر بعدی را انتخاب کن.');return true;
  }
- function clear(kind){queued[kind]=[];update(kind)}
+ function clear(kind){queued[kind]=[];update(kind);changed()}
  function reset(){clear('question');clear('answer')}
  async function capture(kind){
   const crop=current(kind),regions=selections(kind);
@@ -100,7 +109,7 @@ export function createCropQueue({question,answer,switchPane,onNotice=()=>{}}){
   const btn=document.createElement('button');btn.type='button';btn.textContent='+ افزودن این برش';
   btn.addEventListener('click',()=>add(kind));
   const clearBtn=document.createElement('button');clearBtn.type='button';clearBtn.textContent='پاک‌کردن صف';
-  clearBtn.addEventListener('click',()=>clear(kind));
+  clearBtn.addEventListener('click',()=>{if(!queued[kind].length||window.confirm('همه برش‌های این صف حذف شوند؟'))clear(kind)});
   const zoom=document.createElement('div');zoom.className='studio-crop-zoom';zoom.setAttribute('aria-label','کنترل بزرگ‌نمایی PDF');
   const percent=document.createElement('output');percent.textContent='۱۰۰٪';
   const zoomButton=(symbol,delta,label)=>{
@@ -146,18 +155,30 @@ export function createCropQueue({question,answer,switchPane,onNotice=()=>{}}){
    const accept=document.createElement('button');accept.type='button';accept.textContent='تأیید و افزودن همه پیشنهادها';
    accept.addEventListener('click',()=>{
     const merged=uniqueRegions([...queued[kind],...proposed]).slice(0,limit);
-    queued[kind]=merged;update(kind);notify(merged.length+' کادر پیشنهادی به صف اضافه شد.');close();
+    queued[kind]=merged;update(kind);changed();notify(merged.length+' کادر پیشنهادی به صف اضافه شد.');close();
    });
    const cancel=document.createElement('button');cancel.type='button';cancel.textContent='بی‌خیال';
    cancel.addEventListener('click',close);
    actions.append(accept,cancel);dialog.append(title,description,list,actions);
    document.body.append(dialog);dialog.addEventListener('close',()=>dialog.remove(),{once:true});dialog.showModal();
   });
-  head.append(count,btn,clearBtn,zoom,preview,detect);
+  const download=document.createElement('button');download.type='button';download.textContent='دریافت تصویر برش‌ها';
+  download.addEventListener('click',async()=>{
+   download.disabled=true;
+   try{
+    const result=await capture(kind);
+    const url=URL.createObjectURL(result.blob);
+    const a=document.createElement('a');a.href=url;a.download='selection-'+kind+'-crops.webp';document.body.append(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+   }catch{notify('برای خروجی، حداقل یک برش آماده انتخاب کن.')}finally{download.disabled=false}
+  });
+  head.append(count,btn,clearBtn,zoom,preview,download,detect);
   const list=document.createElement('div');list.className='studio-crop-chips';
   const guide=document.createElement('p');guide.className='studio-crop-guide';
-  guide.textContent='برای سؤال چندقسمتی هر کادر را به صف اضافه کن؛ هنگام ثبت، برش‌ها کنار هم ترکیب می‌شوند.';
-  host.append(head,list,guide);toolbar.insertAdjacentElement('afterend',host);
+  guide.textContent='برای سؤال چندقسمتی، کادرها را یکی‌یکی به صف اضافه کن. ترتیب آن‌ها با ↑ و ↓ قابل تغییر است؛ هنگام ثبت، همه برش‌ها ترکیب می‌شوند.';
+  const help=document.createElement('details');help.className='studio-touch-guide';
+  help.innerHTML='<summary>راهنمای استفاده در موبایل و تبلت</summary><p>ابتدا PDF را انتخاب کن. با دکمه قفل شناور بین حرکت سند و انتخاب برش جابه‌جا شو. بعد از انتخاب هر کادر، «افزودن این برش» را بزن. برای تغییر بین سؤال و پاسخ، روی زبانه‌ها بزن یا آن‌ها را افقی بکش. برای رفتن به صفحه دلخواه از کادر شماره صفحه استفاده کن.</p>';
+  host.append(head,list,guide,help);toolbar.insertAdjacentElement('afterend',host);
   views[kind]={count,list};update(kind);
   // The caller clears the queue only once replacement PDF loading succeeds.
  }
@@ -171,5 +192,14 @@ export function createCropQueue({question,answer,switchPane,onNotice=()=>{}}){
   if(Math.abs(dx)<75||Math.abs(dy)>55)return;
   document.getElementById(dx>0?'questionTab':'answerTab')?.click();
  },{passive:true});
- return {add,clear,reset,capture,selections};
+ // Keyboard page navigation only outside editable fields and modal dialogs.
+ document.addEventListener('keydown',event=>{
+  if(event.ctrlKey||event.altKey||event.metaKey||event.shiftKey||!['PageUp','PageDown'].includes(event.key))return;
+  if(event.target?.closest?.('input,textarea,select,[contenteditable="true"]')||document.querySelector('dialog[open]'))return;
+  const kind=document.getElementById('answerPane')?.classList.contains('hidden')?'question':'answer';
+  const crop=current(kind);
+  if(!crop?.pdf||crop.loading||crop.rendering)return;
+  event.preventDefault();void crop.go(crop.page+(event.key==='PageDown'?1:-1));
+ });
+ return {add,clear,reset,capture,selections,shift};
 }
