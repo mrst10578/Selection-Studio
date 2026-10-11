@@ -1,0 +1,24 @@
+/* Ember Atelier Pro: responsive, resizable three-pane operator workspace */
+:root{--studio-copper:#f0a879;--studio-teal:#83d8d1}
+body.atelier-studio .shell{max-width:1920px}
+body.atelier-studio .workbench{grid-template-columns:minmax(230px,var(--studio-sidebar,270px)) minmax(0,1fr) minmax(320px,var(--studio-inspector,370px));align-items:stretch}
+body.atelier-studio .studio-projects{padding:16px;min-width:0;position:sticky;top:82px;max-height:calc(100vh - 96px);overflow:auto}
+.studio-projects h2{margin:0 0 8px}.studio-projects p{color:var(--text-muted);font-size:.83rem;line-height:1.7}
+.studio-projects .studio-links{display:grid;gap:9px;margin-top:16px}
+.studio-projects a{display:block;padding:12px;border:1px solid var(--line);border-radius:12px;color:var(--text);text-decoration:none}
+.studio-projects a:hover,.studio-projects a:focus-visible{border-color:var(--studio-teal);background:var(--surface-subtle)}
+.studio-projects .studio-hint{border-top:1px solid var(--line);padding-top:14px;margin-top:18px}
+.studio-layout-controls{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.studio-layout-controls button{min-height:36px;font-size:.78rem}
+.studio-command-dialog{width:min(560px,calc(100vw - 28px));max-height:min(78vh,680px);border:1px solid var(--line-strong);border-radius:18px;background:var(--surface);color:var(--text);padding:16px;box-shadow:var(--shadow-dialog)}
+.studio-command-dialog::backdrop{background:#020710bb;backdrop-filter:blur(6px)}
+.studio-command-dialog input{width:100%;margin:10px 0}
+.studio-command-results{display:grid;gap:6px;max-height:55vh;overflow:auto}
+.studio-command-results button{text-align:right;min-height:44px}
+.studio-command-results button:focus-visible{outline:2px solid var(--studio-teal)}
+body.atelier-studio .viewer{min-width:0}
+body.atelier-studio .inspector{top:82px}
+@media(min-width:1200px){body.atelier-studio .workbench{column-gap:14px}}
+@media(max-width:1199px){body.atelier-studio .workbench{grid-template-columns:minmax(0,1fr) minmax(310px,38%)}body.atelier-studio .studio-projects{grid-column:1/-1;position:static;max-height:none}.studio-projects .studio-links{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:780px){body.atelier-studio .workbench{grid-template-columns:minmax(0,1fr)}body.atelier-studio .studio-projects{grid-column:auto}.studio-projects .studio-links{grid-template-columns:1fr}body.atelier-studio .inspector{position:static;max-height:none}body.atelier-studio .pdf-stage{min-height:380px;height:55vh}.studio-layout-controls{display:none}}
+@media(prefers-reduced-motion:reduce){.studio-command-dialog,.studio-projects *{animation:none!important;transition:none!important}}
