@@ -10,6 +10,12 @@ const types={".html":"text/html; charset=utf-8",".js":"text/javascript; charset=
 createServer(async(req,res)=>{
   try{
     const url=new URL(req.url||"/","http://localhost"),pathname=decodeURIComponent(url.pathname);
+    // QA-only identity fixture. This server binds loopback and is never copied into Pages.
+    if(pathname==="/api/session"){
+      const body=JSON.stringify({authenticated:true,role:"operator",email:"qa-operator@example.test"});
+      res.writeHead(200,{"content-type":"application/json; charset=utf-8","cache-control":"no-store"});
+      res.end(body);return;
+    }
     let target=path.resolve(ROOT,"."+pathname);
     if(!target.startsWith(ROOT)){res.writeHead(403);res.end("Forbidden");return}
     let info=await stat(target).catch(()=>null);
