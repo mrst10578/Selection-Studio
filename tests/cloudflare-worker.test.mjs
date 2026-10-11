@@ -1,0 +1,14 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {readFile} from "node:fs/promises";
+const source=await readFile(new URL("../cloudflare/_worker.js",import.meta.url),"utf8");
+const {default:worker}=await import("../cloudflare/_worker.js");
+const request=(path,method="GET",headers={})=>new Request("https://selection-studio.pages.dev"+path,{method,headers,body:method==="POST"?"test":undefined});
+const env={ASSETS:{fetch:async()=>new Response("asset")}};
+test("native asset routing",async()=>{const r=await worker.fetch(request("/studio/"),env);assert.equal(await r.text(),"asset")});
+test("health",async()=>{const r=await worker.fetch(request("/health"),env);assert.equal((await r.json()).assets,"native")});
+test("unknown API",async()=>assert.equal((await worker.fetch(request("/api/nope"),env)).status,404));
+test("OCR rejects GET",async()=>assert.equal((await worker.fetch(request("/api/ocr"),env)).status,405));
+test("OCR fails closed without server config",async()=>assert.equal((await worker.fetch(request("/api/ocr","POST"),env)).status,503));
+test("OCR rejects unverified identity",async()=>{const r=await worker.fetch(request("/api/ocr","POST"),{...env,OCR_SERVICE_TOKEN:"dummy",ACCESS_TEAM_DOMAIN:"example.cloudflareaccess.com",ACCESS_AUD:"test"});assert.equal(r.status,401)});
+test("upstream token is not hardcoded",()=>assert.ok(!source.includes("Bearer admin")));
