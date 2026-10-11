@@ -38,7 +38,8 @@ test.describe('Studio Phase 2: cloud draft and multi-crop controls',()=>{
   await page.goto('/studio/');
   await expect(page.locator('#operatorLogin')).toBeHidden({timeout:5000});
   await page.locator('#provider').fill('قلمچی');
-  await expect(page.locator('.studio-draft-status')).toContainText('سرور در دسترس نیست');
+  await page.locator('.studio-history-controls').getByRole('button',{name:'پروژه‌ها'}).click();
+  await expect(page.locator('#studioProjectDashboard .studio-cloud-sync')).toContainText('همگام‌سازی ابری در دسترس نیست');
   await page.waitForTimeout(900);
   const data=await page.evaluate(()=>JSON.parse(localStorage.getItem('selection-studio-form-draft-v3')));
   expect(data.fields.provider).toBe('قلمچی');
