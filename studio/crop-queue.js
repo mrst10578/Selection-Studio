@@ -189,7 +189,7 @@ export function createCropQueue({question,answer,switchPane,onNotice=()=>{},onCh
   head.append(count,btn,clearBtn,zoom,preview,download,detect);
   const list=document.createElement('div');list.className='studio-crop-chips';
   const guide=document.createElement('p');guide.className='studio-crop-guide';
-  guide.textContent='برای سؤال چندقسمتی، کادرها را یکی‌یکی به صف اضافه کن. ترتیب آن‌ها با ↑ و ↓ قابل تغییر است؛ هنگام ثبت، همه برش‌ها ترکیب می‌شوند.';
+  guide.textContent='برای سؤال چندقسمتی، کادرها را یکی‌یکی به صف اضافه کن. ترتیب آن‌ها با ↑ و ↓ قابل تغییر است؛ هنگام ثبت، برش‌ها کنار هم ترکیب می‌شوند.';
   const help=document.createElement('details');help.className='studio-touch-guide';
   help.innerHTML='<summary>راهنمای استفاده در موبایل و تبلت</summary><p>ابتدا PDF را انتخاب کن. با دکمه قفل شناور بین حرکت سند و انتخاب برش جابه‌جا شو. بعد از انتخاب هر کادر، «افزودن این برش» را بزن. برای تغییر بین سؤال و پاسخ، روی زبانه‌ها بزن یا آن‌ها را افقی بکش. برای رفتن به صفحه دلخواه از کادر شماره صفحه استفاده کن.</p>';
   host.append(head,list,guide,help);toolbar.insertAdjacentElement('afterend',host);
