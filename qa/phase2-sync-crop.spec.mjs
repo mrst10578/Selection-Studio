@@ -12,6 +12,8 @@ test.describe('Studio Phase 2: cloud draft and multi-crop controls',()=>{
   await question.getByRole('button',{name:'بزرگ‌کردن PDF'}).click();
   await expect(question.locator('.studio-crop-zoom output')).toHaveText('125٪');
   await expect(page.locator('#qRegionLock')).toHaveAttribute('aria-pressed','false');
+  await question.getByRole('button',{name:'پیشنهاد کادرها'}).click();
+  await expect(page.locator('.global-toast')).toContainText('اول PDF را باز کن');
   await expect(question.locator('.studio-crop-guide')).toContainText('برش‌ها کنار هم');
  });
  test('never silently restores remote form and resolves cloud conflict by explicit user action',async({page})=>{
