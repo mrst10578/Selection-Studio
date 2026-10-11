@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 import {generateKeyPairSync,sign} from "node:crypto";
 import worker from "../cloudflare/_worker.js";
+import secureOcr from "../cloudflare/ocr-secure.js";
 
 const source=await readFile(new URL("../cloudflare/_worker.js",import.meta.url),"utf8");
 const operator=await readFile(new URL("../studio/operator-auth.js",import.meta.url),"utf8");
@@ -60,4 +61,22 @@ test("OCR requires D1 quota and audit binding",async()=>{
   const r=await worker.fetch(request("/api/ocr","POST",{"Cf-Access-Jwt-Assertion":jwt(),"Content-Type":"application/json"}),{...authEnv,OCR_SERVICE_TOKEN:"test-only"});
   assert.equal(r.status,503);
  }finally{globalThis.fetch=prior}
+});
+
+test("isolated OCR worker requires its own server token",async()=>{
+ const noToken=await secureOcr.fetch(new Request("https://internal/ocr",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"}),{ACCESS_TOKEN:"server-only"});
+ assert.equal(noToken.status,401);
+ const noConfig=await secureOcr.fetch(new Request("https://internal/ocr",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"}),{});
+ assert.equal(noConfig.status,401);
+});
+test("OCR worker sends constrained image prompt to Workers AI",async()=>{
+ let call;
+ const env={ACCESS_TOKEN:"server-only",AI:{run:async(model,options)=>{call={model,options};return {response:"شناسايی شد"}}}};
+ const payload=JSON.stringify({image:"data:image/png;base64,AAAA",prompt:"تست OCR"});
+ const response=await secureOcr.fetch(new Request("https://internal/ocr",{method:"POST",headers:{"Authorization":"Bearer server-only","Content-Type":"application/json"},body:payload}),env);
+ assert.equal(response.status,200);
+ assert.equal(call.model,"@cf/google/gemma-4-26b-a4b-it");
+ assert.equal(call.options.messages[0].content[1].image_url.url,"data:image/png;base64,AAAA");
+ const bad=await secureOcr.fetch(new Request("https://internal/ocr",{method:"POST",headers:{"Authorization":"Bearer server-only","Content-Type":"application/json"},body:JSON.stringify({image:"https://untrusted.example/"} )}),env);
+ assert.equal(bad.status,400);
 });
