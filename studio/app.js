@@ -232,7 +232,7 @@ function switchPane(name){
 }
 $("questionTab").onclick=()=>switchPane("question");
 $("answerTab").onclick=()=>switchPane("answer");
-const cropQueue=createCropQueue({question:qCrop,answer:aCrop,switchPane,onNotice:message=>toast(message)});
+const cropQueue=createCropQueue({question:qCrop,answer:aCrop,switchPane,onNotice:message=>toast(message),onChange:()=>renderGate()});
 
 function setSegmented(target,value){
   $(target).value=value?String(value):"";
@@ -298,8 +298,8 @@ function gateState(){
   const checks={
     exam:Boolean(sessionMatchesForm()&&qCrop.isRenderReady()&&aCrop.isRenderReady()),
     number:Boolean(source!==null&&unique),
-    question:qCrop.isRegionReady(),
-    answer:aCrop.isRegionReady(),
+    question:qCrop.isRenderReady()&&cropQueue.selections("question").length>0,
+    answer:aCrop.isRenderReady()&&cropQueue.selections("answer").length>0,
     taxonomy:Boolean($("chapter").value&&$("unit").value&&[10,11,12].includes(Number($("grade").value))),
     difficulty:["level_1","level_2","level_3","level_4","level_5"].includes($("difficulty").value),
     key:[1,2,3,4].includes(Number($("correctOption").value)),
@@ -324,8 +324,8 @@ function renderGate(){
   $("nextAction").textContent=msg;
   const order=["exam","question","answer","meta","ready"],idx=order.indexOf(s);
   document.querySelectorAll("[data-step]").forEach(el=>{const i=order.indexOf(el.dataset.step);el.classList.toggle("done",i>=0&&i<idx);el.classList.toggle("active",i===idx)});
-  $("questionCropState").textContent=qCrop.loading||qCrop.rendering?"در حال آماده‌سازی":qCrop.isRegionReady()?"ثبت شد":qCrop.region?"نیازمند رندر":"بدون برش";
-  $("answerCropState").textContent=aCrop.loading||aCrop.rendering?"در حال آماده‌سازی":aCrop.isRegionReady()?"ثبت شد":aCrop.region?"نیازمند رندر":"بدون برش";
+  $("questionCropState").textContent=qCrop.loading||qCrop.rendering?"در حال آماده‌سازی":cropQueue.selections("question").length?`${cropQueue.selections("question").length} برش آماده`:"بدون برش";
+  $("answerCropState").textContent=aCrop.loading||aCrop.rendering?"در حال آماده‌سازی":cropQueue.selections("answer").length?`${cropQueue.selections("answer").length} برش آماده`:"بدون برش";
   $("questionIdentity").textContent="سؤال "+($("sourceNumber").value||"-");
 }
 document.querySelectorAll("[data-check]").forEach(button=>button.addEventListener("click",()=>{
