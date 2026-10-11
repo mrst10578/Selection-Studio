@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0A0E15">
+  <title>استودیوی بازتایپ | Selection Studio</title>
+  <link rel="stylesheet" href="../studio/design-system.css">
+  <link rel="stylesheet" href="./ocr-studio.css">
+</head>
+<body>
+<header class="ocr-header">
+  <div><span class="eyebrow">پنل مدیریت / بانک تست</span><h1>استودیوی بازتایپ و یکدست‌سازی</h1><p>مرجع اصلی همیشه برش PDF است؛ متن هوشمند پیش‌نویس قابل‌بازبینی است.</p></div>
+  <nav aria-label="ناوبری استودیو"><a href="./index.html">بازگشت به مدیریت</a><button id="printBtn" class="primary" type="button">چاپ / خروجی PDF</button></nav>
+</header>
+<main class="ocr-layout">
+  <aside class="ocr-panel ocr-sidebar" aria-label="فهرست سؤال‌ها">
+    <h2>سؤال‌ها <span id="count">۰</span></h2>
+    <div class="ocr-actions"><button id="addImages" type="button">+ تصویر / PDF</button><button id="newQuestion" type="button">+ سؤال تایپی</button></div>
+    <input id="images" type="file" accept="image/png,image/jpeg,image/webp,application/pdf,.pdf" multiple hidden>
+    <div id="questionList" class="ocr-list"></div>
+    <p class="ocr-note">ترتیب را با فلش‌ها تغییر بده. فایل PDF اصلی و مختصات کراپ دست‌نخورده باقی می‌مانند.</p>
+    <div class="ocr-actions"><button id="saveProject" type="button">دانلود پروژه</button><button id="sidecarExport" type="button">خروجی متن مرتبط با متادیتا</button><button id="loadProject" type="button">بازکردن پروژه</button></div>
+    <input id="projectFile" type="file" accept=".json,application/json" hidden>
+  </aside>
+  <section class="ocr-work">
+    <section class="ocr-panel">
+      <div class="ocr-section-heading"><h2>تصویر مرجع</h2><span id="sourceInfo">تصویر انتخاب نشده</span></div>
+      <div id="imageStage" class="ocr-image-stage">
+        <img id="referenceImage" alt="تصویر اصلی سؤال جهت بازبینی OCR" hidden>
+        <p id="imageEmpty">سؤالی از پنل مدیریت انتخاب کن یا یک تصویر وارد کن.</p>
+        <canvas id="figureCanvas" hidden></canvas>
+      </div>
+      <div class="ocr-actions">
+        <button id="figureMode" type="button">انتخاب ناحیه شکل</button>
+        <button id="removeFigure" type="button">حذف شکل خروجی</button>
+        <span id="figureState" class="ocr-note">شکلی برای خروجی انتخاب نشده</span>
+      </div>
+    </section>
+    <section class="ocr-panel">
+      <div class="ocr-section-heading"><h2>متن تایپی و اصلاح دستی</h2><label class="ocr-check"><input id="reviewed" type="checkbox"> متن و فرمول را بررسی کردم</label></div>
+      <label class="ocr-label" for="questionTitle">عنوان سؤال</label><input id="questionTitle" placeholder="نام سؤال">
+      <label class="ocr-label" for="questionText">سؤال و گزینه‌ها</label>
+      <textarea id="questionText" dir="rtl" rows="12" placeholder="متن استخراج‌شده اینجا قرار می‌گیرد. اعداد، گزینه‌ها و فرمول‌ها را با تصویر اصلی تطبیق بده."></textarea>
+      <div class="ocr-actions"><button id="extractBtn" class="primary" type="button">بازشناسی هوشمند تصویر</button><button id="verifyBtn" type="button">بازبینی دوم</button><button id="extractAllBtn" type="button">بازشناسی همه تصاویر</button></div>
+      <p id="ocrStatus" role="status" aria-live="polite">آماده</p>
+      <div id="warnings" class="ocr-warnings" aria-live="polite"></div>
+    </section>
+  </section>
+  <aside class="ocr-panel ocr-settings" aria-label="خروجی و تنظیمات">
+    <h2>اتصال هوش مصنوعی</h2>
+    <p class="ocr-note">مدل Gemma 4 روی Cloudflare اکانت Zh #2. کلید هرگز در سورس یا پروژه ذخیره نمی‌شود.</p>
+    <label class="ocr-label" for="accessFile">خواندن فایل دسترسی خصوصی</label><input id="accessFile" type="file" accept=".txt,text/plain">
+    <label class="ocr-label" for="accessToken">توکن دسترسی</label><input id="accessToken" type="password" autocomplete="off" spellcheck="false" placeholder="فقط در حافظه همین صفحه">
+    <details><summary>آدرس Worker</summary><label class="ocr-label" for="workerEndpoint">نشانی API</label><input id="workerEndpoint" dir="ltr" value="https://examforge-free-ocr.zh-st-2.workers.dev/ocr"></details>
+    <hr>
+    <h2>قالب یکدست همه سؤال‌ها</h2>
+    <label class="ocr-label" for="bankTitle">عنوان جزوه</label><input id="bankTitle" value="بانک تست">
+    <label class="ocr-label" for="fontFamily">فونت متن</label><select id="fontFamily"><option value="Tahoma">Tahoma</option><option value="Arial">Arial</option><option value="serif">Serif</option></select>
+    <label class="ocr-label" for="fontSize">اندازه فونت</label><output id="fontSizeValue" for="fontSize">۱۷</output><input id="fontSize" type="range" min="13" max="24" value="17">
+    <label class="ocr-label" for="lineHeight">فاصله خطوط</label><select id="lineHeight"><option value="1.6">فشرده</option><option value="1.9" selected>استاندارد</option><option value="2.25">باز</option></select>
+    <label class="ocr-label" for="columns">ستون‌ها</label><select id="columns"><option value="1">تک‌ستونه</option><option value="2">دوستونه</option></select>
+    <div class="ocr-actions"><button id="previewAll" type="button">پیش‌نمایش کل جزوه</button><button id="htmlExport" class="primary" type="button">دریافت HTML تایپی</button></div>
+    <p class="ocr-note">حاشیه و تزئینات اسکن در خروجی تایپی منتقل نمی‌شوند. شکل علمی فقط درصورت انتخاب جداگانه باقی می‌ماند.</p>
+  </aside>
+</main>
+<dialog id="previewDialog" class="ocr-dialog">
+  <div class="ocr-dialog-head"><strong>پیش‌نمایش خروجی نهایی</strong><button id="closePreview" type="button">بستن</button></div>
+  <div id="previewContent" class="ocr-paper"></div>
+</dialog>
+<div id="printContainer" hidden></div>
+<script type="module" src="./ocr-studio.js"></script>
+</body>
+</html>
