@@ -386,7 +386,7 @@ $("questionForm").addEventListener("submit",async e=>{
     records.push(record);
     saveRecords(records);
     $("sourceNumber").value=String(source+1);
-    qCrop.setRegionLocked(false);aCrop.setRegionLocked(false);qCrop.clearRegion();aCrop.clearRegion();cropQueue.reset();setSegmented("difficulty","");setSegmented("correctOption","");biologyEditor.reset();switchPane("question");
+    qCrop.setRegionLocked(false);aCrop.setRegionLocked(false);qCrop.clearAllRegions();aCrop.clearAllRegions();cropQueue.reset();setSegmented("difficulty","");setSegmented("correctOption","");biologyEditor.reset();switchPane("question");
     renderRecent();
     toast(`سؤال ${source} ثبت شد · ${activeRecords().length} سؤال در فهرست`,"ok");
   }catch(error){
