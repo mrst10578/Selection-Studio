@@ -1,40 +1,95 @@
-// Cloudflare Pages advanced-mode Worker. Cloudflare Access JWT required for protected API.
+// Native Cloudflare Pages Worker. Fail closed if identity, quota or secret config is absent.
 const OCR_ORIGIN="https://examforge-free-ocr.zh-st-2.workers.dev/ocr";
-const json=(body,status=200,extra={})=>Response.json(body,{status,headers:{"Cache-Control":"no-store","X-Content-Type-Options":"nosniff",...extra}});
-const encode=s=>Uint8Array.from(atob(s.replace(/-/g,"+").replace(/_/g,"/").padEnd(Math.ceil(s.length/4)*4,"=")),c=>c.charCodeAt(0));
+const json=(value,status=200,extra={})=>Response.json(value,{status,headers:{"Cache-Control":"no-store","X-Content-Type-Options":"nosniff",...extra}});
+const bytes=value=>Uint8Array.from(atob(value.replace(/-/g,"+").replace(/_/g,"/").padEnd(Math.ceil(value.length/4)*4,"=")),c=>c.charCodeAt(0));
+let cachedKeys=null;
 async function verifyAccess(request,env){
-  const token=request.headers.get("Cf-Access-Jwt-Assertion");
-  const domain=env.ACCESS_TEAM_DOMAIN, audience=env.ACCESS_AUD;
-  if(!token||!domain||!audience)return null;
-  const parts=token.split(".");if(parts.length!==3)return null;
-  let header,payload;
-  try{header=JSON.parse(new TextDecoder().decode(encode(parts[0])));payload=JSON.parse(new TextDecoder().decode(encode(parts[1])))}catch{return null}
-  if(header.alg!=="RS256"||!header.kid||!payload.sub)return null;
-  const issuer="https://"+domain.replace(/^https?:\/\//,"").replace(/\/$/,"");
-  if(payload.iss!==issuer||!Array.isArray(payload.aud)||!payload.aud.includes(audience)||!Number.isFinite(payload.exp)||payload.exp<=Date.now()/1000||!Number.isFinite(payload.iat)||payload.iat>Date.now()/1000+60)return null;
-  const keysUrl=issuer+"/cdn-cgi/access/certs";
-  let keys;try{const response=await fetch(keysUrl);if(!response.ok)return null;keys=await response.json()}catch{return null}
-  const jwk=keys.keys?.find(k=>k.kid===header.kid&&k.kty==="RSA");if(!jwk)return null;
-  try{const key=await crypto.subtle.importKey("jwk",jwk,{name:"RSASSA-PKCS1-v1_5",hash:"SHA-256"},false,["verify"]);const valid=await crypto.subtle.verify("RSASSA-PKCS1-v1_5",key,encode(parts[2]),new TextEncoder().encode(parts[0]+"."+parts[1]));return valid?payload:null}catch{return null}
+ const jwt=request.headers.get("Cf-Access-Jwt-Assertion");
+ const domain=String(env.ACCESS_TEAM_DOMAIN||"").replace(/^https?:\/\//,"").replace(/\/$/,"");
+ const audience=env.ACCESS_AUD;
+ if(!jwt||!domain.endsWith(".cloudflareaccess.com")||!audience)return null;
+ const parts=jwt.split(".");
+ if(parts.length!==3||parts.some(p=>p.length>16000))return null;
+ let header,claims;
+ try{header=JSON.parse(new TextDecoder().decode(bytes(parts[0])));claims=JSON.parse(new TextDecoder().decode(bytes(parts[1])))}catch{return null}
+ if(header.alg!=="RS256"||typeof header.kid!=="string"||typeof claims.sub!=="string")return null;
+ const issuer="https://"+domain;
+ const now=Math.floor(Date.now()/1000);
+ const audiences=Array.isArray(claims.aud)?claims.aud:[claims.aud];
+ if(claims.iss!==issuer||!audiences.includes(audience)||!Number.isFinite(claims.exp)||claims.exp<=now||!Number.isFinite(claims.iat)||claims.iat>now+60||(claims.nbf!=null&&claims.nbf>now+60))return null;
+ try{
+  if(!cachedKeys||cachedKeys.issuer!==issuer||cachedKeys.expires<Date.now()){
+   const response=await fetch(issuer+"/cdn-cgi/access/certs");
+   if(!response.ok)return null;
+   const value=await response.json();
+   if(!Array.isArray(value.keys))return null;
+   cachedKeys={issuer,keys:value.keys,expires:Date.now()+300000};
+  }
+  const jwk=cachedKeys.keys.find(k=>k.kid===header.kid&&k.kty==="RSA");
+  if(!jwk)return null;
+  const key=await crypto.subtle.importKey("jwk",jwk,{name:"RSASSA-PKCS1-v1_5",hash:"SHA-256"},false,["verify"]);
+  const valid=await crypto.subtle.verify("RSASSA-PKCS1-v1_5",key,bytes(parts[2]),new TextEncoder().encode(parts[0]+"."+parts[1]));
+  return valid?claims:null;
+ }catch{return null}
+}
+const allowed=(identity,env)=>{
+ const mail=String(identity?.email||"").trim().toLowerCase();
+ const list=String(env.OPERATOR_EMAILS||"").split(",").map(x=>x.trim().toLowerCase()).filter(Boolean);
+ return mail&&list.includes(mail);
+};
+async function actorId(identity){
+ const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(identity.sub));
+ return Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,"0")).join("").slice(0,32);
+}
+async function recordAudit(db,actor,action,result,detail=""){
+ await db.prepare("INSERT INTO security_audit (actor,action,result,detail) VALUES (?1,?2,?3,?4)").bind(actor,action,result,detail).run();
+}
+async function consumeQuota(db,actor){
+ const now=Date.now();
+ for(const [window,bucket,maximum] of [["minute",Math.floor(now/60000),10],["day",Math.floor(now/86400000),100]]){
+  const row=await db.prepare("INSERT INTO ocr_usage (actor,window,bucket,used) VALUES (?1,?2,?3,1) ON CONFLICT(actor,window,bucket) DO UPDATE SET used=used+1 WHERE used < ?4 RETURNING used").bind(actor,window,bucket,maximum).first();
+  if(!row)return false;
+ }
+ return true;
 }
 export default {
  async fetch(request,env){
   const url=new URL(request.url);
   if(url.pathname==="/health")return json({ok:true,service:"selection-studio",hosting:"Cloudflare Pages",assets:"native"});
-  if(url.pathname==="/api/ocr"){
-   if(request.method!=="POST")return json({error:"Method not allowed"},405,{"Allow":"POST"});
-   if(!env.OCR_SERVICE_TOKEN||!env.ACCESS_TEAM_DOMAIN||!env.ACCESS_AUD)return json({error:"OCR service not configured"},503);
-   const identity=await verifyAccess(request,env);if(!identity)return json({error:"Unauthorized"},401);
-   const role=identity.custom?.role||identity.role||"operator";
-   if(!["admin","operator"].includes(role))return json({error:"Forbidden"},403);
-   const size=Number(request.headers.get("content-length")||0);
-   if(size>8*1024*1024)return json({error:"Payload too large"},413);
-   if(env.OCR_RATE_LIMITER){const limit=await env.OCR_RATE_LIMITER.limit({key:identity.sub});if(!limit.success)return json({error:"Rate limit exceeded"},429,{"Retry-After":"60"})}
-   const body=await request.arrayBuffer();if(body.byteLength>8*1024*1024)return json({error:"Payload too large"},413);
-   const upstream=new AbortController();const timer=setTimeout(()=>upstream.abort(),30000);
-   try{const response=await fetch(OCR_ORIGIN,{method:"POST",headers:{"Authorization":"Bearer "+env.OCR_SERVICE_TOKEN,"Content-Type":request.headers.get("content-type")||"application/octet-stream"},body,signal:upstream.signal,redirect:"error"});return new Response(response.body,{status:response.status,headers:{"Content-Type":response.headers.get("content-type")||"application/json","Cache-Control":"no-store","X-Content-Type-Options":"nosniff"}})}
-   catch{return json({error:"OCR upstream unavailable"},502)}
-   finally{clearTimeout(timer)}
+  if(url.pathname==="/api/session"||url.pathname==="/api/ocr"){
+   const isOcr=url.pathname==="/api/ocr";
+   const method=isOcr?"POST":"GET";
+   if(request.method!==method)return json({error:"Method not allowed"},405,{"Allow":method});
+   if(!env.ACCESS_TEAM_DOMAIN||!env.ACCESS_AUD||!env.OPERATOR_EMAILS)return json({error:"Identity not configured"},503);
+   const identity=await verifyAccess(request,env);
+   if(!identity)return json({error:"Unauthorized"},401);
+   if(!allowed(identity,env))return json({error:"Forbidden"},403);
+   if(!isOcr)return json({authenticated:true,role:"operator",email:identity.email});
+   if(!env.OCR_SERVICE_TOKEN||!env.SECURITY_DB)return json({error:"OCR is not configured"},503);
+   const actor=await actorId(identity);
+   try{
+    const permitted=await consumeQuota(env.SECURITY_DB,actor);
+    if(!permitted){
+     await recordAudit(env.SECURITY_DB,actor,"ocr","rate_limited");
+     return json({error:"Rate limit exceeded"},429,{"Retry-After":"60"});
+    }
+   }catch{return json({error:"Rate limit service unavailable"},503)}
+   if(!request.headers.get("content-type")?.toLowerCase().startsWith("application/json"))return json({error:"JSON required"},415);
+   const declared=Number(request.headers.get("content-length")||0);
+   if(!Number.isFinite(declared)||declared>8*1024*1024)return json({error:"Payload too large"},413);
+   const body=await request.arrayBuffer();
+   if(body.byteLength>8*1024*1024)return json({error:"Payload too large"},413);
+   try{await recordAudit(env.SECURITY_DB,actor,"ocr","started")}catch{return json({error:"Audit service unavailable"},503)}
+   const controller=new AbortController();
+   const timeout=setTimeout(()=>controller.abort(),90000);
+   try{
+    const upstream=await fetch(OCR_ORIGIN,{method:"POST",headers:{"Authorization":"Bearer "+env.OCR_SERVICE_TOKEN,"Content-Type":"application/json"},body,signal:controller.signal,redirect:"error"});
+    try{await recordAudit(env.SECURITY_DB,actor,"ocr",upstream.ok?"completed":"upstream_error",String(upstream.status))}catch{}
+    return new Response(upstream.body,{status:upstream.status,headers:{"Content-Type":upstream.headers.get("content-type")||"application/json","Cache-Control":"no-store","X-Content-Type-Options":"nosniff"}});
+   }catch{
+    try{await recordAudit(env.SECURITY_DB,actor,"ocr","failed")}catch{}
+    return json({error:"OCR upstream unavailable"},502);
+   }finally{clearTimeout(timeout)}
   }
   if(url.pathname.startsWith("/api/"))return json({error:"Unknown API endpoint"},404);
   if(url.pathname==="/ocr")return Response.redirect(url.origin+"/admin/ocr-studio.html",302);
