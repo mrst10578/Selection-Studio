@@ -177,6 +177,19 @@ $("closePreview").onclick=()=>$("previewDialog").close();
 $("printBtn").onclick=()=>{if(!verifyExport())return;buildPreview();if(!$("previewDialog").open)return;const el=$("printContainer");el.replaceChildren($("previewContent").cloneNode(true));$("previewDialog").close();window.print()};
 $("fontSize").oninput=()=>{$("fontSizeValue").textContent=digits($("fontSize").value)};
 async function blobToData(blob){return new Promise((res,rej)=>{const reader=new FileReader();reader.onload=()=>res(reader.result);reader.onerror=()=>rej(reader.error);reader.readAsDataURL(blob)})}
+$("sidecarExport").onclick=()=>{
+ const records=state.items.map((q,i)=>({
+  question_id:q.sourceName||null,
+  draft_id:q.id,
+  sequence:i+1,
+  typed_text:q.text,
+  reviewed:q.reviewed,
+  warnings:q.warnings,
+  figure_data:q.figure||null
+ }));
+ download(new Blob([JSON.stringify({schema:"selection-ocr-sidecar",version:1,canonical_metadata_unchanged:true,records},null,2)],{type:"application/json"}),"TestBank_Typed_Sidecar.json");
+ notice("فایل متادیتای تکمیلی مستقل صادر شد. برای ادغام رسمی، بازبینی و تطبیق شناسه‌ها لازم است.");
+};
 $("saveProject").onclick=()=>guarded(async()=>{const entries=[];for(const q of state.items){const blob=await getPreview(SOURCE_KEY+q.id);entries.push({...q,image:blob?await blobToData(blob):null})}download(new Blob([JSON.stringify({type:"selection-studio-ocr-draft",version:1,items:entries})],{type:"application/json"}),"Selection_OCR_Draft.json");notice("پیش‌نویس OCR به‌طور مستقل صادر شد.")});
 $("loadProject").onclick=()=>$("projectFile").click();
 $("projectFile").onchange=async e=>{const f=e.target.files?.[0];e.target.value="";if(!f)return;await guarded(async()=>{const project=JSON.parse(await f.text());if(project.type!=="selection-studio-ocr-draft"||!Array.isArray(project.items)||project.items.length>300)throw Error("فایل پروژه معتبر نیست.");const next=[];for(const q of project.items){const id=newId();if(q.image){if(!cleanImage(q.image))throw Error("فرمت تصویر نامعتبر است.");const blob=await (await fetch(q.image)).blob();await putPreview(SOURCE_KEY+id,blob)}next.push({id,title:String(q.title||""),text:String(q.text||""),reviewed:!!q.reviewed,warnings:Array.isArray(q.warnings)?q.warnings:[],figure:cleanImage(q.figure),sourceName:String(q.sourceName||"")})}state.items=next;state.selected=next[0]?.id||"";snapshot();notice("پروژه وارد شد.")})};
