@@ -291,3 +291,11 @@ body.atelier-studio .studio-recovery-banner button{min-height:32px;padding:5px 9
 @media(prefers-reduced-motion:reduce){
  .studio-shortcuts a,.studio-command-dialog,.studio-project-dialog{animation:none!important;transition:none!important}
 }
+/* ZH-72 cloud draft reconciliation: explicit choice, never silent overwrite */
+.studio-cloud-sync{display:grid;gap:9px;padding:15px;border:1px solid #426779;border-radius:13px;background:linear-gradient(125deg,#18313A,#152534)}
+.studio-cloud-sync>strong{font-size:.85rem;color:#D9F4ED}
+.studio-cloud-sync>p{margin:0;color:#B7CCDB;font-size:.77rem;line-height:1.8}
+.studio-cloud-sync .studio-cloud-controls{display:flex;gap:8px;flex-wrap:wrap}
+body.atelier-studio .studio-cloud-controls button{min-height:36px;padding:6px 10px;border-color:#476878;font-size:.72rem}
+.studio-cloud-sync .studio-cloud-warning{padding:11px 12px;border:1px solid #94734B;border-radius:10px;background:#3F3227;color:#FFE1AD}
+.studio-cloud-versions{display:grid;gap:7px;max-height:230px;overflow:auto}
