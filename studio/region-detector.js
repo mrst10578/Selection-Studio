@@ -24,7 +24,7 @@ export function detectInkBlocks(data,width,height,{maxCandidates=12}={}){
  if(!lines.length)return [];
  const sortedHeights=lines.map(([a,b])=>b-a+1).sort((a,b)=>a-b);
  const typical=sortedHeights[Math.floor(sortedHeights.length/2)];
- const breakGap=Math.max(15,Math.round(typical*2.8),Math.round(height*.017));
+ const breakGap=Math.max(12,Math.min(35,Math.round(typical*1.8)),Math.round(height*.015));
  const blocks=[];let start=lines[0][0],end=lines[0][1];
  for(const [a,b] of lines.slice(1)){
   if(a-end-1>breakGap){blocks.push([start,end]);start=a}
