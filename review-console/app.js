@@ -1,5 +1,6 @@
 import {ReviewModel,questionIssues,reviewStatusLabel} from './model.js';
 import {createLocalReviewApi} from './api.js';
+import {putPreview} from '../studio/preview-db.js';
 import {difficultyLabel,subjectLabel,gradeLabel} from '../studio/store.js';
 import {mountBiologyCombinationEditor} from '../studio/biology-combination.js';
 import {isTypingTarget,createCommandPalette,toast} from '../studio/ui-runtime.js';
@@ -239,6 +240,24 @@ function nextIndex(delta){
   openQuick(next);
 }
 $('#prevBtn').onclick=()=>nextIndex(-1);$('#nextBtn').onclick=()=>nextIndex(1);$('#quickClose').onclick=()=>$('#quickDialog').close();
+$('#openOcrStudio').onclick=async()=>{
+  if(quickIndex<0||!model.batch)return;
+  const q=model.batch.questions[quickIndex],button=$('#openOcrStudio');
+  button.disabled=true;button.textContent='در حال انتقال برش…';
+  try{
+    const blob=await api.source(model.batch.id,q.id,'question');
+    if(!blob?.type?.startsWith('image/'))throw Error('برش تصویری برای این سؤال موجود نیست.');
+    await putPreview('examforge:handoff',blob);
+    sessionStorage.setItem('selection-ocr-handoff-v1',JSON.stringify({
+      questionId:q.id,title:'سؤال '+q.source_question_number,sourceNumber:q.source_question_number
+    }));
+    window.location.assign('./ocr-studio.html');
+  }catch(e){
+    toast('امکان بازکردن در استودیوی بازتایپ نیست: '+e.message,'error');
+    button.disabled=false;button.textContent='بازتایپ و OCR این سؤال';
+  }
+};
+
 $('#quickUndoBtn').onclick=()=>{if(!model.undo()){toast('تغییری برای بازگردانی نیست.','ok');return}$('#quickDialog').close();openQuick(quickIndex)};
 document.querySelectorAll('[data-review-view]').forEach(button=>button.addEventListener('click',()=>{
   $('#quickViewers').dataset.activeView=button.dataset.reviewView;
