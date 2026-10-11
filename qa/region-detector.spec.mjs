@@ -141,7 +141,8 @@ test.describe('ZH-74 deterministic segmentation and operator review',()=>{
    const queue=createCropQueue({question,answer,switchPane:()=>{},onNotice:()=>{},onChange:()=>{}});
    window.__regionQueue={question,answer,queue};
   });
-  const cropUi=page.locator('#questionPane .studio-crop-queue').last();
+  // New queue is inserted immediately after the toolbar, before the original app queue.
+  const cropUi=page.locator('#questionPane .studio-crop-queue').first();
   await cropUi.getByRole('button',{name:'پیشنهاد کادرها'}).click();
   const dialog=page.locator('.studio-region-review');
   await expect(dialog).toBeVisible();
