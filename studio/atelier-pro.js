@@ -1,3 +1,4 @@
+import {installCloudDraftSync} from './cloud-draft.js';
 /* Ember Atelier Pro: a progressive enhancement layer. Native question/crop logic
    remains owned by app.js; this module never stores PDF bytes or credentials. */
 const $=selector=>document.querySelector(selector);
@@ -35,6 +36,7 @@ const formSnapshot=()=>Object.fromEntries(fields.map(el=>[el.id,el.value]));
 const stateString=()=>JSON.stringify(formSnapshot());
 let history=[],historyIndex=0,applying=false,saveTimer=null,conflicted=false,lastStored='';
 let draftNotice,sidebar,sidebarCount,sidebarProgress,sidebarRecent,projectsButton,inspectorButton,commandButton;
+let cloudSync=null;
 
 function applyLayout(persist=true){
  if(!workspace)return;
@@ -268,7 +270,7 @@ function saveDraft(){
  clearTimeout(saveTimer);
  if(conflicted){setDraftStatus('تعارض بین دو تب؛ برای تصمیم‌گیری داشبورد را باز کن.','warning');return}
  const payload={version:3,savedAt:Date.now(),fields:formSnapshot()};
- if(storage.set(draftKey,payload)){lastStored=JSON.stringify(payload);setDraftStatus('پیش‌نویس محلی ذخیره شد','ok')}
+ if(storage.set(draftKey,payload)){lastStored=JSON.stringify(payload);setDraftStatus('پیش‌نویس محلی ذخیره شد','ok');cloudSync?.schedule()}
  else setDraftStatus('ذخیره محلی در دسترس نیست','warning');
 }
 function registerChange(){
@@ -339,6 +341,7 @@ function renderProjectDashboard(){
  for(const item of records){const key=String(item.exam_id||'بدون شناسه آزمون');groups.set(key,(groups.get(key)||0)+1)}
  const headline=create('div','studio-dashboard-hero');headline.append(create('span','studio-overline','LOCAL PROJECT OVERVIEW'),create('strong','',`${records.length} سؤال در ${groups.size} آزمون`),create('p','','اطلاعات این داشبورد فقط روی همین دستگاه هستند. تصاویر و PDFها در این خروجی JSON قرار نمی‌گیرند.'));
  projectContent.append(headline);
+ const cloud=create('section','studio-cloud-sync');projectContent.append(cloud);cloudSync?.render(cloud);
  const area=create('div','studio-project-grid');
  if(!groups.size)area.append(create('p','studio-no-records','پروژه‌ای برای نمایش وجود ندارد.'));
  for(const [key,count] of groups){const row=create('article','studio-project-card');row.append(create('strong','',key),create('small','',`${count} سؤال ذخیره‌شده`));area.append(row)}
@@ -376,3 +379,4 @@ function installProjectDashboard(){
  projectDialog.addEventListener('click',e=>{if(e.target===projectDialog)projectDialog.close()});
 }
 installPalette();installProjectDashboard();installSidebar();installViewerToolbar();installDrafts();
+cloudSync=installCloudDraftSync({getFields:formSnapshot,applyFields:applyForm,getLocal:()=>storage.get(draftKey),onStatus:setDraftStatus,onApplied:()=>{history=[stateString()];historyIndex=0;updateHistoryButtons();saveDraft();}});
