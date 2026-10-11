@@ -1,18 +1,35 @@
-# Foundation release gate (ZH-64 through ZH-68)
+# Selection Studio Cloudflare production foundation (ZH-64 .. ZH-68)
 
-## ZH-64 Native Pages
-Static files are copied into root, /studio and /admin. The advanced-mode Worker uses ASSETS directly; no GitHub Pages origin proxy. Validate paths and PDF loading on a preview deployment.
+## What is provisioned (Zh2 account)
 
-## ZH-65 CI and rollback
-Pull requests build and run regression checks, without deploying production. A main-branch push deploys the validated artifact. Roll back by reverting the bad commit and rerunning the workflow, or promoting a previously validated Pages deployment through the Cloudflare dashboard. **Neither rollback route is automated or tested yet.**
+- Zero Trust organization: `Selection Studio Zh2`, auth domain `blue-shadow-a981.cloudflareaccess.com`.
+- OTP email identity provider: `d9fd3d2d-3e9c-4fa4-a5a7-21c7e1849d7d`.
+- Self-hosted Access application `Selection Studio Operators`, domain `selection-studio-e1c.pages.dev`, app id `25b8d99f-32c8-4bf5-b7de-2ea399eda4ab`, audience `b8242a004bf471634c5245dc720d3e9395e2d748d04ce8438d26038e458895ad`.
+- Access policy `Owner operator` allows only the linked Zh2 operator email. Never replace with an Everyone or Bypass policy.
+- Cloudflare Pages project `selection-studio` configured with `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD` and `OPERATOR_EMAILS` as environment variables for production and preview.
+- D1 database `selection-studio-security`, id `ae03b8c4-2b05-4f3e-9d3d-151ae77c0dbc`, bound as `SECURITY_DB` in both environments. Schema in `cloudflare/schema-security.sql` was applied via Cloudflare D1 API. D1 records contain pseudonymous actor hashes, quotas and event status; no question images or raw text.
 
-## ZH-66 Access-protected OCR
-Configure Cloudflare Access application on /api/* with allowed identities. Set Pages secrets OCR_SERVICE_TOKEN, ACCESS_TEAM_DOMAIN (for example, team.cloudflareaccess.com), ACCESS_AUD (Access application audience). The Pages Worker validates the Access JWT signature using the team's published public keys, issuer, audience and expiry. It never trusts a browser-supplied upstream token. Restrict the upstream OCR Worker to requests authenticated with its separate service token; otherwise the direct upstream hostname may bypass this gateway. Optional OCR_RATE_LIMITER binding provides per-identity rate limiting; **without it there is no application rate limit**. Role defaults to operator for authenticated Access users, so configure Access policy to restrict membership accordingly.
+**Deployment state**: Configured resources exist, but PR #45 remains unmerged and the new Worker/UI must still be deployed and browser-tested. Existing production Pages artifact is unchanged.
 
-## ZH-67 OCR QA
-Automated tests currently cover native routing, health, error handling and fail-closed authentication. Real Persian scans, mathematical formulas, PDF end-to-end, latency, timeout, size limits and upstream token interoperability **still require integration tests with test assets and configured Cloudflare credentials**.
+## Routing and policy
 
-## ZH-68 Security and observability
-The legacy studio/operator-auth.js contains client-only demo login and MUST NOT be treated as authorization. Protect the entire operator UI using Cloudflare Access before production use. Audit logs, RBAC claims provisioned by a trusted identity source, rate limiting bindings, AI cost budgets, alerting and recovery drills remain release blockers.
+- GitHub Actions builds the same native Pages asset tree for `/`, `/studio/`, `/admin/`. Worker serves native `env.ASSETS` (no GitHub Pages proxy).
+- `GET /health`: operational routing status.
+- `GET /api/session`: validates Cloudflare Access JWT signature, issuer, audience, expiry, and operator email allowlist.
+- `POST /api/ocr`: only for verified session, JSON, up to 8 MiB. Uses D1 quota windows (10/minute, 100/day per actor) and an audit log; **missing binding, audit failure or upstream token => fail closed**. Upstream token never reaches client JavaScript.
+- Operator and admin UI use verified /api/session. OCR console uses same-origin /api/ocr. Client-side login state alone does not authorize access.
 
-**Production gate: DO NOT mark ZH-64..ZH-68 complete or merge/deploy until real browser tests, Access policy, secret bindings, OCR upstream verification and monitoring have passed.**
+## Outstanding production blockers
+
+1. **OCR upstream secret**: Upstream `examforge-free-ocr` currently contains an existing encrypted secret named `ACCESS_TOKEN`. Its value cannot be read from Cloudflare by design. Do not rotate it silently: that can break other clients. A coordinated rotation or separately provisioned credential is needed before `OCR_SERVICE_TOKEN` is set on Pages.
+2. **Upstream direct access**: Verify the OCR Worker strictly enforces its own bearer token; otherwise a direct URL could bypass the gateway.
+3. Test the OTP flow in a real authenticated browser, and check whether preview branch hostnames receive equivalent Access protection.
+4. Run the full existing CI, native Workers/Pages preview smoke tests, PDF rendering, Persian text and LaTeX OCR fixtures, permissions and quota tests.
+5. Configure operational notifications, audit pruning (30-day suggested retention), AI cost controls and a rollback rehearsal. Periodic pruning SQL is in the schema comments.
+6. GitHub Actions production secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` are required for a main-branch deployment.
+
+## Rollback
+
+Revert the defective commit on `main` and rerun the validated Pages deployment, or promote the previously verified Pages production deployment from Cloudflare dashboard. No rollback drill has yet been performed.
+
+Do **not** mark ZH-64..ZH-68 complete or merge before checking the outstanding release gates.
