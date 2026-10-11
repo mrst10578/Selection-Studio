@@ -14,7 +14,7 @@ async function waitForStudioBoot(page){
   const splash=page.locator("#bootSplash");
   await expect(splash).toHaveCount(1);
   if(await splash.isVisible())await expect(splash).toBeHidden({timeout:1800});
-  await expect(page.locator("#operatorLogin")).toBeVisible();
+  await expect(page.locator("#operatorLogin")).toBeHidden({timeout:3500});
 }
 
 function contrastRatio(a,b){
@@ -28,14 +28,9 @@ function contrastRatio(a,b){
 }
 
 test.describe("Selection Studio",()=>{
-  test("operator workbench requires temporary operator login",async({page})=>{
+  test("operator workbench requires server-verified Access session",async({page})=>{
     await page.goto("/studio/");
     await waitForStudioBoot(page);
-    await page.locator("#operatorUsername").fill("admin");
-    await page.locator("#operatorPassword").fill("admin");
-    await page.locator("#operatorLoginForm").press("Enter");
-    await expect(page.locator("#operatorLogin")).toHaveClass(/auth-success/);
-    await expect(page.locator("#operatorLoginSubmit")).toHaveText("ورود موفق");
     await expect(page.locator("#operatorLogin")).toBeHidden({timeout:2500});
     await expect(page.locator(".topbar h1")).toHaveText("Selection Studio");
     await expect(page.locator('.topbar nav a[href*="admin"]')).toHaveCount(0);
@@ -117,9 +112,6 @@ test.describe("Selection Studio",()=>{
   test("exam date starts at month, keeps 1405 fixed, and jumps to day after two digits",async({page})=>{
     await page.goto("/studio/");
     await waitForStudioBoot(page);
-    await page.locator("#operatorUsername").fill("admin");
-    await page.locator("#operatorPassword").fill("admin");
-    await page.locator("#operatorLoginForm").press("Enter");
     await expect(page.locator("#operatorLogin")).toBeHidden({timeout:2500});
 
     await page.locator("#examDateField").click({position:{x:8,y:8}});
@@ -189,9 +181,6 @@ test.describe("Selection Studio",()=>{
     await page.setViewportSize({width:390,height:844});
     await page.goto("/studio/");
     await waitForStudioBoot(page);
-    await page.locator("#operatorUsername").fill("admin");
-    await page.locator("#operatorPassword").fill("admin");
-    await page.locator("#operatorLoginForm").press("Enter");
     await expect(page.locator("#qCropLock")).toBeVisible();
     await expect(page.locator("#qCropLock")).toHaveAttribute("aria-pressed","false");
     await expect(page.locator("#qCropLock svg")).toHaveCount(1);
@@ -212,9 +201,6 @@ test.describe("Selection Studio",()=>{
     await page.setViewportSize({width:820,height:900});
     await page.goto("/studio/");
     await waitForStudioBoot(page);
-    await page.locator("#operatorUsername").fill("admin");
-    await page.locator("#operatorPassword").fill("admin");
-    await page.locator("#operatorLoginForm").press("Enter");
     await expect(page.locator("#operatorLogin")).toBeHidden({timeout:2500});
     await expect(page.locator("#qStage")).toHaveClass(/mobile-browse-mode/);
     await expect(page.locator("#qCropLock")).toBeVisible();
@@ -226,9 +212,6 @@ test.describe("Selection Studio",()=>{
     await page.setViewportSize({width:360,height:800});
     await page.goto("/studio/");
     await waitForStudioBoot(page);
-    await page.locator("#operatorUsername").fill("admin");
-    await page.locator("#operatorPassword").fill("admin");
-    await page.locator("#operatorLoginForm").press("Enter");
     await expect(page.locator("#operatorLogin")).toBeHidden({timeout:2500});
     await expect(page.locator("#qCropLock")).toBeVisible();
     await expect(page.locator(".theme-toggle")).toHaveCount(0);
@@ -268,9 +251,6 @@ test.describe("Selection Studio",()=>{
   test("Windows Hotkeys panel replaces inline shortcut guide",async({page})=>{
     await page.goto("/studio/");
     await waitForStudioBoot(page);
-    await page.locator("#operatorUsername").fill("admin");
-    await page.locator("#operatorPassword").fill("admin");
-    await page.locator("#operatorLoginForm").press("Enter");
     await expect(page.locator(".shortcut-card")).toHaveCount(0);
     await expect(page.locator("#hotkeysLauncher")).toHaveText("میانبرها");
     if((page.viewportSize()?.width||0)<=600){
@@ -340,10 +320,7 @@ test.describe("Review Console",()=>{
       localStorage.setItem("testbank-studio.records.v1",JSON.stringify(records));
     });
     await page.goto("/review-console/");
-    await expect(page.locator("#loginView h1")).toHaveText("مدیریت بانک تست");
-    await page.locator("#adminUsername").fill("admin");
-    await page.locator("#adminPassword").fill("admin");
-    await page.locator("#adminLoginForm").press("Enter");
+    await expect(page.locator("#appView")).toBeVisible({timeout:3500});
     await expect(page.locator("#loginView")).toBeHidden({timeout:2500});
     await expect(page.locator("#appView")).toBeVisible();
     await expect(page.locator(".back-link")).toHaveCount(0);
@@ -371,9 +348,6 @@ test.describe("Review Console",()=>{
       localStorage.setItem("testbank-studio.records.v1",JSON.stringify(questions));
     });
     await page.goto("/review-console/");
-    await page.locator("#adminUsername").fill("admin");
-    await page.locator("#adminPassword").fill("admin");
-    await page.locator("#adminLoginForm").press("Enter");
     await expect(page.locator("#appView")).toBeVisible({timeout:2500});
     await page.locator('[data-subject="PHY"]').click();
     await page.locator(".operator-item").click();
