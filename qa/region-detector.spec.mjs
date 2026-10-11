@@ -50,6 +50,22 @@ test.describe('ZH-74 deterministic segmentation and operator review',()=>{
   expect(actual.wrongInput).toEqual([]);
   expect(actual.unaligned.every(x=>x.kind!=='option')).toBe(true);
  });
+ test('recognizes a conservative right-to-left two-column option grid',async({page})=>{
+  await openStudio(page);
+  const result=await page.evaluate(async()=>{
+   const {detectQuestionLayout}=await import('/studio/region-detector.js');
+   const canvas=document.createElement('canvas');canvas.width=600;canvas.height=800;
+   const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,600,800);ctx.fillStyle='#151515';
+   // Two right-aligned question lines, followed by two rows with two separated option cells.
+   [[85,100,430],[90,121,425],[50,142,135],[390,142,135],[52,163,134],[388,163,137]]
+    .forEach(([x,y,w])=>ctx.fillRect(x,y,w,10));
+   const {data}=ctx.getImageData(0,0,600,800);
+   return detectQuestionLayout(data,600,800);
+  });
+  expect(result.map(x=>x.kind)).toEqual(['question','option','option','option','option']);
+  expect(result[1].bbox_norm[0]).toBeGreaterThan(result[2].bbox_norm[0]);
+  expect(result[3].bbox_norm[0]).toBeGreaterThan(result[4].bbox_norm[0]);
+ });
  test('manual coordinates are validated, options remain unchecked until operator approval',async({page})=>{
   await openStudio(page);
   const candidates=await createFixture(page);
