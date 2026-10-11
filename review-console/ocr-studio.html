@@ -50,12 +50,7 @@
   </section>
   <aside class="ocr-panel ocr-settings" aria-label="خروجی و تنظیمات">
     <h2>اتصال هوش مصنوعی</h2>
-    <p class="ocr-note">مدل Gemma 4 روی Cloudflare اکانت Zh #2. کلید هرگز در سورس یا پروژه ذخیره نمی‌شود.</p>
-    <label class="ocr-label" for="accessFile">خواندن فایل دسترسی خصوصی</label><input id="accessFile" type="file" accept=".txt,text/plain">
-    <label class="ocr-label" for="accessToken">توکن دسترسی</label><input id="accessToken" type="password" autocomplete="off" spellcheck="false" placeholder="فقط در حافظه همین صفحه">
-    <details><summary>آدرس Worker</summary><label class="ocr-label" for="workerEndpoint">نشانی API</label><input id="workerEndpoint" dir="ltr" value="https://examforge-free-ocr.zh-st-2.workers.dev/ocr"></details>
-    <hr>
-    <h2>قالب یکدست همه سؤال‌ها</h2>
+    <p class="ocr-note">درخواست بازشناسی از مسیر امن همین سایت ارسال می‌شود. ورود و دسترسی با Cloudflare Access کنترل می‌شود و نیازی به واردکردن کلید شخصی نیست.</p>
     <label class="ocr-label" for="bankTitle">عنوان جزوه</label><input id="bankTitle" value="بانک تست">
     <label class="ocr-label" for="fontFamily">فونت متن</label><select id="fontFamily"><option value="Tahoma">Tahoma</option><option value="Arial">Arial</option><option value="serif">Serif</option></select>
     <label class="ocr-label" for="fontSize">اندازه فونت</label><output id="fontSizeValue" for="fontSize">۱۷</output><input id="fontSize" type="range" min="13" max="24" value="17">
