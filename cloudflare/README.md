@@ -50,3 +50,9 @@ D1 schema definitions are in `cloudflare/schema-security.sql`; the two added dra
 The UI includes list navigation, removal, clear-all, zoom, touch-safe tab switching and a temporary composite preview. Queues remain in memory and clear only after a successful question save or successfully loading a different PDF. A failed replacement does not erase previous selections. PDF binaries and in-memory crop queues are intentionally not synchronized between devices. Operator still needs the original PDF on the target device.
 
 The review/export consumers should be inspected before release to ensure they preserve and display multi-region metadata correctly. Live OCR, release verification and cross-device browser trials are deferred to the final acceptance phase by agreement.
+
+## Experimental operator-approved PDF region suggestions (ZH-74)
+
+`studio/region-detector.js` analyzes a downsampled canvas copy (maximum 700×1000 px) locally, finding dark text bands separated by whitespace and returning normalized candidate boxes. No image leaves the browser; no Workers AI request or OCR budget is consumed. Suggestions are never written automatically. The operator can inspect an individual suggestion or explicitly add the proposed boxes to the pending crop queue, then correct them with existing crop controls.
+
+This heuristic is designed as a **low-risk first pass, not a validated AI question detector**. It can merge dense questions, split headings incorrectly, and miss two-column arrangements or images. It requires actual Persian workbook/answer key QA before this issue can be marked complete.
