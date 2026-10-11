@@ -8,7 +8,7 @@
 - Access policy `Owner operator` allows only the linked Zh2 operator email. Never replace with an Everyone or Bypass policy.
 - Separate preview Access application protects `*.selection-studio-e1c.pages.dev`, app id `22a13d6b-437c-4ac0-912b-d04623d78e37`, audience `68959c2d712413dd855eb4b8c44284eb4b3955f8d3469f48368a6b9cf50e8abf`, with an email allow policy.
 - Cloudflare Pages project `selection-studio` configured with `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD` and `OPERATOR_EMAILS` for production and preview. **Preview uses the distinct preview Access audience**, not the production audience.
-- D1 database `selection-studio-security`, id `ae03b8c4-2b05-4f3e-9d3d-151ae77c0dbc`, bound as `SECURITY_DB` in both environments. Schema in `cloudflare/schema-security.sql` was applied via Cloudflare D1 API. D1 records contain pseudonymous actor hashes, quotas and event status; no question images or raw text.
+- Separate D1 databases prevent preview traffic from consuming production quotas: production `selection-studio-security` (`ae03b8c4-2b05-4f3e-9d3d-151ae77c0dbc`), preview `selection-studio-security-preview` (`241ef565-d9ea-4d5a-b70e-4c115e0e185d`), each bound as `SECURITY_DB`. Schema in `cloudflare/schema-security.sql` was applied through the Cloudflare D1 API. Logs retain pseudonymous actor hashes and event status, not image contents.
 
 **Deployment state**: Configured resources exist, but PR #45 remains unmerged and the new Worker/UI must still be deployed and browser-tested. Existing production Pages artifact is unchanged.
 
@@ -17,7 +17,7 @@
 - GitHub Actions builds the same native Pages asset tree for `/`, `/studio/`, `/admin/`. Worker serves native `env.ASSETS` (no GitHub Pages proxy).
 - `GET /health`: operational routing status.
 - `GET /api/session`: validates Cloudflare Access JWT signature, issuer, audience, expiry, and operator email allowlist.
-- `POST /api/ocr`: only for verified session, JSON, up to 8 MiB. Uses D1 quota windows (10/minute, 100/day per actor) and an audit log; **missing binding, audit failure or upstream token => fail closed**. Upstream token never reaches client JavaScript.
+- `POST /api/ocr`: only for verified session, JSON, up to 8 MiB. Uses D1 quota windows (10/minute, 100/day per actor, **30/day global** via `OCR_GLOBAL_DAILY_LIMIT`) and an audit log; **missing binding, audit failure or upstream token => fail closed**. Upstream token never reaches client JavaScript.
 - Operator and admin UI use verified /api/session. OCR console uses same-origin /api/ocr. Client-side login state alone does not authorize access.
 
 ## Outstanding production blockers
