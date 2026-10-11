@@ -117,6 +117,49 @@ test.describe('ZH-74 deterministic segmentation and operator review',()=>{
   expect(result.accepted).toBeUndefined();
   expect(result.reviewed).toEqual({page:2,bbox_norm:[.1,.1,.6,.5]});
  });
+ test('real queue only receives explicitly approved boxes and rejects stale PDF suggestions',async({page})=>{
+  await openStudio(page);
+  await page.evaluate(async()=>{
+   const {createCropQueue}=await import('/studio/crop-queue.js');
+   const canvas=document.createElement('canvas');canvas.width=600;canvas.height=800;
+   const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,600,800);ctx.fillStyle='#111';
+   [[80,100,440],[92,121,428],[190,142,330],[210,163,310],[200,184,320],[175,205,345]]
+    .forEach(([x,y,w])=>ctx.fillRect(x,y,w,10));
+   const fake=()=>({
+    canvas,page:1,documentGeneration:1,readyFrame:{renderSeq:5},
+    region:null,pdf:{numPages:3},zoom:1,loading:false,rendering:false,
+    isRenderReady(){return true},
+    isRegionReady(){return !!this.region},
+    isRegionLocked(){return false},
+    setRegionLocked(){},
+    clearRegion(){this.region=null},
+    async setRegion(r){this.region=r?structuredClone(r):null},
+    async go(n){this.page=n;return true},
+    async setZoom(z){this.zoom=z;return z}
+   });
+   const question=fake(),answer=fake();
+   const queue=createCropQueue({question,answer,switchPane:()=>{},onNotice:()=>{},onChange:()=>{}});
+   window.__regionQueue={question,answer,queue};
+  });
+  const cropUi=page.locator('#questionPane .studio-crop-queue').last();
+  await cropUi.getByRole('button',{name:'پیشنهاد کادرها'}).click();
+  const dialog=page.locator('.studio-region-review');
+  await expect(dialog).toBeVisible();
+  expect(await page.evaluate(()=>window.__regionQueue.queue.selections('question').length)).toBe(0);
+  await dialog.getByRole('checkbox',{name:'انتخاب متن احتمالی سؤال'}).check();
+  await dialog.getByRole('checkbox',{name:'انتخاب گزینه احتمالی ۱'}).check();
+  await dialog.getByRole('button',{name:'افزودن کادرهای تأییدشده'}).click();
+  await expect(dialog).toBeHidden();
+  expect(await page.evaluate(()=>window.__regionQueue.queue.selections('question').length)).toBe(2);
+  await cropUi.getByRole('button',{name:'پیشنهاد کادرها'}).click();
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('checkbox',{name:'انتخاب گزینه احتمالی ۲'}).check();
+  await page.evaluate(()=>{window.__regionQueue.question.documentGeneration=2});
+  await dialog.getByRole('button',{name:'افزودن کادرهای تأییدشده'}).click();
+  await expect(dialog).toBeVisible();
+  expect(await page.evaluate(()=>window.__regionQueue.queue.selections('question').length)).toBe(2);
+  await dialog.getByRole('button',{name:'انصراف'}).click();
+ });
  test('mobile review stays within viewport with touch-reachable actions',async({page},testInfo)=>{
   test.skip(!testInfo.project.name.includes('mobile'),'Mobile geometry');
   await openStudio(page);
