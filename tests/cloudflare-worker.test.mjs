@@ -104,5 +104,10 @@ test("authenticated OCR enforces D1 quota and records audit before inference",as
   assert.equal(upstreamCalls,10);
   assert.equal(audit.filter(row=>row[2]==="started").length,10);
   assert.equal(audit.filter(row=>row[2]==="rate_limited").length,1);
+  counters.clear();upstreamCalls=0;
+  const tight={...e,OCR_GLOBAL_DAILY_LIMIT:"1"};
+  assert.equal((await worker.fetch(signed(),tight)).status,200);
+  assert.equal((await worker.fetch(signed(),tight)).status,429);
+  assert.equal(upstreamCalls,1);
  }finally{globalThis.fetch=prior}
 });
