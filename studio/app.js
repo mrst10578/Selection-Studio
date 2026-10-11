@@ -4,6 +4,7 @@ import {
 } from "./store.js";
 import {putPreview} from "./preview-db.js";
 import {PdfCropper,validRegion} from "./pdf-crop.js";
+import {createCropQueue} from "./crop-queue.js";
 import {isTypingTarget,toast} from "./ui-runtime.js";
 import "./operator-auth.js";
 import {installWindowsMetadataShortcuts} from "./windows-shortcuts.js";
@@ -227,6 +228,7 @@ function switchPane(name){
 }
 $("questionTab").onclick=()=>switchPane("question");
 $("answerTab").onclick=()=>switchPane("answer");
+const cropQueue=createCropQueue({question:qCrop,answer:aCrop,switchPane,onNotice:message=>toast(message)});
 
 function setSegmented(target,value){
   $(target).value=value?String(value):"";
@@ -367,12 +369,12 @@ $("questionForm").addEventListener("submit",async e=>{
   renderGate();
   const source=sourceQuestionNumber(),id=buildQuestionId(exam.id,source);
   try{
-    const [qCapture,aCapture]=await Promise.all([qCrop.captureCrop(),aCrop.captureCrop()]);
+    const [qCapture,aCapture]=await Promise.all([cropQueue.capture("question"),cropQueue.capture("answer")]);
     const visualHash=await qCrop.visualHash(qCapture.blob);
     const record={
       id,exam_id:exam.id,source_question_number:source,subject:$("subject").value,grade:Number($("grade").value),
       chapter:$("chapter").value,unit:$("unit").value,difficulty:$("difficulty").value,correct_option:Number($("correctOption").value),
-      question_regions:[qCapture.region],answer_regions:[aCapture.region],visual_hash:visualHash,
+      question_regions:qCapture.regions,answer_regions:aCapture.regions,visual_hash:visualHash,
       biology_combination:$("subject").value==="BIO"?biologyEditor.getValue():null,status:"draft",review_status:"pending",
       entered_by:$("operator").value.trim(),created_at:new Date().toISOString()
     };
@@ -380,7 +382,7 @@ $("questionForm").addEventListener("submit",async e=>{
     records.push(record);
     saveRecords(records);
     $("sourceNumber").value=String(source+1);
-    qCrop.setRegionLocked(false);aCrop.setRegionLocked(false);qCrop.clearRegion();aCrop.clearRegion();setSegmented("difficulty","");setSegmented("correctOption","");biologyEditor.reset();switchPane("question");
+    qCrop.setRegionLocked(false);aCrop.setRegionLocked(false);qCrop.clearRegion();aCrop.clearRegion();cropQueue.reset();setSegmented("difficulty","");setSegmented("correctOption","");biologyEditor.reset();switchPane("question");
     renderRecent();
     toast(`سؤال ${source} ثبت شد · ${activeRecords().length} سؤال در فهرست`,"ok");
   }catch(error){
