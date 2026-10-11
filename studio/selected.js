@@ -60,8 +60,8 @@ function missing(record){
   if(!record.unit)out.push(record.subject==="BIO"?"گفتار":"مبحث");
   if(!["level_1","level_2","level_3","level_4","level_5"].includes(record.difficulty))out.push("سطح سؤال");
   if(![1,2,3,4].includes(Number(record.correct_option)))out.push("کلید");
-  if(!validRegion(record.question_regions?.[0]))out.push("برش سؤال");
-  if(!validRegion(record.answer_regions?.[0]))out.push("برش پاسخ");
+  if(!Array.isArray(record.question_regions)||!record.question_regions.length||record.question_regions.some(region=>!validRegion(region)))out.push("برش سؤال");
+  if(!Array.isArray(record.answer_regions)||!record.answer_regions.length||record.answer_regions.some(region=>!validRegion(region)))out.push("برش پاسخ");
   if(record.subject==="BIO"){
     out.push(...biologyIssues({
       subject:"BIO",
