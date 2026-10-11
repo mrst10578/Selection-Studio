@@ -3,6 +3,47 @@ import {test,expect} from "@playwright/test";
 async function openStudio(page){await page.goto("/studio/");await expect(page.locator(".studio-crop-queue").first()).toBeVisible()}
 
 test.describe("ZH-73 multi-crop and navigation",()=>{
+ test("clearing a completed question removes all memorized page regions",async({page})=>{
+  await openStudio(page);
+  const result=await page.evaluate(async()=>{
+   const {PdfCropper}=await import("/studio/pdf-crop.js");
+   const crop=Object.create(PdfCropper.prototype);
+   crop.page=2;
+   crop.region={page:2,bbox_norm:[.1,.1,.4,.4]};
+   crop.regionsByPage=new Map([[1,{page:1,bbox_norm:[.1,.1,.4,.4]}],[2,crop.region]]);
+   crop.regionLocked=false;crop.drag={start:{}};
+   crop.box={classList:{add(){}}};
+   let updateCount=0;crop.onChange=()=>{updateCount++};
+   const cleared=crop.clearAllRegions();
+   return{cleared,region:crop.region,size:crop.regionsByPage.size,drag:crop.drag,updateCount};
+  });
+  expect(result).toEqual({cleared:true,region:null,size:0,drag:null,updateCount:1});
+ });
+ test("PageUp/PageDown navigate PDF only when focus is outside an editor",async({page})=>{
+  await openStudio(page);
+  const result=await page.evaluate(async()=>{
+   const {createCropQueue}=await import("/studio/crop-queue.js");
+   const make=()=>({
+    pdf:{numPages:5},page:1,region:null,loading:false,rendering:false,zoom:1,
+    isRenderReady:()=>true,isRegionReady:()=>false,isRegionLocked:()=>false,
+    async setZoom(v){this.zoom=v;return v},
+    async go(value){this.page=Math.min(5,Math.max(1,value));return true}
+   });
+   const question=make(),answer=make();
+   createCropQueue({question,answer,switchPane:()=>{}});
+   document.body.focus();
+   document.body.dispatchEvent(new KeyboardEvent("keydown",{key:"PageDown",bubbles:true,cancelable:true}));
+   const afterNext=question.page;
+   const provider=document.getElementById("provider");provider.focus();
+   provider.dispatchEvent(new KeyboardEvent("keydown",{key:"PageDown",bubbles:true,cancelable:true}));
+   const afterEditing=question.page;
+   provider.blur();
+   document.body.dispatchEvent(new KeyboardEvent("keydown",{key:"PageUp",bubbles:true,cancelable:true}));
+   return{afterNext,afterEditing,afterPrevious:question.page};
+  });
+  expect(result).toEqual({afterNext:2,afterEditing:2,afterPrevious:1});
+ });
+
  test("saved queue satisfies real question gate and stores multiple normalized regions",async({page},testInfo)=>{
   test.skip(!testInfo.project.name.startsWith("desktop"),"Desktop pointer interaction with stub PDF renderer");
   await page.setContent('<!doctype html><html><body style="padding:48px;font-size:30px">Question 1: demo mathematics and science<br><br>Answer 1: explanation</body></html>');
