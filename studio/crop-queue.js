@@ -36,7 +36,15 @@ export function createCropQueue({question,answer,switchPane,onNotice=()=>{},onCh
    const jump=document.createElement('button');jump.type='button';jump.textContent='برش '+(index+1)+' · صفحه '+item.page;
    jump.title='بازکردن محدوده ثبت‌شده';jump.addEventListener('click',()=>{void activate(kind,item)});
    const remove=document.createElement('button');remove.type='button';remove.className='studio-chip-remove';remove.textContent='×';
-   remove.setAttribute('aria-label','حذف برش '+(index+1));remove.addEventListener('click',()=>{queued[kind].splice(index,1);update(kind);changed()});
+   remove.setAttribute('aria-label','حذف برش '+(index+1));remove.addEventListener('click',()=>{
+    queued[kind].splice(index,1);
+    const crop=current(kind),region=crop.region;
+    if(region&&Number(region.page)===Number(item.page)&&JSON.stringify(region.bbox_norm)===JSON.stringify(item.bbox_norm)){
+     if(crop.isRegionLocked())crop.setRegionLocked(false);
+     crop.clearRegion();
+    }
+    update(kind);changed();
+   });
    const up=document.createElement('button');up.type='button';up.textContent='↑';up.disabled=index===0;up.setAttribute('aria-label','بالا بردن برش '+(index+1));up.addEventListener('click',()=>shift(kind,index,-1));
    const down=document.createElement('button');down.type='button';down.textContent='↓';down.disabled=index===items.length-1;down.setAttribute('aria-label','پایین بردن برش '+(index+1));down.addEventListener('click',()=>shift(kind,index,1));
    group.append(jump,up,down,remove);list.append(group);
@@ -66,10 +74,16 @@ export function createCropQueue({question,answer,switchPane,onNotice=()=>{},onCh
   const crop=current(kind),regions=selections(kind);
   if(!regions.length||!crop.isRenderReady())throw Error('PDF_CROP_NOT_READY');
   if(regions.length===1){
-   if(crop.page!==Number(regions[0].page))await crop.go(Number(regions[0].page));
-   await crop.setRegion(regions[0]);
-   const captured=await crop.captureCrop();
-   return {...captured,regions};
+   const original=structuredClone(crop.region),originalPage=crop.page;
+   try{
+    if(crop.page!==Number(regions[0].page))await crop.go(Number(regions[0].page));
+    await crop.setRegion(regions[0]);
+    const captured=await crop.captureCrop();
+    return {...captured,regions};
+   }finally{
+    if(crop.page!==originalPage)await crop.go(originalPage);
+    await crop.setRegion(original);
+   }
   }
   const original=structuredClone(crop.region),originalPage=crop.page;
   const pieces=[];
