@@ -1,0 +1,50 @@
+name: Deploy Selection Studio to Cloudflare Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "studio/**"
+      - "review-console/**"
+      - "cloudflare/**"
+      - ".github/workflows/deploy-cloudflare-pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: selection-studio-cloudflare-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare Pages artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p _site/studio _site/admin
+          cp -R studio/. _site/
+          cp -R studio/. _site/studio/
+          cp -R review-console/. _site/admin/
+          cp cloudflare/_worker.js _site/_worker.js
+          cat > _site/_headers <<'HEADERS'
+          /*
+            X-Content-Type-Options: nosniff
+            Referrer-Policy: strict-origin-when-cross-origin
+            Permissions-Policy: camera=(), microphone=(), geolocation=()
+          HEADERS
+          test -f _site/index.html
+          test -f _site/studio/index.html
+          test -f _site/admin/ocr-studio.html
+          test -f _site/_worker.js
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy _site --project-name=selection-studio --branch=main
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
