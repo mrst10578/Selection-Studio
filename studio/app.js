@@ -324,8 +324,8 @@ function renderGate(){
   $("nextAction").textContent=msg;
   const order=["exam","question","answer","meta","ready"],idx=order.indexOf(s);
   document.querySelectorAll("[data-step]").forEach(el=>{const i=order.indexOf(el.dataset.step);el.classList.toggle("done",i>=0&&i<idx);el.classList.toggle("active",i===idx)});
-  $("questionCropState").textContent=qCrop.loading||qCrop.rendering?"در حال آماده‌سازی":cropQueue.selections("question").length?`${cropQueue.selections("question").length} برش آماده`:"بدون برش";
-  $("answerCropState").textContent=aCrop.loading||aCrop.rendering?"در حال آماده‌سازی":cropQueue.selections("answer").length?`${cropQueue.selections("answer").length} برش آماده`:"بدون برش";
+  $("questionCropState").textContent=qCrop.loading||qCrop.rendering?"در حال آماده‌سازی":qCrop.isRegionReady()&&cropQueue.selections("question").length===1?"ثبت شد":cropQueue.selections("question").length?`${cropQueue.selections("question").length} برش آماده`:"بدون برش";
+  $("answerCropState").textContent=aCrop.loading||aCrop.rendering?"در حال آماده‌سازی":aCrop.isRegionReady()&&cropQueue.selections("answer").length===1?"ثبت شد":cropQueue.selections("answer").length?`${cropQueue.selections("answer").length} برش آماده`:"بدون برش";
   $("questionIdentity").textContent="سؤال "+($("sourceNumber").value||"-");
 }
 document.querySelectorAll("[data-check]").forEach(button=>button.addEventListener("click",()=>{
