@@ -539,6 +539,16 @@ export class PdfCropper{
     return true;
   }
 
+  clearAllRegions({force=false}={}){
+    if(this.regionLocked&&!force)return false;
+    this.region=null;
+    this.regionsByPage.clear();
+    this.drag=null;
+    this.box.classList.add("hidden");
+    this.onChange(null);
+    return true;
+  }
+
   async setRegion(region){
     if(region?.page&&Number(region.page)!==this.page){
       const target=Number(region.page);
