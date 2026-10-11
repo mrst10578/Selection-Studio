@@ -3,6 +3,82 @@ import {test,expect} from "@playwright/test";
 async function openStudio(page){await page.goto("/studio/");await expect(page.locator(".studio-crop-queue").first()).toBeVisible()}
 
 test.describe("ZH-73 multi-crop and navigation",()=>{
+ test("saved queue satisfies real question gate and stores multiple normalized regions",async({page},testInfo)=>{
+  test.skip(!testInfo.project.name.startsWith("desktop"),"Desktop pointer interaction with stub PDF renderer");
+  const moduleSource=`
+   export const GlobalWorkerOptions={workerSrc:""};
+   export function getDocument(){
+    const pdf={numPages:3,async getPage(index){
+     return{getViewport:({scale})=>({width:420*scale,height:600*scale}),
+      render:({canvasContext})=>{const promise=Promise.resolve().then(()=>{
+       canvasContext.fillStyle="#fff";canvasContext.fillRect(0,0,canvasContext.canvas.width,canvasContext.canvas.height);
+       canvasContext.fillStyle=index===1?"#242d3b":"#335588";
+       canvasContext.fillRect(30,40,canvasContext.canvas.width*.65,35);
+      });return{promise,cancel(){}};}
+     };
+    },async destroy(){}};
+    return{promise:Promise.resolve(pdf),async destroy(){}};
+   }
+  `;
+  await page.route("**/pdfjs-dist@4.10.38/build/pdf.min.mjs",route=>route.fulfill({
+   status:200,contentType:"application/javascript",headers:{"access-control-allow-origin":"*"},body:moduleSource
+  }));
+  await openStudio(page);
+  await expect(page.locator("#operatorLogin")).toBeHidden();
+  await page.locator("#provider").fill("قلمچی");
+  await page.locator("#examMonth").fill("03");
+  await page.locator("#examDay").fill("07");
+  await page.locator("#operator").fill("گزینشگر");
+  const file={name:"fixture.pdf",mimeType:"application/pdf",buffer:Buffer.from("%PDF-1.4 mock fixture")};
+  await page.locator("#questionPdf").setInputFiles(file);
+  await expect(page.locator("#questionPdfState")).toContainText("fixture.pdf");
+  await page.locator("#answerPdf").setInputFiles({...file,name:"answer.pdf"});
+  await expect(page.locator("#answerPdfState")).toContainText("answer.pdf");
+  await page.locator("#saveSession").click();
+  await expect(page.locator("#sessionCard")).toHaveClass(/ready/);
+  await page.locator("#questionTab").click();
+  const drag=async selector=>{
+   const canvas=page.locator(selector);
+   await expect(canvas).toBeVisible();
+   const box=await canvas.boundingBox();
+   expect(box).toBeTruthy();
+   const x=box.x+Math.min(70,box.width*.2),y=box.y+Math.min(65,box.height*.16);
+   await page.mouse.move(x,y);
+   await page.mouse.down();
+   await page.mouse.move(x+90,y+100,{steps:5});
+   await page.mouse.up();
+  };
+  await drag("#qCanvas");
+  await page.locator("#questionPane .studio-crop-queue").getByRole("button",{name:"+ افزودن این برش"}).click();
+  await expect(page.locator("#questionPane .studio-crop-chip")).toHaveCount(1);
+  await expect(page.locator('[data-check="question"]')).toHaveClass(/done/);
+  await expect(page.locator("#questionCropState")).toContainText("۱ برش آماده");
+  // Add another part of the same question, keeping the first queued crop.
+  await drag("#qCanvas");
+  await page.locator("#questionPane .studio-crop-queue").getByRole("button",{name:"+ افزودن این برش"}).click();
+  await expect(page.locator("#questionPane .studio-crop-chip")).toHaveCount(2);
+  await page.locator("#answerTab").click();
+  await drag("#aCanvas");
+  await page.locator("#answerPane .studio-crop-queue").getByRole("button",{name:"+ افزودن این برش"}).click();
+  await expect(page.locator('[data-check="answer"]')).toHaveClass(/done/);
+  await page.locator("#subject").selectOption("PHY");
+  await page.locator("#grade").selectOption("10");
+  await page.locator("#chapter").selectOption({index:1});
+  await page.locator("#unit").selectOption({index:1});
+  await page.locator("#sourceNumber").fill("1");
+  await page.locator('.segmented[data-target="difficulty"] [data-value="level_2"]').click();
+  await page.locator('.segmented[data-target="correctOption"] [data-value="1"]').click();
+  await expect(page.locator("#saveQuestion")).toBeEnabled();
+  await page.locator("#saveQuestion").click();
+  await expect(page.locator("#recordCount")).toHaveText("1");
+  const records=await page.evaluate(()=>JSON.parse(localStorage.getItem("testbank-studio.records.v1")||"[]"));
+  expect(records).toHaveLength(1);
+  expect(records[0].question_regions).toHaveLength(2);
+  expect(records[0].answer_regions).toHaveLength(1);
+  expect(records[0].question_regions[0].bbox_norm).toHaveLength(4);
+  await expect(page.locator("#questionPane .studio-crop-chip")).toHaveCount(0);
+ });
+
  test("queues independent page regions, changes reading order, composites WebP and restores page",async({page})=>{
   await openStudio(page);
   const outcome=await page.evaluate(async()=>{
