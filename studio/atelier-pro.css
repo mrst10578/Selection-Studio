@@ -22,3 +22,9 @@ body.atelier-studio .inspector{top:82px}
 @media(max-width:1199px){body.atelier-studio .workbench{grid-template-columns:minmax(0,1fr) minmax(310px,38%)}body.atelier-studio .studio-projects{grid-column:1/-1;position:static;max-height:none}.studio-projects .studio-links{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:780px){body.atelier-studio .workbench{grid-template-columns:minmax(0,1fr)}body.atelier-studio .studio-projects{grid-column:auto}.studio-projects .studio-links{grid-template-columns:1fr}body.atelier-studio .inspector{position:static;max-height:none}body.atelier-studio .pdf-stage{min-height:380px;height:55vh}.studio-layout-controls{display:none}}
 @media(prefers-reduced-motion:reduce){.studio-command-dialog,.studio-projects *{animation:none!important;transition:none!important}}
+
+.studio-draft-status{font-size:.73rem;color:var(--studio-teal);padding:6px 10px;border:1px solid var(--line);border-radius:999px}
+.studio-history-controls{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
+.studio-history-controls button{min-height:38px;font-size:.78rem}
+body.atelier-studio .viewer:fullscreen{background:var(--surface);overflow:auto;padding:14px}
+body.atelier-studio .viewer:fullscreen .pdf-stage{height:calc(100vh - 175px);min-height:300px}
