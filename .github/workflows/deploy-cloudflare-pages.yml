@@ -40,7 +40,7 @@ jobs:
         run: |
           node --check cloudflare/_worker.js
           node --check studio/atelier-pro.js
-          node --test tests/cloudflare-worker.test.mjs
+          node --test tests/*.test.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: selection-studio-pages
