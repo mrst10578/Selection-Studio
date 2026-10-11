@@ -120,13 +120,13 @@ export function detectQuestionLayout(data,width,height,{maxCandidates=12}={}){
    const bounds=boxOf(stem,width,height);
    proposals.push({kind:'question',label:'متن احتمالی سؤال',confidence:.72,bbox_norm:bounds});
    lines.slice(-4).forEach((line,index)=>{
-    proposals.push({kind:'option',label:'گزینه احتمالی '+(index+1),confidence:.58,bbox_norm:boxOf([line],width,height)});
+    proposals.push({kind:'option',label:'گزینه احتمالی '+(index+1).toLocaleString('fa-IR'),confidence:.58,bbox_norm:boxOf([line],width,height)});
    });
   }else{
    const cells=twoColumnOptionTail(lines,data,width,height);
    if(cells){
     proposals.push({kind:'question',label:'متن احتمالی سؤال',confidence:.65,bbox_norm:boxOf(lines.slice(0,-2),width,height)});
-    cells.forEach((cell,index)=>proposals.push({kind:'option',label:'گزینه احتمالی '+(index+1),confidence:.5,bbox_norm:boxOf([cell],width,height)}));
+    cells.forEach((cell,index)=>proposals.push({kind:'option',label:'گزینه احتمالی '+(index+1).toLocaleString('fa-IR'),confidence:.5,bbox_norm:boxOf([cell],width,height)}));
    }else{
     proposals.push({kind:'block',label:'بخش احتمالی سؤال',confidence:.45,bbox_norm:boxOf(lines,width,height)});
    }
