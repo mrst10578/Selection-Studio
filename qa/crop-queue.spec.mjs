@@ -37,12 +37,12 @@ test.describe("ZH-73 multi-crop and navigation",()=>{
   await page.locator("#saveSession").click();
   await expect(page.locator("#sessionCard")).toHaveClass(/ready/);
   await page.locator("#questionTab").click();
-  const drag=async selector=>{
+  const drag=async (selector,offset=0)=>{
    const canvas=page.locator(selector);
    await expect(canvas).toBeVisible();
    const box=await canvas.boundingBox();
    expect(box).toBeTruthy();
-   const x=box.x+Math.min(70,box.width*.2),y=box.y+Math.min(65,box.height*.16);
+   const x=box.x+Math.min(70,box.width*.2)+offset,y=box.y+Math.min(65,box.height*.16)+offset*.35;
    await page.mouse.move(x,y);
    await page.mouse.down();
    await page.mouse.move(x+90,y+100,{steps:5});
@@ -52,9 +52,9 @@ test.describe("ZH-73 multi-crop and navigation",()=>{
   await page.locator("#questionPane .studio-crop-queue").getByRole("button",{name:"+ افزودن این برش"}).click();
   await expect(page.locator("#questionPane .studio-crop-chip")).toHaveCount(1);
   await expect(page.locator('[data-check="question"]')).toHaveClass(/done/);
-  await expect(page.locator("#questionCropState")).toContainText("۱ برش آماده");
+  await expect(page.locator("#questionCropState")).toContainText("1 برش آماده");
   // Add another part of the same question, keeping the first queued crop.
-  await drag("#qCanvas");
+  await drag("#qCanvas",110);
   await page.locator("#questionPane .studio-crop-queue").getByRole("button",{name:"+ افزودن این برش"}).click();
   await expect(page.locator("#questionPane .studio-crop-chip")).toHaveCount(2);
   await page.locator("#answerTab").click();
