@@ -29,7 +29,7 @@
       <div id="imageStage" class="ocr-image-stage">
         <img id="referenceImage" alt="تصویر اصلی سؤال جهت بازبینی OCR" hidden>
         <p id="imageEmpty">سؤالی از پنل مدیریت انتخاب کن یا یک تصویر وارد کن.</p>
-        <canvas id="figureCanvas" aria-label="ناحیه انتخابی برای شکل علمی" hidden></canvas>
+        <canvas id="figureCanvas" hidden></canvas>
       </div>
       <div class="ocr-actions">
         <button id="figureMode" type="button">انتخاب ناحیه شکل</button>
@@ -57,7 +57,7 @@
     <h2>قالب یکدست همه سؤال‌ها</h2>
     <label class="ocr-label" for="bankTitle">عنوان جزوه</label><input id="bankTitle" value="بانک تست">
     <label class="ocr-label" for="fontFamily">فونت متن</label><select id="fontFamily"><option value="Tahoma">Tahoma</option><option value="Arial">Arial</option><option value="serif">Serif</option></select>
-    <label class="ocr-label" for="fontSize">اندازه فونت <output id="fontSizeValue">۱۷</output></label><input id="fontSize" type="range" min="13" max="24" value="17">
+    <label class="ocr-label" for="fontSize">اندازه فونت</label><output id="fontSizeValue" for="fontSize">۱۷</output><input id="fontSize" type="range" min="13" max="24" value="17">
     <label class="ocr-label" for="lineHeight">فاصله خطوط</label><select id="lineHeight"><option value="1.6">فشرده</option><option value="1.9" selected>استاندارد</option><option value="2.25">باز</option></select>
     <label class="ocr-label" for="columns">ستون‌ها</label><select id="columns"><option value="1">تک‌ستونه</option><option value="2">دوستونه</option></select>
     <div class="ocr-actions"><button id="previewAll" type="button">پیش‌نمایش کل جزوه</button><button id="htmlExport" class="primary" type="button">دریافت HTML تایپی</button></div>
