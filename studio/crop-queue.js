@@ -1,5 +1,6 @@
 import {validRegion} from './pdf-crop.js';
-import {suggestRegionsOnCanvas} from './region-detector.js';
+import {createDetectionSnapshot} from './region-detector.js';
+import {openRegionReview} from './region-review.js';
 /* ZH-73: multiple non-destructive regions per question; original PDF stays untouched. */
 export function uniqueRegions(regions){
  const seen=new Set();
@@ -153,28 +154,31 @@ export function createCropQueue({question,answer,switchPane,onNotice=()=>{},onCh
   detect.addEventListener('click',()=>{
    const crop=current(kind);
    if(!crop.isRenderReady()){notify('اول PDF را باز کن.');return}
-   const proposed=suggestRegionsOnCanvas(crop.canvas,crop.page);
-   if(!proposed.length){notify('در این صفحه کادر پیشنهادی مشخصی پیدا نشد؛ برش دستی را انجام بده.');return}
-   const dialog=document.createElement('dialog');dialog.className='studio-region-suggestions';
-   const title=document.createElement('h2');title.textContent='کادرهای پیشنهادی · صفحه '+crop.page;
-   const description=document.createElement('p');description.textContent='این تشخیص آزمایشی است. محدوده‌ها را بررسی کن؛ هیچ برشی بدون تأییدت ثبت نمی‌شود.';
-   const list=document.createElement('div');list.className='studio-region-proposals';
-   const close=()=>dialog.close();
-   for(const [index,region] of proposed.entries()){
-    const choice=document.createElement('button');choice.type='button';choice.textContent='بررسی کادر '+(index+1);
-    choice.addEventListener('click',()=>{close();void activate(kind,region)});
-    list.append(choice);
+   const page=crop.page,generation=crop.documentGeneration,renderSeq=crop.readyFrame?.renderSeq;
+   let snapshot;
+   try{snapshot=createDetectionSnapshot(crop.canvas,page)}
+   catch{notify('تحلیل تصویر PDF ممکن نشد؛ از برش دستی استفاده کن.');return}
+   if(!snapshot?.candidates?.length){
+    notify('محدوده قابل‌اعتمادی شناسایی نشد؛ برش دستی را انجام بده.');return;
    }
-   const actions=document.createElement('div');actions.className='studio-crop-proposal-actions';
-   const accept=document.createElement('button');accept.type='button';accept.textContent='تأیید و افزودن همه پیشنهادها';
-   accept.addEventListener('click',()=>{
-    const merged=uniqueRegions([...queued[kind],...proposed]).slice(0,limit);
-    queued[kind]=merged;update(kind);changed();notify(merged.length+' کادر پیشنهادی به صف اضافه شد.');close();
+   const isFresh=()=>Boolean(crop.isRenderReady()&&crop.page===page&&crop.documentGeneration===generation&&crop.readyFrame?.renderSeq===renderSeq);
+   openRegionReview({
+    snapshot,
+    onReview:region=>{
+     if(!isFresh()){notify('صفحه PDF تغییر کرده است. پیشنهادها را دوباره بررسی کن.');return}
+     void activate(kind,region);
+     notify('کادر پیشنهادی روی PDF نمایش داده شد؛ می‌توانی با برش دستی اصلاحش کنی.');
+    },
+    onAccept:regions=>{
+     if(!isFresh()){notify('صفحه PDF تغییر کرده است. پیشنهادها را دوباره بررسی کن.');return false}
+     // Distinct, validated regions only; do not silently truncate beyond queue cap.
+     const merged=uniqueRegions([...queued[kind],...regions]);
+     if(merged.length>limit){notify('هر سؤال حداکثر ۱۲ برش دارد؛ تعداد پیشنهادهای انتخاب‌شده را کم کن.');return false}
+     if(merged.length===queued[kind].length){notify('این محدوده‌ها قبلاً در صف بودند.');return false}
+     queued[kind]=merged;update(kind);changed();
+     notify(regions.length+' کادر بررسی‌شده به صف اضافه شد.');return true;
+    }
    });
-   const cancel=document.createElement('button');cancel.type='button';cancel.textContent='بی‌خیال';
-   cancel.addEventListener('click',close);
-   actions.append(accept,cancel);dialog.append(title,description,list,actions);
-   document.body.append(dialog);dialog.addEventListener('close',()=>dialog.remove(),{once:true});dialog.showModal();
   });
   const download=document.createElement('button');download.type='button';download.textContent='دریافت تصویر برش‌ها';
   download.addEventListener('click',async()=>{
