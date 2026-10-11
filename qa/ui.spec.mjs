@@ -28,6 +28,15 @@ function contrastRatio(a,b){
 }
 
 test.describe("Selection Studio",()=>{
+  test("operator form remains locked when the server denies Access identity",async({page})=>{
+    await page.route("**/api/session",route=>route.fulfill({status:401,contentType:"application/json",body:JSON.stringify({error:"Unauthorized"})}));
+    await page.goto("/studio/");
+    await expect(page.locator("body")).toHaveClass(/auth-locked/);
+    await expect(page.locator("#operatorLogin")).toBeVisible();
+    await expect(page.locator("#operatorLoginRetry")).toBeVisible();
+    await expect(page.locator("#operatorUsername")).toHaveCount(0);
+  });
+
   test("operator workbench requires server-verified Access session",async({page})=>{
     await page.goto("/studio/");
     await waitForStudioBoot(page);
