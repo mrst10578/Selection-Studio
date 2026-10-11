@@ -158,7 +158,7 @@ export function suggestRegionsOnCanvas(canvas,page){
  return createDetectionSnapshot(canvas,page)?.candidates.map(({page,bbox_norm})=>({page,bbox_norm}))||[];
 }
 export function validateEditedBounds(values){
- if(!Array.isArray(values)||values.length!==4)return null;
+ if(!Array.isArray(values)||values.length!==4||values.some(v=>typeof v==='string'&&!v.trim()))return null;
  const numbers=values.map(Number);
  if(!numbers.every(finite))return null;
  const [left,top,right,bottom]=numbers;
