@@ -84,7 +84,44 @@ function renderListTitle(){const q=selected();const i=state.items.indexOf(q);if(
 $("questionText").addEventListener("input",e=>{const q=selected();if(q){q.text=e.target.value;q.reviewed=false;$("reviewed").checked=false;snapshot()}});
 $("reviewed").addEventListener("change",e=>{const q=selected();if(q){q.reviewed=e.target.checked;snapshot();renderListTitle()}});
 $("addImages").onclick=()=>$("images").click();
-$("images").onchange=async e=>{const files=[...e.target.files];e.target.value="";let n=0;for(const file of files){try{await addBlob(file,file.name);n++}catch(err){notice(err.message)}}notice(digits(n)+" تصویر وارد شد.")};
+let pdfModule=null;
+async function loadPdf(){
+ if(pdfModule)return pdfModule;
+ let last=null;
+ for(const base of ["https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38","https://unpkg.com/pdfjs-dist@4.10.38"]){
+  try{const mod=await import(base+"/build/pdf.min.mjs");mod.GlobalWorkerOptions.workerSrc=base+"/build/pdf.worker.min.mjs";pdfModule=mod;return mod}catch(e){last=e}
+ }
+ throw Error("کتابخانه PDF.js دریافت نشد؛ اتصال اینترنت را بررسی کن. "+(last?.message||""));
+}
+async function importPdf(file){
+ const mod=await loadPdf(),doc=await mod.getDocument({data:await file.arrayBuffer()}).promise;
+ if(doc.numPages>50)throw Error("این نسخه حداکثر ۵۰ صفحه در هر بار ورود می‌پذیرد. PDF را به بخش‌های کوچک‌تر تقسیم کن.");
+ let count=0;
+ try{
+  for(let pageNo=1;pageNo<=doc.numPages;pageNo++){
+   notice("در حال رندر صفحه "+digits(pageNo)+" از "+digits(doc.numPages));
+   const page=await doc.getPage(pageNo),initial=page.getViewport({scale:1}),scale=Math.min(2,2500/Math.max(initial.width,initial.height));
+   const viewport=page.getViewport({scale});
+   const canvas=document.createElement("canvas");canvas.width=Math.round(viewport.width);canvas.height=Math.round(viewport.height);
+   await page.render({canvasContext:canvas.getContext("2d"),viewport}).promise;
+   const blob=await new Promise((resolve,reject)=>canvas.toBlob(v=>v?resolve(v):reject(Error("رندر PDF ناموفق بود")),"image/jpeg",.93));
+   await addBlob(blob,file.name+" • صفحه "+digits(pageNo));
+   canvas.width=0;canvas.height=0;page.cleanup();count++;
+  }
+ }finally{await doc.destroy()}
+ return count;
+}
+$("images").onchange=async e=>{
+ const files=[...e.target.files];e.target.value="";let n=0;
+ for(const file of files){
+  try{
+   if(file.type==="application/pdf"||/\.pdf$/i.test(file.name))n+=await importPdf(file);
+   else if(file.type.startsWith("image/")){await addBlob(file,file.name);n++}
+   else throw Error("فرمت فایل پشتیبانی نمی‌شود.");
+  }catch(error){notice("خطا برای "+file.name+": "+error.message)}
+ }
+ if(n)notice(digits(n)+" صفحه یا تصویر به پیش‌نویس بانک تست اضافه شد.");
+};
 $("newQuestion").onclick=()=>{const q={id:newId(),title:"سؤال تایپی جدید",text:"",reviewed:false,warnings:[],figure:"",sourceName:""};state.items.push(q);state.selected=q.id;snapshot();render();$("questionText").focus()};
 $("removeFigure").onclick=()=>{const q=selected();if(!q)return;q.figure="";snapshot();render();notice("شکل از خروجی تایپی حذف شد؛ تصویر مرجع باقی است.")};
 
