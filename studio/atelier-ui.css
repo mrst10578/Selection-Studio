@@ -349,3 +349,38 @@ body.atelier .login-card h1{color:#FFE2C9}
   body.atelier-ocr #printContainer .ocr-paper{background:white!important;color:black!important;box-shadow:none!important}
   body.atelier-ocr>*:not(#printContainer){display:none!important}
 }
+
+/* Strengthen theme specificity against historic premium layers. */
+:root[data-theme="dark"] body.atelier :is(.panel,.ocr-panel,.review-sidebar,.review-question,.question-card,.guide-card){
+  background:linear-gradient(154deg,#192739 0%,#121D2C 57%,#111B29 100%);
+  border-color:#35475C;
+  box-shadow:0 11px 26px rgba(0,5,12,.22),inset 0 1px 0 rgba(236,246,255,.055);
+}
+:root[data-theme="dark"] body.atelier :is(.topbar,.review-header,.ocr-header){
+  background:linear-gradient(95deg,#111B28,#141E2B 50%,#1B212D);
+  border-bottom-color:#46566D;box-shadow:0 10px 24px #01060E45,inset 0 -1px 0 #F4A5741A;
+}
+:root[data-theme="dark"] body.atelier :is(button.primary,.primary,#saveQuestion):not(:disabled){
+  background:linear-gradient(115deg,#FFC697,#FFA875 60%,#F2936D);
+  border-color:#FFD0A3;color:#241A18;
+}
+:root[data-theme="dark"] body.atelier :is(button.primary,.primary,#saveQuestion):not(:disabled):hover{
+  background:linear-gradient(110deg,#FFD8B4,#FFB786 67%,#F6A276);border-color:#FFD0A3;color:#241A18;
+}
+:root[data-theme="dark"] body.atelier :is(input,select,textarea){
+  background:#101B29;border-color:#637991;color:#F1F5FA;
+}
+:root[data-theme="dark"] body.atelier .topbar nav a.active{background:linear-gradient(135deg,#513A37,#303344);border-color:#A87962;color:#FFE7D3}
+:root[data-theme="dark"] body.atelier-studio .viewer{background:#0C1521;border-color:#52657B}
+:root[data-theme="dark"] body.atelier-studio .inspector{background:linear-gradient(165deg,#1C2B3B,#131E2D 67%);border-color:#54677D}
+:root[data-theme="dark"] body.atelier-studio .session{background:linear-gradient(110deg,#262837,#222633 55%,#172839);border-color:#74574E}
+:root[data-theme="dark"] body.atelier-studio .segmented button.active{
+  border-color:#DEAC82;background:linear-gradient(140deg,#6A443E,#393346);color:#FFE2C9;
+}
+:root[data-theme="dark"] body.atelier-admin .review-sidebar{background:linear-gradient(175deg,#1B2939,#121D2B);border-color:#53667B}
+:root[data-theme="dark"] body.atelier-admin .batch-overview{background:linear-gradient(116deg,#242B39,#192B3B 75%);border-color:#655448}
+:root[data-theme="dark"] body.atelier-admin .review-question{background:linear-gradient(145deg,#1D2B3B,#14202E);border-color:#43586D}
+:root[data-theme="dark"] body.atelier-ocr .ocr-panel{background:linear-gradient(150deg,#1B293B,#111F2E);border-color:#486077}
+@media(max-width:760px){
+  :root[data-theme="dark"] body.atelier :is(.panel,.ocr-panel,.review-sidebar,.question-card){box-shadow:none}
+}
