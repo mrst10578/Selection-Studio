@@ -34,3 +34,19 @@
 Revert the defective commit on `main` and rerun the validated Pages deployment, or promote the previously verified Pages production deployment from Cloudflare dashboard. No rollback drill has yet been performed.
 
 Do **not** mark ZH-64..ZH-68 complete or merge before checking the outstanding release gates.
+
+## Phase 2 draft sync (ZH-72)
+
+The authenticated `GET /api/draft?project=workspace` endpoint returns the most recent form metadata (or `revision:0` for a new profile). `PUT` accepts only whitelisted string form fields, `baseRevision` and 8 KiB of JSON maximum. It uses an atomic compare-and-swap update on Cloudflare D1 and returns HTTP 409 with the current revision when another device saved first. `GET /api/draft?project=workspace&history=1` returns the 12 most recent versions. Auth and email allowlist requirements are the same as `/api/session`.
+
+Client-side form edits are saved locally immediately and synchronized asynchronously. When local and remote versions differ, **the app does not silently choose either**: the project dashboard offers explicit recovery or retaining the current form. Failed network saves keep the local copy. PDF files, page rasters, crops, passwords and private session tokens are never uploaded as draft metadata.
+
+D1 schema definitions are in `cloudflare/schema-security.sql`; the two added draft tables were provisioned in both the production and preview databases. Browser QA uses a local identity fixture and is not a substitute for live Access testing.
+
+## Multi-region PDF capture (ZH-73)
+
+`studio/crop-queue.js` adds a bounded queue of up to 12 normalized page regions per question and per answer. The current (unqueued) crop is included in the final selection. Selected regions may span multiple PDF pages. Each image crop is composed vertically into a WebP preview, preserving the existing single-preview storage contract while writing all `question_regions` and `answer_regions` in the question metadata. The original PDF remains untouched.
+
+The UI includes list navigation, removal, clear-all, zoom, touch-safe tab switching and a temporary composite preview. Queues remain in memory and clear only after a successful question save or successfully loading a different PDF. A failed replacement does not erase previous selections. PDF binaries and in-memory crop queues are intentionally not synchronized between devices. Operator still needs the original PDF on the target device.
+
+The review/export consumers should be inspected before release to ensure they preserve and display multi-region metadata correctly. Live OCR, release verification and cross-device browser trials are deferred to the final acceptance phase by agreement.
