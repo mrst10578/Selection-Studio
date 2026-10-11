@@ -52,10 +52,9 @@ const quickBio=mountBiologyCombinationEditor({
 });
 
 async function showAdmin(){
-  $('#loginView').classList.add('hidasync function showAdmin(){
-  $('#loginView').classList.add('hidden');
-  $('#appView').classList.remove('hidden');
-  resetBrowser();
+ $('#loginView').classList.add('hidden');
+ $('#appView').classList.remove('hidden');
+ resetBrowser();
 }
 async function login(event){
  event?.preventDefault();
@@ -70,11 +69,11 @@ async function login(event){
  }catch(error){$('#adminLoginError').textContent=error.message||'دسترسی تأیید نشد.'}
 }
 $('#adminLoginForm').addEventListener('submit',login);
-
-click=()=>{sessionStorage.removeItem(ADMIN_SESSION);location.reload()};
+function statusClass(s){return s||'pending'}
+$('#logoutBtn').onclick=()=>{sessionStorage.removeItem(ADMIN_SESSION);location.assign('/cdn-cgi/access/logout')};
 $('#refreshBtn').onclick=async()=>{
-  if(selectedSubject)await loadOperators(selectedSubject);
-  if(selectedSubject&&selectedOperator)await openOperator(selectedOperator);
+ if(selectedSubject)await loadOperators(selectedSubject);
+ if(selectedSubject&&selectedOperator)await openOperator(selectedOperator);
 };
 
 function resetBrowser(){
