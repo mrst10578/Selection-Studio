@@ -5,7 +5,8 @@ const SAMPLE="iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAGUlEQVR4nGP8//8/Ay
 test.describe("Admin typed test-bank editor",()=>{
   test("uses edge-managed authentication instead of browser tokens",async({page})=>{
     await page.goto("/review-console/ocr-studio.html");
-    await expect(page.locator("#questionList")).toBeVisible();
+    await expect(page.locator(".ocr-layout")).toBeVisible();
+    await expect(page.locator("#questionList")).toHaveCount(1);
     await expect(page.locator("#accessToken")).toHaveCount(0);
     await expect(page.locator("#workerEndpoint")).toHaveCount(0);
     await expect(page.locator("#extractBtn")).toBeVisible();
