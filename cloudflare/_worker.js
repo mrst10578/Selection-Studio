@@ -1,5 +1,5 @@
 // Native Cloudflare Pages Worker. Fail closed if identity, quota or secret config is absent.
-const OCR_ORIGIN="https://examforge-free-ocr.zh-st-2.workers.dev/ocr";
+const OCR_ORIGIN="https://selection-studio-ocr-secure.zh-st-2.workers.dev/ocr";
 const json=(value,status=200,extra={})=>Response.json(value,{status,headers:{"Cache-Control":"no-store","X-Content-Type-Options":"nosniff",...extra}});
 const bytes=value=>Uint8Array.from(atob(value.replace(/-/g,"+").replace(/_/g,"/").padEnd(Math.ceil(value.length/4)*4,"=")),c=>c.charCodeAt(0));
 let cachedKeys=null;
