@@ -57,7 +57,7 @@ function optionTail(lines,width,height){
  const validSpacing=yGaps.every(g=>g>=0&&g<Math.max(34,height*.042));
  const widths=tail.map(l=>l.right-l.left+1);
  // A loose right anchor works for RTL question options while avoiding random text.
- const validAnchor=rightEdge<=width*.2;
+ const validAnchor=rightEdge<=width*.075;
  const validWidth=widths.every(w=>w>width*.07&&w<width*.9);
  const stemSpace=tail[0].top-prior.at(-1).bottom;
  return validHeight&&validSpacing&&validAnchor&&validWidth&&stemSpace>=2;
