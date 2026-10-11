@@ -22,8 +22,8 @@
 
 ## Outstanding production blockers
 
-1. **OCR upstream secret**: Upstream `examforge-free-ocr` currently contains an existing encrypted secret named `ACCESS_TOKEN`. Its value cannot be read from Cloudflare by design. Do not rotate it silently: that can break other clients. A coordinated rotation or separately provisioned credential is needed before `OCR_SERVICE_TOKEN` is set on Pages.
-2. **Upstream direct access**: Verify the OCR Worker strictly enforces its own bearer token; otherwise a direct URL could bypass the gateway.
+1. **Dedicated OCR upstream now provisioned**: `selection-studio-ocr-secure.zh-st-2.workers.dev/ocr` is a separate Worker with Workers AI binding, secret-protected `ACCESS_TOKEN` and no public CORS allowance. Cloudflare Pages now has matching encrypted `OCR_SERVICE_TOKEN` in preview and production. The original `examforge-free-ocr` Worker and its clients were not modified. New inference still incurs whatever Workers AI usage costs apply, so configure budgets before broad rollout.
+2. **Live E2E validation**: Confirm newly deployed upstream and Pages URL through authenticated browser, verify invalid/unauthorized direct Worker calls fail, and run a real low-volume OCR check with consent and cost controls.
 3. Test the OTP flow in a real authenticated browser, and confirm preview branch hostnames are actually intercepted by the wildcard Access application.
 4. Run the full existing CI, native Workers/Pages preview smoke tests, PDF rendering, Persian text and LaTeX OCR fixtures, permissions and quota tests.
 5. Configure operational notifications, audit pruning (30-day suggested retention), AI cost controls and a rollback rehearsal. Periodic pruning SQL is in the schema comments.
