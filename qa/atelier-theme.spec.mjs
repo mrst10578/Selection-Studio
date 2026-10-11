@@ -59,7 +59,7 @@ test.describe("Ember Atelier premium theme",()=>{
   await page.goto("/review-console/ocr-studio.html");
   await page.locator("#newQuestion").click();
   await page.locator("#questionText").fill("کدام گزینه صحیح است؟\nالف) پاسخ اول");
-  await page.locator("#fontSize").fill("19");
+  await page.locator("#fontSize").evaluate(el=>{el.value="19";el.dispatchEvent(new Event("input",{bubbles:true}))});
   await expect(page.locator("#fontSizeValue")).toHaveText("۱۹");
   await page.locator("#reviewed").check();
   await page.locator("#previewAll").click();
