@@ -85,7 +85,8 @@ async function handleDraft(request,env,identity,url){
   if(keys.length>DRAFT_FIELDS.size||keys.some(k=>!DRAFT_FIELDS.has(k)||typeof input.fields[k]!=="string"||input.fields[k].length>200))return json({error:"Invalid fields"},400);
   const fields_json=JSON.stringify(Object.fromEntries(keys.map(k=>[k,input.fields[k]])));
   // Atomic compare-and-swap: INSERT when absent, otherwise only update matching revision.
-  const write=await db.prepare("INSERT INTO studio_drafts (actor,project,revision,fields_json,updated_at) SELECT ?1,?2,1,?3,CURRENT_TIMESTAMP WHERE ?4=0 ON CONFLICT(actor,project) DO UPDATE SET revision=studio_drafts.revision+1,fields_json=excluded.fields_json,updated_at=CURRENT_TIMESTAMP WHERE studio_drafts.revision=?4 RETURNING revision,updated_at").bind(actor,project,fields_json,input.baseRevision).first();
+  if(input.baseRevision>0&&!(await select()))return json({error:"Revision conflict",project,revision:0,fields:null},409);
+  const write=await db.prepare("INSERT INTO studio_drafts (actor,project,revision,fields_json,updated_at) VALUES (?1,?2,1,?3,CURRENT_TIMESTAMP) ON CONFLICT(actor,project) DO UPDATE SET revision=studio_drafts.revision+1,fields_json=excluded.fields_json,updated_at=CURRENT_TIMESTAMP WHERE studio_drafts.revision=?4 RETURNING revision,updated_at").bind(actor,project,fields_json,input.baseRevision).first();
   if(!write){const current=await select();return json({error:"Revision conflict",project,revision:current?.revision||0,fields:current?JSON.parse(current.fields_json):null},409)}
   // Best-effort version history: the current draft is already safely stored.
   try{
