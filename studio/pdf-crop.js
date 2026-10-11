@@ -48,6 +48,7 @@ export class PdfCropper{
     this.pdf=null;
     this.file=null;
     this.page=1;
+    this.zoom=1;
     this.region=null;
     this.regionsByPage=new Map();
     this.viewByPage=new Map();
@@ -326,6 +327,13 @@ export class PdfCropper{
     return this.render({anchor,startAtTop:!anchor});
   }
 
+  async setZoom(value){
+    const next=clamp(Number(value)||1,.75,1.8);
+    this.zoom=next;
+    if(this.pdf&&!this.loading&&this.stage.offsetParent!==null)await this.refresh();
+    return this.zoom;
+  }
+
   cssScale(base){
     const width=Math.max(280,this.stage.clientWidth-4);
     if(this.isMobile()){
@@ -334,9 +342,9 @@ export class PdfCropper{
         return Math.max(.1,Math.min(width/base.width,height/base.height));
       }
       const fit=width/base.width;
-      return Math.max(fit*1.38,.92);
+      return Math.max(fit*1.38,.92)*this.zoom;
     }
-    return Math.max(.1,Math.min(2,width/base.width));
+    return Math.max(.1,Math.min(2,width/base.width))*this.zoom;
   }
 
   renderPixelRatio(cssViewport){
