@@ -48,11 +48,20 @@ test("real PDF.js renders an allowed mixed-script PDF with isolated LTR drawing 
   await page.locator("#saveSession").click();
   await expect(page.locator("#sessionSummary")).toContainText("قلمچی");
 
+  // In a resizable three-pane workspace the canvas can extend beyond the
+  // viewport. Drag within the actual visible intersection, not off-screen.
+  await page.locator("#qCanvas").scrollIntoViewIfNeeded();
   const box=await page.locator("#qCanvas").boundingBox();
   expect(box).not.toBeNull();
-  await page.mouse.move(box.x+box.width*.18,box.y+box.height*.22);
+  const viewport=page.viewportSize();
+  const top=Math.max(0,box.y)+12;
+  const bottom=Math.min(viewport.height,box.y+box.height)-12;
+  expect(bottom-top).toBeGreaterThan(80);
+  const start={x:box.x+box.width*.18,y:top+(bottom-top)*.20};
+  const finish={x:box.x+box.width*.58,y:top+(bottom-top)*.72};
+  await page.mouse.move(start.x,start.y);
   await page.mouse.down();
-  await page.mouse.move(box.x+box.width*.58,box.y+box.height*.52,{steps:6});
+  await page.mouse.move(finish.x,finish.y,{steps:6});
   await page.mouse.up();
   await expect(page.locator("#questionCropState")).toHaveText("ثبت شد");
 
