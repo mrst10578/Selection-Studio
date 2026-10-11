@@ -57,18 +57,58 @@ async function consumeQuota(db,actor,env){
  }
  return true;
 }
+const DRAFT_FIELDS=new Set(["provider","examMonth","examDay","operator","sourceNumber","subject","grade","chapter","unit","difficulty","correctOption"]);
+async function handleDraft(request,env,identity,url){
+ if(!env.SECURITY_DB)return json({error:"Draft storage unavailable"},503);
+ const project=url.searchParams.get("project")||"workspace";
+ if(!/^[a-z0-9_-]{1,64}$/.test(project))return json({error:"Invalid project identifier"},400);
+ const actor=await actorId(identity);
+ const db=env.SECURITY_DB;
+ const select=()=>db.prepare("SELECT revision, fields_json, updated_at FROM studio_drafts WHERE actor=?1 AND project=?2").bind(actor,project).first();
+ try{
+  if(request.method==="GET"){
+   const row=await select();
+   if(url.searchParams.get("history")==="1"){
+    const items=await db.prepare("SELECT revision, fields_json, updated_at FROM studio_draft_revisions WHERE actor=?1 AND project=?2 ORDER BY revision DESC LIMIT 12").bind(actor,project).all();
+    return json({project,revision:row?.revision||0,versions:(items.results||[]).map(item=>({revision:item.revision,updatedAt:item.updated_at,fields:JSON.parse(item.fields_json)}))});
+   }
+   return json({project,revision:row?.revision||0,updatedAt:row?.updated_at||null,fields:row?JSON.parse(row.fields_json):null});
+  }
+  if(request.method!=="PUT")return json({error:"Method not allowed"},405,{"Allow":"GET, PUT"});
+  if(!request.headers.get("content-type")?.toLowerCase().startsWith("application/json"))return json({error:"JSON required"},415);
+  const declared=Number(request.headers.get("content-length")||0);
+  if(declared>8192||!Number.isFinite(declared))return json({error:"Draft too large"},413);
+  const raw=await request.text();if(new TextEncoder().encode(raw).length>8192)return json({error:"Draft too large"},413);
+  let input;try{input=JSON.parse(raw)}catch{return json({error:"Invalid JSON"},400)}
+  if(!input||typeof input!=="object"||Array.isArray(input)||!Number.isSafeInteger(input.baseRevision)||input.baseRevision<0||!input.fields||typeof input.fields!=="object"||Array.isArray(input.fields))return json({error:"Invalid draft"},400);
+  const keys=Object.keys(input.fields);
+  if(keys.length>DRAFT_FIELDS.size||keys.some(k=>!DRAFT_FIELDS.has(k)||typeof input.fields[k]!=="string"||input.fields[k].length>200))return json({error:"Invalid fields"},400);
+  const fields_json=JSON.stringify(Object.fromEntries(keys.map(k=>[k,input.fields[k]])));
+  // Atomic compare-and-swap: INSERT when absent, otherwise only update matching revision.
+  const write=await db.prepare("INSERT INTO studio_drafts (actor,project,revision,fields_json,updated_at) SELECT ?1,?2,1,?3,CURRENT_TIMESTAMP WHERE ?4=0 ON CONFLICT(actor,project) DO UPDATE SET revision=studio_drafts.revision+1,fields_json=excluded.fields_json,updated_at=CURRENT_TIMESTAMP WHERE studio_drafts.revision=?4 RETURNING revision,updated_at").bind(actor,project,fields_json,input.baseRevision).first();
+  if(!write){const current=await select();return json({error:"Revision conflict",project,revision:current?.revision||0,fields:current?JSON.parse(current.fields_json):null},409)}
+  // Best-effort version history: the current draft is already safely stored.
+  try{
+   await db.prepare("INSERT INTO studio_draft_revisions (actor,project,revision,fields_json,updated_at) VALUES (?1,?2,?3,?4,?5)").bind(actor,project,write.revision,fields_json,write.updated_at).run();
+   await db.prepare("DELETE FROM studio_draft_revisions WHERE actor=?1 AND project=?2 AND revision NOT IN (SELECT revision FROM studio_draft_revisions WHERE actor=?1 AND project=?2 ORDER BY revision DESC LIMIT 12)").bind(actor,project).run();
+  }catch{}
+  return json({project,revision:write.revision,updatedAt:write.updated_at,saved:true});
+ }catch{return json({error:"Draft database unavailable"},503)}
+}
 export default {
  async fetch(request,env){
   const url=new URL(request.url);
   if(url.pathname==="/health")return json({ok:true,service:"selection-studio",hosting:"Cloudflare Pages",assets:"native"});
-  if(url.pathname==="/api/session"||url.pathname==="/api/ocr"){
+  if(url.pathname==="/api/session"||url.pathname==="/api/ocr"||url.pathname==="/api/draft"){
    const isOcr=url.pathname==="/api/ocr";
-   const method=isOcr?"POST":"GET";
-   if(request.method!==method)return json({error:"Method not allowed"},405,{"Allow":method});
+   const isDraft=url.pathname==="/api/draft";
+   const method=isDraft?"GET, PUT":isOcr?"POST":"GET";
+   if(isDraft&&!["GET","PUT"].includes(request.method)||!isDraft&&request.method!==method)return json({error:"Method not allowed"},405,{"Allow":method});
    if(!env.ACCESS_TEAM_DOMAIN||!env.ACCESS_AUD||!env.OPERATOR_EMAILS)return json({error:"Identity not configured"},503);
    const identity=await verifyAccess(request,env);
    if(!identity)return json({error:"Unauthorized"},401);
    if(!allowed(identity,env))return json({error:"Forbidden"},403);
+   if(isDraft)return handleDraft(request,env,identity,url);
    if(!isOcr)return json({authenticated:true,role:"operator",email:identity.email});
    if(!env.OCR_SERVICE_TOKEN||!env.SECURITY_DB)return json({error:"OCR is not configured"},503);
    const actor=await actorId(identity);
