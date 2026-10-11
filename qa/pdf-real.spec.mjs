@@ -87,10 +87,14 @@ test("real PDF.js renders an allowed mixed-script PDF with isolated LTR drawing 
 
   const sampleCanvas=()=>page.evaluate(()=>{const source=document.querySelector("#qCanvas");const probe=document.createElement("canvas");probe.width=32;probe.height=32;const x=probe.getContext("2d");x.drawImage(source,0,0,32,32);const data=x.getImageData(0,0,32,32).data;const out=[];for(let i=0;i<data.length;i+=4)out.push(Math.round((data[i]+data[i+1]+data[i+2])/3));return out});
   const before=await sampleCanvas();
+  // A rejected PDF replacement must preserve previously queued crop geometry.
+  await page.locator('#questionPane .studio-crop-queue').getByRole('button',{name:'افزودن این برش'}).click();
+  await expect(page.locator('#questionPane .studio-crop-chip')).toHaveCount(1);
   await page.setInputFiles("#questionPdf",{name:"broken.pdf",mimeType:"application/pdf",buffer:Buffer.from("not a pdf")});
   await expect(page.locator(".global-toast")).toContainText("سند فعال قبلی «mixed-script.pdf» حفظ شد",{timeout:10000});
   await expect(page.locator("#questionPdf")).toHaveValue("");
   await expect(page.locator("#questionPdfState")).toHaveText("سند فعال: mixed-script.pdf");
+  await expect(page.locator("#questionPane .studio-crop-chip")).toHaveCount(1);
   await expect(page.locator("#qPage")).toHaveText("1/1");
   const after=await sampleCanvas();
   const meanAbsoluteDifference=after.reduce((sum,value,index)=>sum+Math.abs(value-before[index]),0)/after.length;
