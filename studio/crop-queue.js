@@ -1,4 +1,5 @@
 import {validRegion} from './pdf-crop.js';
+import {suggestRegionsOnCanvas} from './region-detector.js';
 /* ZH-73: multiple non-destructive regions per question; original PDF stays untouched. */
 export function uniqueRegions(regions){
  const seen=new Set();
@@ -124,7 +125,35 @@ export function createCropQueue({question,answer,switchPane,onNotice=()=>{}}){
    }catch{notify('برای پیش‌نمایش، یک محدوده آماده روی PDF انتخاب کن.')}
    finally{preview.disabled=false}
   });
-  head.append(count,btn,clearBtn,zoom,preview);
+  const detect=document.createElement('button');detect.type='button';detect.textContent='پیشنهاد کادرها';
+  detect.title='پیشنهاد آزمایشی مبتنی بر فضای سفید PDF؛ نیازمند تأیید انسانی';
+  detect.addEventListener('click',()=>{
+   const crop=current(kind);
+   if(!crop.isRenderReady()){notify('اول PDF را باز کن.');return}
+   const proposed=suggestRegionsOnCanvas(crop.canvas,crop.page);
+   if(!proposed.length){notify('در این صفحه کادر پیشنهادی مشخصی پیدا نشد؛ برش دستی را انجام بده.');return}
+   const dialog=document.createElement('dialog');dialog.className='studio-region-suggestions';
+   const title=document.createElement('h2');title.textContent='کادرهای پیشنهادی · صفحه '+crop.page;
+   const description=document.createElement('p');description.textContent='این تشخیص آزمایشی است. محدوده‌ها را بررسی کن؛ هیچ برشی بدون تأییدت ثبت نمی‌شود.';
+   const list=document.createElement('div');list.className='studio-region-proposals';
+   const close=()=>dialog.close();
+   for(const [index,region] of proposed.entries()){
+    const choice=document.createElement('button');choice.type='button';choice.textContent='بررسی کادر '+(index+1);
+    choice.addEventListener('click',()=>{close();void activate(kind,region)});
+    list.append(choice);
+   }
+   const actions=document.createElement('div');actions.className='studio-crop-proposal-actions';
+   const accept=document.createElement('button');accept.type='button';accept.textContent='تأیید و افزودن همه پیشنهادها';
+   accept.addEventListener('click',()=>{
+    const merged=uniqueRegions([...queued[kind],...proposed]).slice(0,limit);
+    queued[kind]=merged;update(kind);notify(merged.length+' کادر پیشنهادی به صف اضافه شد.');close();
+   });
+   const cancel=document.createElement('button');cancel.type='button';cancel.textContent='بی‌خیال';
+   cancel.addEventListener('click',close);
+   actions.append(accept,cancel);dialog.append(title,description,list,actions);
+   document.body.append(dialog);dialog.addEventListener('close',()=>dialog.remove(),{once:true});dialog.showModal();
+  });
+  head.append(count,btn,clearBtn,zoom,preview,detect);
   const list=document.createElement('div');list.className='studio-crop-chips';
   const guide=document.createElement('p');guide.className='studio-crop-guide';
   guide.textContent='برای سؤال چندقسمتی هر کادر را به صف اضافه کن؛ هنگام ثبت، برش‌ها کنار هم ترکیب می‌شوند.';
