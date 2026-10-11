@@ -299,3 +299,28 @@ body.atelier-studio .studio-recovery-banner button{min-height:32px;padding:5px 9
 body.atelier-studio .studio-cloud-controls button{min-height:36px;padding:6px 10px;border-color:#476878;font-size:.72rem}
 .studio-cloud-sync .studio-cloud-warning{padding:11px 12px;border:1px solid #94734B;border-radius:10px;background:#3F3227;color:#FFE1AD}
 .studio-cloud-versions{display:grid;gap:7px;max-height:230px;overflow:auto}
+
+/* ZH-73: multi-crop capture and responsive zoom tooling */
+.studio-crop-queue{display:grid;gap:7px;padding:10px 12px;border-bottom:1px solid #345064;background:#111F2D}
+.studio-crop-queue-head{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.studio-crop-count{font-size:.73rem;font-weight:750;color:#C3E5DC;margin-inline-end:auto}
+body.atelier-studio .studio-crop-queue-head button{min-height:35px;padding:6px 9px;font-size:.73rem}
+.studio-crop-zoom{display:flex;align-items:center;gap:5px;direction:ltr}
+.studio-crop-zoom output{min-width:46px;text-align:center;font:700 .72rem ui-monospace,Consolas,monospace;color:#BDE6D9}
+.studio-crop-chips{display:flex;gap:7px;overflow-x:auto;scrollbar-width:thin;min-height:4px;max-width:100%;padding-bottom:2px}
+.studio-crop-chip{display:flex;gap:0;flex:none;align-items:stretch;border:1px solid #42667B;border-radius:9px;background:#1B3441;overflow:hidden}
+body.atelier-studio .studio-crop-chip button{min-height:34px;padding:5px 9px;border:0;border-radius:0;background:transparent;color:#E2F0F6;font-size:.71rem}
+body.atelier-studio .studio-crop-chip button:hover{background:#2B4D5C}
+body.atelier-studio .studio-crop-chip .studio-chip-remove{padding:5px 11px;border-inline-start:1px solid #42667B;color:#FFD4CE;font-size:1.05rem}
+.studio-crop-guide{margin:0;color:#A2BBCB;font-size:.69rem;line-height:1.8}
+.studio-crop-preview{width:min(900px,calc(100vw - 24px));max-height:88dvh;overflow:auto;padding:16px;border:1px solid #5B7990;border-radius:15px;background:#101C28;color:#F4F7FB}
+.studio-crop-preview::backdrop{background:#030B14C9}
+.studio-crop-preview img{display:block;width:auto;max-width:100%;margin:10px auto;background:white;border-radius:5px}
+.studio-crop-preview p{font-size:.8rem;color:#BAE3D4}
+@media(max-width:780px){
+ .studio-crop-queue{padding:11px}
+ body.atelier-studio .studio-crop-queue-head button,body.atelier-studio .studio-crop-chip button{min-height:44px}
+ .studio-crop-count{flex-basis:100%}
+ .studio-crop-zoom{flex:1;justify-content:center}
+ .studio-crop-guide{font-size:.72rem}
+}
