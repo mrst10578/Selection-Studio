@@ -44,10 +44,15 @@ async function actorId(identity){
 async function recordAudit(db,actor,action,result,detail=""){
  await db.prepare("INSERT INTO security_audit (actor,action,result,detail) VALUES (?1,?2,?3,?4)").bind(actor,action,result,detail).run();
 }
-async function consumeQuota(db,actor){
- const now=Date.now();
- for(const [window,bucket,maximum] of [["minute",Math.floor(now/60000),10],["day",Math.floor(now/86400000),100]]){
-  const row=await db.prepare("INSERT INTO ocr_usage (actor,window,bucket,used) VALUES (?1,?2,?3,1) ON CONFLICT(actor,window,bucket) DO UPDATE SET used=used+1 WHERE used < ?4 RETURNING used").bind(actor,window,bucket,maximum).first();
+async function consumeQuota(db,actor,env){
+ const now=Date.now(),daily=Math.floor(now/86400000);
+ const globalLimit=Math.min(100,Math.max(1,Number(env.OCR_GLOBAL_DAILY_LIMIT)||30));
+ for(const [subject,window,bucket,maximum] of [
+  [actor,"minute",Math.floor(now/60000),10],
+  [actor,"day",daily,100],
+  ["__global__","day",daily,globalLimit]
+ ]){
+  const row=await db.prepare("INSERT INTO ocr_usage (actor,window,bucket,used) VALUES (?1,?2,?3,1) ON CONFLICT(actor,window,bucket) DO UPDATE SET used=used+1 WHERE used < ?4 RETURNING used").bind(subject,window,bucket,maximum).first();
   if(!row)return false;
  }
  return true;
@@ -68,7 +73,7 @@ export default {
    if(!env.OCR_SERVICE_TOKEN||!env.SECURITY_DB)return json({error:"OCR is not configured"},503);
    const actor=await actorId(identity);
    try{
-    const permitted=await consumeQuota(env.SECURITY_DB,actor);
+    const permitted=await consumeQuota(env.SECURITY_DB,actor,env);
     if(!permitted){
      await recordAudit(env.SECURITY_DB,actor,"ocr","rate_limited");
      return json({error:"Rate limit exceeded"},429,{"Retry-After":"60"});
