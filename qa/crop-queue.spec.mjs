@@ -5,31 +5,15 @@ async function openStudio(page){await page.goto("/studio/");await expect(page.lo
 test.describe("ZH-73 multi-crop and navigation",()=>{
  test("saved queue satisfies real question gate and stores multiple normalized regions",async({page},testInfo)=>{
   test.skip(!testInfo.project.name.startsWith("desktop"),"Desktop pointer interaction with stub PDF renderer");
-  const moduleSource=`
-   export const GlobalWorkerOptions={workerSrc:""};
-   export function getDocument(){
-    const pdf={numPages:3,async getPage(index){
-     return{getViewport:({scale})=>({width:420*scale,height:600*scale}),
-      render:({canvasContext})=>{const promise=Promise.resolve().then(()=>{
-       canvasContext.fillStyle="#fff";canvasContext.fillRect(0,0,canvasContext.canvas.width,canvasContext.canvas.height);
-       canvasContext.fillStyle=index===1?"#242d3b":"#335588";
-       canvasContext.fillRect(30,40,canvasContext.canvas.width*.65,35);
-      });return{promise,cancel(){}};}
-     };
-    },async destroy(){}};
-    return{promise:Promise.resolve(pdf),async destroy(){}};
-   }
-  `;
-  await page.route("**/pdfjs-dist@4.10.38/build/pdf.min.mjs",route=>route.fulfill({
-   status:200,contentType:"application/javascript",headers:{"access-control-allow-origin":"*"},body:moduleSource
-  }));
+  await page.setContent('<!doctype html><html><body style="padding:48px;font-size:30px">Question 1: demo mathematics and science<br><br>Answer 1: explanation</body></html>');
+  const pdf=await page.pdf({width:"600px",height:"800px",printBackground:true});
   await openStudio(page);
   await expect(page.locator("#operatorLogin")).toBeHidden();
   await page.locator("#provider").fill("قلمچی");
   await page.locator("#examMonth").fill("03");
   await page.locator("#examDay").fill("07");
   await page.locator("#operator").fill("گزینشگر");
-  const file={name:"fixture.pdf",mimeType:"application/pdf",buffer:Buffer.from("%PDF-1.4 mock fixture")};
+  const file={name:"fixture.pdf",mimeType:"application/pdf",buffer:pdf};
   await page.locator("#questionPdf").setInputFiles(file);
   await expect(page.locator("#questionPdfState")).toContainText("fixture.pdf");
   await page.locator("#answerPdf").setInputFiles({...file,name:"answer.pdf"});
@@ -37,24 +21,30 @@ test.describe("ZH-73 multi-crop and navigation",()=>{
   await page.locator("#saveSession").click();
   await expect(page.locator("#sessionCard")).toHaveClass(/ready/);
   await page.locator("#questionTab").click();
-  const drag=async (selector,offset=0)=>{
+  const drag=async (selector,part=0)=>{
    const canvas=page.locator(selector);
+   await canvas.scrollIntoViewIfNeeded();
    await expect(canvas).toBeVisible();
-   const box=await canvas.boundingBox();
+   const box=await canvas.boundingBox(),viewport=page.viewportSize();
    expect(box).toBeTruthy();
-   const x=box.x+Math.min(70,box.width*.2)+offset,y=box.y+Math.min(65,box.height*.16)+offset*.35;
-   await page.mouse.move(x,y);
+   const top=Math.max(0,box.y)+15;
+   const bottom=Math.min(viewport.height,box.y+box.height)-15;
+   expect(bottom-top).toBeGreaterThan(80);
+   const from={x:box.x+box.width*.18,y:top+(bottom-top)*(part===0?.08:.55)};
+   const to={x:box.x+box.width*.58,y:top+(bottom-top)*(part===0?.36:.86)};
+   await page.mouse.move(from.x,from.y);
    await page.mouse.down();
-   await page.mouse.move(x+90,y+100,{steps:5});
+   await page.mouse.move(to.x,to.y,{steps:6});
    await page.mouse.up();
   };
   await drag("#qCanvas");
+  await expect(page.locator("#questionCropState")).toHaveText("ثبت شد");
   await page.locator("#questionPane .studio-crop-queue").getByRole("button",{name:"+ افزودن این برش"}).click();
   await expect(page.locator("#questionPane .studio-crop-chip")).toHaveCount(1);
   await expect(page.locator('[data-check="question"]')).toHaveClass(/done/);
   await expect(page.locator("#questionCropState")).toContainText("1 برش آماده");
   // Add another part of the same question, keeping the first queued crop.
-  await drag("#qCanvas",110);
+  await drag("#qCanvas",1);
   await page.locator("#questionPane .studio-crop-queue").getByRole("button",{name:"+ افزودن این برش"}).click();
   await expect(page.locator("#questionPane .studio-crop-chip")).toHaveCount(2);
   await page.locator("#answerTab").click();
