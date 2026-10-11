@@ -1,67 +1,127 @@
-/* ZH-74 experimental LOCAL region proposals. No image upload or OCR inference. */
-const clamp=(n,min,max)=>Math.min(max,Math.max(min,n));
-export function detectInkBlocks(data,width,height,{maxCandidates=12}={}){
- if(!Number.isInteger(width)||!Number.isInteger(height)||width<24||height<24||!data||data.length<width*height*4)return [];
- const count=new Uint32Array(height);
- const minRowInk=Math.max(3,Math.floor(width*.006));
+/* ZH-74: local, deterministic PDF pixel segmentation, never OCR or network.
+ * All coordinates are [x1,y1,x2,y2] normalized to the original rendered canvas.
+ * "Option" labels are only visual hypotheses and MUST be reviewed by an operator.
+ */
+const clamp=(value,min,max)=>Math.min(max,Math.max(min,value));
+const finite=value=>typeof value==='number'&&Number.isFinite(value);
+function boxOf(lines,width,height,padX=Math.max(3,Math.round(width*.012)),padY=Math.max(3,Math.round(height*.006))){
+ const minX=Math.min(...lines.map(x=>x.left)),maxX=Math.max(...lines.map(x=>x.right));
+ const minY=Math.min(...lines.map(x=>x.top)),maxY=Math.max(...lines.map(x=>x.bottom));
+ return [
+  clamp((minX-padX)/width,0,1),clamp((minY-padY)/height,0,1),
+  clamp((maxX+padX+1)/width,0,1),clamp((maxY+padY+1)/height,0,1)
+ ];
+}
+function lineRuns(data,width,height){
+ const rows=[];
+ const minPixels=Math.max(3,Math.round(width*.004));
  for(let y=0;y<height;y++){
+  let left=width,right=-1,ink=0;
   for(let x=0;x<width;x++){
-   const i=(y*width+x)*4;
-   const darkness=(data[i]*.2126+data[i+1]*.7152+data[i+2]*.0722)<185;
-   if(darkness&&data[i+3]>127)count[y]++;
+   const offset=(y*width+x)*4;
+   if(data[offset+3]<128)continue;
+   const gray=data[offset]*.2126+data[offset+1]*.7152+data[offset+2]*.0722;
+   if(gray<185){ink++;if(x<left)left=x;if(x>right)right=x}
   }
+  // Suppress page-wide rules/borders; these are not text rows.
+  rows.push(ink>=minPixels&&ink<width*.93?{y,left,right,ink}:null);
  }
- const lines=[];let first=-1,last=-1;
+ const runs=[];let active=null,gap=0;
+ function commit(){
+  if(!active)return;
+  if(active.bottom-active.top>=0&&active.ink>=35&&active.right-active.left>=width*.065)runs.push(active);
+  active=null;gap=0;
+ }
  for(let y=0;y<height;y++){
-  if(count[y]>=minRowInk){
-   if(first<0)first=y;
-   last=y;
-  }else if(first>=0&&y-last>2){
-   lines.push([first,last]);first=-1;last=-1;
+  const row=rows[y];
+  if(row){
+   if(!active)active={top:y,bottom:y,left:row.left,right:row.right,ink:0};
+   active.bottom=y;active.left=Math.min(active.left,row.left);active.right=Math.max(active.right,row.right);active.ink+=row.ink;gap=0;
+  }else if(active){
+   gap++;if(gap>2)commit();
   }
  }
- if(first>=0)lines.push([first,last]);
- if(!lines.length)return [];
- const sortedHeights=lines.map(([a,b])=>b-a+1).sort((a,b)=>a-b);
- const typical=sortedHeights[Math.floor(sortedHeights.length/2)];
- const breakGap=Math.max(12,Math.min(35,Math.round(typical*1.8)),Math.round(height*.015));
- const blocks=[];let start=lines[0][0],end=lines[0][1];
- for(const [a,b] of lines.slice(1)){
-  if(a-end-1>breakGap){blocks.push([start,end]);start=a}
-  end=b;
+ commit();
+ return runs;
+}
+function optionTail(lines,width,height){
+ if(lines.length<5)return false;
+ const tail=lines.slice(-4);
+ const prior=lines.slice(0,-4);
+ const heights=tail.map(l=>l.bottom-l.top+1);
+ const sorted=[...heights].sort((a,b)=>a-b);
+ const typical=sorted[1]+.5*(sorted[2]-sorted[1]);
+ const validHeight=heights.every(h=>h>=2&&h<=Math.max(20,typical*2.2));
+ const rightEdge=Math.max(...tail.map(l=>l.right))-Math.min(...tail.map(l=>l.right));
+ const yGaps=tail.slice(1).map((l,i)=>l.top-tail[i].bottom-1);
+ const validSpacing=yGaps.every(g=>g>=0&&g<Math.max(34,height*.042));
+ const widths=tail.map(l=>l.right-l.left+1);
+ // A loose right anchor works for RTL question options while avoiding random text.
+ const validAnchor=rightEdge<=width*.2;
+ const validWidth=widths.every(w=>w>width*.07&&w<width*.9);
+ const stemSpace=tail[0].top-prior.at(-1).bottom;
+ return validHeight&&validSpacing&&validAnchor&&validWidth&&stemSpace>=2;
+}
+export function detectQuestionLayout(data,width,height,{maxCandidates=12}={}){
+ if(!Number.isInteger(width)||!Number.isInteger(height)||width<24||height<24||
+    !data||data.length<width*height*4)return [];
+ const rows=lineRuns(data,width,height);
+ if(!rows.length)return [];
+ const heights=rows.map(x=>x.bottom-x.top+1).sort((a,b)=>a-b);
+ const typical=heights[Math.floor(heights.length/2)];
+ const gapLimit=Math.max(13,Math.min(39,Math.round(typical*1.8)),Math.round(height*.015));
+ const groups=[];let current=[rows[0]];
+ for(const line of rows.slice(1)){
+  const prev=current.at(-1);
+  if(line.top-prev.bottom-1>gapLimit){groups.push(current);current=[]}
+  current.push(line);
  }
- blocks.push([start,end]);
- const candidates=[];
- for(const [from,to] of blocks){
-  if(to-from+1<Math.max(11,Math.floor(height*.015)))continue;
-  let left=width,right=0,darkPixels=0;
-  for(let y=from;y<=to;y++){
-   for(let x=0;x<width;x++){
-    const i=(y*width+x)*4;
-    if(data[i+3]>127&&(data[i]*.2126+data[i+1]*.7152+data[i+2]*.0722)<185){
-     left=Math.min(left,x);right=Math.max(right,x);darkPixels++;
-    }
-   }
+ groups.push(current);
+ const proposals=[];
+ for(const lines of groups){
+  const top=lines[0].top,bottom=lines.at(-1).bottom;
+  if(bottom-top+1<Math.max(9,Math.round(height*.01)))continue;
+  if(optionTail(lines,width,height)){
+   const stem=lines.slice(0,-4);
+   const bounds=boxOf(stem,width,height);
+   proposals.push({kind:'question',label:'متن احتمالی سؤال',confidence:.72,bbox_norm:bounds});
+   lines.slice(-4).forEach((line,index)=>{
+    proposals.push({kind:'option',label:'گزینه احتمالی '+(index+1),confidence:.58,bbox_norm:boxOf([line],width,height)});
+   });
+  }else{
+   proposals.push({kind:'block',label:'بخش احتمالی سؤال',confidence:.45,bbox_norm:boxOf(lines,width,height)});
   }
-  if(right-left+1<width*.12||darkPixels<35)continue;
-  const px=Math.max(4,Math.round(width*.015)),py=Math.max(4,Math.round(height*.008));
-  const box=[
-   clamp((left-px)/width,0,1),clamp((from-py)/height,0,1),
-   clamp((right+px+1)/width,0,1),clamp((to+py+1)/height,0,1)
-  ];
-  if(box[2]>box[0]&&box[3]>box[1])candidates.push({bbox_norm:box});
  }
- return candidates.slice(0,clamp(Number(maxCandidates)||12,1,12));
+ return proposals.filter(p=>p.bbox_norm[2]>p.bbox_norm[0]&&p.bbox_norm[3]>p.bbox_norm[1])
+  .slice(0,clamp(Number(maxCandidates)||12,1,12));
+}
+// Backward compatible API for existing consumers: exactly the original bounds shape.
+export function detectInkBlocks(data,width,height,opts={}){
+ return detectQuestionLayout(data,width,height,opts).map(({bbox_norm})=>({bbox_norm}));
+}
+export function createDetectionSnapshot(canvas,page,{maxCandidates=12}={}){
+ if(!canvas?.width||!canvas?.height||!Number.isInteger(Number(page))||Number(page)<1)return null;
+ const ratio=Math.min(1,700/canvas.width,1000/canvas.height);
+ const thumbnail=document.createElement('canvas');
+ thumbnail.width=Math.max(24,Math.round(canvas.width*ratio));
+ thumbnail.height=Math.max(24,Math.round(canvas.height*ratio));
+ const ctx=thumbnail.getContext('2d',{willReadFrequently:true});
+ if(!ctx)return null;
+ ctx.fillStyle='#fff';ctx.fillRect(0,0,thumbnail.width,thumbnail.height);
+ ctx.drawImage(canvas,0,0,thumbnail.width,thumbnail.height);
+ const image=ctx.getImageData(0,0,thumbnail.width,thumbnail.height);
+ const candidates=detectQuestionLayout(image.data,thumbnail.width,thumbnail.height,{maxCandidates})
+  .map((proposal,index)=>({...proposal,id:'proposal-'+(index+1),page:Number(page)}));
+ return {thumbnail,candidates,width:thumbnail.width,height:thumbnail.height};
 }
 export function suggestRegionsOnCanvas(canvas,page){
- if(!canvas?.width||!canvas?.height)return [];
- const ratio=Math.min(1,700/canvas.width,1000/canvas.height);
- const copy=document.createElement('canvas');
- copy.width=Math.max(24,Math.round(canvas.width*ratio));
- copy.height=Math.max(24,Math.round(canvas.height*ratio));
- const context=copy.getContext('2d',{willReadFrequently:true});
- context.fillStyle='#fff';context.fillRect(0,0,copy.width,copy.height);
- context.drawImage(canvas,0,0,copy.width,copy.height);
- const image=context.getImageData(0,0,copy.width,copy.height);
- return detectInkBlocks(image.data,copy.width,copy.height).map(x=>({page,bbox_norm:x.bbox_norm}));
+ return createDetectionSnapshot(canvas,page)?.candidates.map(({page,bbox_norm})=>({page,bbox_norm}))||[];
+}
+export function validateEditedBounds(values){
+ if(!Array.isArray(values)||values.length!==4)return null;
+ const numbers=values.map(Number);
+ if(!numbers.every(finite))return null;
+ const [left,top,right,bottom]=numbers;
+ if(left<0||top<0||right>100||bottom>100||right-left<1||bottom-top<1)return null;
+ return numbers.map(x=>Math.round(x*100)/10000);
 }
