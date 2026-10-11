@@ -201,11 +201,15 @@ function updatePdfState(crop,stateId){
 }
 async function loadPdfInput(input,crop,label,stateId){
   const selected=input.files[0]||null;
+  const previousFile=crop.file;
   updatePdfState(crop,stateId);
   try{
     const result=await crop.loadFile(selected);
     if(result?.status==="stale")return;
-    if(result?.status==="ready")toast(label+" آماده شد","ok");
+    if(result?.status==="ready"){
+      if(previousFile!==crop.file)cropQueue.clear(crop===qCrop?"question":"answer");
+      toast(label+" آماده شد","ok");
+    }
   }catch(error){
     input.value="";
     const kept=crop.file?.name?" سند فعال قبلی «"+crop.file.name+"» حفظ شد.":"";
