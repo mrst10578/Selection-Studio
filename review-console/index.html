@@ -12,7 +12,7 @@
 </section>
 
 <div id="appView" class="hidden">
-<header class="review-header"><div><span class="eyebrow">بانک تست</span><h1>پنل مدیریت</h1></div><div class="header-actions"><span id="autosaveState" class="status-pill" title="داده‌های این پنل در حافظهٔ همین مرورگر ذخیره می‌شوند.">ذخیره در این مرورگر</span><button id="commandLauncher" type="button">فرمان‌ها <kbd>Ctrl K</kbd></button><button id="refreshBtn" type="button">بروزرسانی</button><button id="logoutBtn" type="button">خروج</button></div></header>
+<header class="review-header"><div><span class="eyebrow">بانک تست</span><h1>پنل مدیریت</h1></div><div class="header-actions"><span id="autosaveState" class="status-pill" title="داده‌های این پنل در حافظهٔ همین مرورگر ذخیره می‌شوند.">ذخیره در این مرورگر</span><a href="./ocr-studio.html" class="ocr-admin-link">استودیوی بازتایپ</a><button id="commandLauncher" type="button">فرمان‌ها <kbd>Ctrl K</kbd></button><button id="refreshBtn" type="button">بروزرسانی</button><button id="logoutBtn" type="button">خروج</button></div></header>
 <main class="review-layout">
   <aside class="review-sidebar admin-browser" aria-label="انتخاب درس و گزینشگر">
     <div class="admin-step"><span class="eyebrow">مرحله ۱</span><strong>انتخاب درس</strong></div>
@@ -44,7 +44,7 @@
 
 <dialog id="quickDialog" class="quick-dialog">
   <div class="quick-shell">
-    <div class="quick-head"><div><span class="eyebrow">بازبینی سؤال</span><strong id="quickId">-</strong><small id="quickPosition">-</small></div><div class="quick-head-actions"><button id="quickUndoBtn" type="button" aria-label="بازگردانی آخرین تغییر">بازگردانی</button><button id="quickClose" type="button">بستن</button></div></div>
+    <div class="quick-head"><div><span class="eyebrow">بازبینی سؤال</span><strong id="quickId">-</strong><small id="quickPosition">-</small></div><div class="quick-head-actions"><button id="openOcrStudio" type="button">بازتایپ و OCR این سؤال</button><button id="quickUndoBtn" type="button" aria-label="بازگردانی آخرین تغییر">بازگردانی</button><button id="quickClose" type="button">بستن</button></div></div>
     <div class="quick-viewers" id="quickViewers" data-active-view="question"><div class="quick-view-tabs" role="group" aria-label="نمایش برش سؤال یا پاسخ"><button type="button" data-review-view="question" aria-pressed="true">نمایش سؤال</button><button type="button" data-review-view="answer" aria-pressed="false">نمایش پاسخ</button></div><figure id="quickQuestionFigure"><figcaption>برش سؤال</figcaption><button type="button" class="image-expand" data-image="quickQuestionImage">بزرگ‌نمایی تصویر</button><img id="quickQuestionImage" alt="برش سؤال" /></figure><figure id="quickAnswerFigure"><figcaption>برش پاسخ</figcaption><button type="button" class="image-expand" data-image="quickAnswerImage">بزرگ‌نمایی تصویر</button><img id="quickAnswerImage" alt="برش پاسخ" /></figure></div>
     <aside class="quick-inspector" aria-label="بازبینی و شناسنامه سوال">
       <div class="inspector-title"><span class="eyebrow">مشخصات سؤال</span><strong>شناسنامه و تصمیم</strong></div>
