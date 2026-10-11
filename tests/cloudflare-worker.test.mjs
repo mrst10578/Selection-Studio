@@ -80,3 +80,29 @@ test("OCR worker sends constrained image prompt to Workers AI",async()=>{
  const bad=await secureOcr.fetch(new Request("https://internal/ocr",{method:"POST",headers:{"Authorization":"Bearer server-only","Content-Type":"application/json"},body:JSON.stringify({image:"https://untrusted.example/"} )}),env);
  assert.equal(bad.status,400);
 });
+
+test("authenticated OCR enforces D1 quota and records audit before inference",async()=>{
+ const prior=globalThis.fetch;
+ let upstreamCalls=0;
+ globalThis.fetch=async (url,options)=>{
+  if(String(url).includes("cloudflareaccess.com"))return new Response(JSON.stringify({keys:[jwk]}),{status:200});
+  upstreamCalls++;
+  assert.equal(options.headers.Authorization,"Bearer server-secret");
+  return new Response(JSON.stringify({result:{response:"ok"}}),{status:200,headers:{"Content-Type":"application/json"}});
+ };
+ const counters=new Map(),audit=[];
+ const db={prepare(sql){return {bind(...params){return {
+  async first(){const [actor,window,bucket,max]=params;const k=actor+":"+window+":"+bucket;const used=counters.get(k)||0;if(used>=max)return null;counters.set(k,used+1);return {used:used+1}},
+  async run(){audit.push(params);return {success:true}}
+ }}}}};
+ try{
+  const e={...authEnv,SECURITY_DB:db,OCR_SERVICE_TOKEN:"server-secret"};
+  const signed=()=>request("/api/ocr","POST",{"Cf-Access-Jwt-Assertion":jwt(),"Content-Type":"application/json"});
+  for(let i=0;i<10;i++)assert.equal((await worker.fetch(signed(),e)).status,200);
+  const rejected=await worker.fetch(signed(),e);
+  assert.equal(rejected.status,429);
+  assert.equal(upstreamCalls,10);
+  assert.equal(audit.filter(row=>row[2]==="started").length,10);
+  assert.equal(audit.filter(row=>row[2]==="rate_limited").length,1);
+ }finally{globalThis.fetch=prior}
+});
