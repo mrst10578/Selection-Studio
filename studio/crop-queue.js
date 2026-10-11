@@ -130,7 +130,7 @@ export function createCropQueue({question,answer,switchPane,onNotice=()=>{}}){
   guide.textContent='برای سؤال چندقسمتی هر کادر را به صف اضافه کن؛ هنگام ثبت، برش‌ها کنار هم ترکیب می‌شوند.';
   host.append(head,list,guide);toolbar.insertAdjacentElement('afterend',host);
   views[kind]={count,list};update(kind);
-  document.getElementById(kind==='question'?'questionPdf':'answerPdf')?.addEventListener('change',()=>clear(kind));
+  // The caller clears the queue only once replacement PDF loading succeeds.
  }
  install('question');install('answer');
  // Swipe only the tab strip, not the PDF itself, so pan/zoom cannot turn pages accidentally.
