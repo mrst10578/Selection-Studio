@@ -100,7 +100,31 @@ export function createCropQueue({question,answer,switchPane,onNotice=()=>{}}){
   btn.addEventListener('click',()=>add(kind));
   const clearBtn=document.createElement('button');clearBtn.type='button';clearBtn.textContent='پاک‌کردن صف';
   clearBtn.addEventListener('click',()=>clear(kind));
-  head.append(count,btn,clearBtn);
+  const zoom=document.createElement('div');zoom.className='studio-crop-zoom';zoom.setAttribute('aria-label','کنترل بزرگ‌نمایی PDF');
+  const percent=document.createElement('output');percent.textContent='۱۰۰٪';
+  const zoomButton=(symbol,delta,label)=>{
+   const button=document.createElement('button');button.type='button';button.textContent=symbol;button.setAttribute('aria-label',label);
+   button.addEventListener('click',async()=>{try{const value=await current(kind).setZoom(current(kind).zoom+delta);percent.textContent=Math.round(value*100)+'٪'}catch{notify('بزرگ‌نمایی ممکن نشد.')}});
+   return button;
+  };
+  zoom.append(zoomButton('−',-.25,'کوچک‌کردن PDF'),percent,zoomButton('+',.25,'بزرگ‌کردن PDF'));
+  const preview=document.createElement('button');preview.type='button';preview.textContent='پیش‌نمایش برش‌ها';
+  preview.addEventListener('click',async()=>{
+   preview.disabled=true;
+   try{
+    const result=await capture(kind);
+    const url=URL.createObjectURL(result.blob);
+    const dialog=document.createElement('dialog');dialog.className='studio-crop-preview';
+    const close=document.createElement('button');close.type='button';close.textContent='بستن پیش‌نمایش';
+    const image=document.createElement('img');image.src=url;image.alt='ترکیب برش‌های انتخاب‌شده';
+    const message=document.createElement('p');message.textContent=result.regions.length+' برش آماده ذخیره است';
+    dialog.append(close,message,image);document.body.append(dialog);
+    const clean=()=>{URL.revokeObjectURL(url);dialog.remove()};
+    close.addEventListener('click',()=>dialog.close());dialog.addEventListener('close',clean,{once:true});dialog.showModal();
+   }catch{notify('برای پیش‌نمایش، یک محدوده آماده روی PDF انتخاب کن.')}
+   finally{preview.disabled=false}
+  });
+  head.append(count,btn,clearBtn,zoom,preview);
   const list=document.createElement('div');list.className='studio-crop-chips';
   const guide=document.createElement('p');guide.className='studio-crop-guide';
   guide.textContent='برای سؤال چندقسمتی هر کادر را به صف اضافه کن؛ هنگام ثبت، برش‌ها کنار هم ترکیب می‌شوند.';
@@ -109,5 +133,14 @@ export function createCropQueue({question,answer,switchPane,onNotice=()=>{}}){
   document.getElementById(kind==='question'?'questionPdf':'answerPdf')?.addEventListener('change',()=>clear(kind));
  }
  install('question');install('answer');
+ // Swipe only the tab strip, not the PDF itself, so pan/zoom cannot turn pages accidentally.
+ const tabs=document.querySelector('.viewer-tabs');let start=null;
+ tabs?.addEventListener('touchstart',e=>{if(e.touches.length===1)start={x:e.touches[0].clientX,y:e.touches[0].clientY}},{passive:true});
+ tabs?.addEventListener('touchend',e=>{
+  if(!start||!e.changedTouches.length)return;
+  const dx=e.changedTouches[0].clientX-start.x,dy=e.changedTouches[0].clientY-start.y;start=null;
+  if(Math.abs(dx)<75||Math.abs(dy)>55)return;
+  document.getElementById(dx>0?'questionTab':'answerTab')?.click();
+ },{passive:true});
  return {add,clear,reset,capture,selections};
 }
