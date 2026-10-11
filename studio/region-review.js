@@ -26,8 +26,9 @@ export function openRegionReview({snapshot,onReview,onAccept,onClose=()=>{}}){
  const syncFeedback=message=>{
   const count=selected().length;
   feedback.textContent=message||(`کادرهای انتخاب‌شده: ${count} از ${entries.length}`);
-  submit.disabled=count===0;
+  if(submit)submit.disabled=count===0;
  };
+ let submit=null;
  const rows=[];
  for(const [index,entry] of entries.entries()){
   const row=make('div','studio-region-editor-row');
@@ -79,7 +80,7 @@ export function openRegionReview({snapshot,onReview,onAccept,onClose=()=>{}}){
  selectAll.addEventListener('click',()=>{for(const row of rows){row.entry.selected=true;row.mark()}});
  const deselect=make('button','','لغو انتخاب');deselect.type='button';
  deselect.addEventListener('click',()=>{for(const row of rows){row.entry.selected=false;row.mark()}});
- const submit=make('button','primary','افزودن کادرهای تأییدشده');submit.type='button';submit.disabled=true;
+ submit=make('button','primary','افزودن کادرهای تأییدشده');submit.type='button';submit.disabled=true;
  submit.addEventListener('click',()=>{
   // Revalidate all selected fields even if focus never left the edited input.
   const chosen=[];
