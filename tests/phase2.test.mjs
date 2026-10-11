@@ -4,6 +4,7 @@ import {generateKeyPairSync,sign} from 'node:crypto';
 import worker from '../cloudflare/_worker.js';
 import {uniqueRegions} from '../studio/crop-queue.js';
 import {sameFields,DRAFT_FIELDS} from '../studio/cloud-draft.js';
+import {detectInkBlocks} from '../studio/region-detector.js';
 
 test('multi-crop keeps distinct page and box regions, removing invalid and duplicate geometry',()=>{
  const a={page:2,bbox_norm:[0.1,0.2,0.4,0.5]};
@@ -90,4 +91,23 @@ test('draft endpoint requires authenticated identity and storage',async()=>{
   assert.equal((await worker.fetch(request,env)).status,503);
   assert.equal((await worker.fetch(new Request('https://host.example/api/draft'),env)).status,401);
  }finally{globalThis.fetch=prior}
+});
+
+test('local ink segmentation proposes separate editable page blocks without image upload',()=>{
+ const width=240,height=180;
+ const image=new Uint8ClampedArray(width*height*4).fill(255);
+ const block=(x1,y1,x2,y2)=>{
+  for(let y=y1;y<y2;y++)for(let x=x1;x<x2;x++){
+   const offset=(y*width+x)*4;
+   image[offset]=image[offset+1]=image[offset+2]=20;
+  }
+ };
+ block(30,18,187,45);
+ block(55,115,212,149);
+ const found=detectInkBlocks(image,width,height);
+ assert.equal(found.length,2);
+ assert.ok(found[0].bbox_norm[1]<.2);
+ assert.ok(found[1].bbox_norm[1]>.55);
+ assert.ok(found[0].bbox_norm.every(n=>n>=0&&n<=1));
+ assert.deepEqual(detectInkBlocks(new Uint8ClampedArray(width*height*4).fill(255),width,height),[]);
 });
