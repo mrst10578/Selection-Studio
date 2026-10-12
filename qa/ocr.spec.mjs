@@ -80,7 +80,7 @@ test.describe('ZH-75 multi-stage OCR, LaTeX preview and operator review',()=>{
   expect(requests).toHaveLength(2);
   await expect(panel.locator('.studio-ocr-preview-text')).toContainText('سؤال ۱۲');
   await expect(panel.locator('.studio-ocr-preview-math')).not.toBeEmpty();
-  await expect(panel.locator('textarea[id="studioOcrLatex"]')).toContainText('x^2');
+  await expect(panel.locator('textarea[id="studioOcrLatex"]')).toHaveValue(/x\\^2/);
   expect(await page.evaluate(()=>window.__fixtureOcr.reviewForSave())).toBeNull();
   await panel.getByRole('button',{name:'۳ · تأیید اپراتور'}).click();
   let confirmed=await page.evaluate(()=>window.__fixtureOcr.reviewForSave());
