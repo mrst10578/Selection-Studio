@@ -17,3 +17,35 @@ body{margin:0;background:#0a0e15;color:#ecf2fa;font-family:Tahoma,"Segoe UI",san
 @media(max-width:710px){.ocr-layout{grid-template-columns:1fr}.ocr-sidebar,.ocr-settings{position:static;max-height:none}.ocr-image-stage{max-height:250px}.ocr-image-stage img{max-height:250px}.ocr-header{padding:14px}.ocr-header nav{width:100%;justify-content:space-between}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
 @media print{body>*:not(#printContainer){display:none!important}body{background:white;color:black}#printContainer{display:block!important;font-family:Tahoma,sans-serif}#printContainer .ocr-paper{padding:0}#printContainer article{break-inside:avoid}}
+
+
+/* ZH-75: non-destructive recognition review and live scientific typesetting. */
+.ocr-live-preview{margin-top:13px;display:grid;gap:9px;border:1px solid #547583;background:linear-gradient(135deg,#1a303c,#152838);border-radius:13px;padding:12px}
+.ocr-live-head{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.ocr-live-head strong{font-size:.83rem;color:#d7ecef}
+.ocr-live-head output{font-size:.7rem;color:#a8d6cd}
+.ocr-live-paper{font-family:Tahoma,"Segoe UI",system-ui,sans-serif;font-size:.95rem;line-height:2.1;min-height:64px;max-height:420px;overflow:auto;border:1px solid #5e7486;border-radius:10px;padding:16px;background:#f7fafd;color:#162635;overflow-wrap:anywhere;white-space:pre-wrap;unicode-bidi:plaintext}
+.ocr-preview-lines{white-space:pre-wrap;line-height:2.1;unicode-bidi:plaintext}
+.ocr-preview-empty{font-size:.8rem;color:#52677a;margin:0}
+.ocr-math-source{display:inline-block;direction:ltr;unicode-bidi:isolate;max-width:100%;overflow-x:auto;padding:1px 4px;border-radius:4px;background:#f2e5dc;color:#533d31;font-family:ui-monospace,monospace;font-size:.86em}
+.ocr-math-display{display:block;text-align:center;margin:8px auto;min-height:36px}
+.ocr-math-rendered{background:transparent;color:inherit;font-family:inherit}
+.ocr-math-invalid{border:1px dashed #c24d4d;color:#912c2c}
+.ocr-stage-actions{padding:7px 0}
+.ocr-stage-actions button{min-height:43px}
+.ocr-candidate{display:grid;gap:9px;padding:15px;border:1px solid #b79065;border-radius:12px;background:linear-gradient(150deg,#3c322f,#272e3d);margin:12px 0}
+.ocr-candidate[hidden]{display:none!important}
+.ocr-candidate-title{display:flex;align-items:center;justify-content:space-between;gap:9px;flex-wrap:wrap}
+.ocr-candidate-title strong{color:#f6dec8;font-size:.95rem}
+.ocr-candidate-title span{color:#ffcca4;font-size:.71rem}
+.ocr-candidate-preview{max-height:230px;min-height:50px}
+.ocr-candidate .ocr-warnings span{color:#ffdfb7}
+.ocr-candidate .ocr-actions{margin:2px 0}
+.ocr-candidate .ocr-actions button{min-height:42px}
+@media(max-width:710px){
+ .ocr-live-paper{padding:12px;font-size:.88rem}
+ .ocr-stage-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+ .ocr-stage-actions button{white-space:normal;line-height:1.65;padding:8px}
+ .ocr-candidate{padding:11px}
+}
+@media(max-width:370px){.ocr-stage-actions{grid-template-columns:1fr}}
