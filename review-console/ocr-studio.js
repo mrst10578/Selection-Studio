@@ -202,9 +202,10 @@ async function imageData(blob){
 async function recognize(q,stage="extract"){
  const blob=await getPreview(SOURCE_KEY+q.id);if(!blob)throw Error("این سؤال فایل تصویر ندارد؛ از تایپ دستی استفاده کن.");
  const prompt=buildOcrPrompt(stage,q.text);
+ const url="/api/ocr";
  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),90000);
  try{
-  const response=await fetch("/api/ocr",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({mode:stage,image:await imageData(blob),prompt}),signal:controller.signal});
+  const response=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({mode:stage,image:await imageData(blob),prompt}),signal:controller.signal});
   const data=await response.json().catch(()=>({error:"پاسخ نامعتبر سرور"}));
   if(!response.ok){const err=new Error(data.error||"خطای HTTP "+response.status);err.status=response.status;throw err}
   return parseOcrResponse(data);
