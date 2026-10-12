@@ -173,17 +173,22 @@ test.describe('ZH-76 OCR text–image mapping and selective OCR',()=>{
   expect(await page.evaluate(()=>window.__bboxWorkbench.reviewForSave())).toBeNull();
  });
 
- test('malformed OCR boxes stay unlinked rather than producing fake highlights',async({page})=>{
+ test('model-proposed valid boxes link to text, but malformed OCR boxes cannot create fake highlights',async({page})=>{
   const panel=await install(page);
   await page.route('**/api/ocr',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({result:{response:JSON.stringify({
    text:'کدام گزینه نیست؟',latex:[],segments:[
-    {start:0,end:4,text:'درست',bbox_norm:[.1,.1,.4,.2]},
+    {start:0,end:4,text:'کدام',bbox_norm:[.1,.1,.4,.2]},
+    {start:5,end:9,text:'درست',bbox_norm:[.1,.3,.4,.5]},
     {start:1,end:5,bbox_norm:[0,0,2,1]}
    ]
   })}})}));
   await panel.getByRole('button',{name:'۱ · تشخیص متن'}).click();
   await expect(panel.locator('#studioOcrText')).toHaveValue('کدام گزینه نیست؟');
-  await expect(panel.locator('.studio-ocr-map-region')).toHaveCount(0);
+  await expect(panel.locator('.studio-ocr-map-region')).toHaveCount(1);
+  await panel.locator('.studio-ocr-map-region').click();
+  const selected=await panel.locator('#studioOcrText').evaluate(el=>el.value.slice(el.selectionStart,el.selectionEnd));
+  expect(selected).toBe('کدام');
+  expect((await page.evaluate(()=>window.__bboxWorkbench.getState('question').links))[0].source).toBe('model');
  });
 
  test('mobile view does not overflow and region controls remain usable',async({page},info)=>{
