@@ -49,3 +49,13 @@ body{margin:0;background:#0a0e15;color:#ecf2fa;font-family:Tahoma,"Segoe UI",san
  .ocr-candidate{padding:11px}
 }
 @media(max-width:370px){.ocr-stage-actions{grid-template-columns:1fr}}
+
+
+.ocr-structured{display:grid;gap:10px;border:1px solid #496b75;border-radius:12px;padding:12px;background:#192c3a}
+.ocr-structured[hidden]{display:none!important}
+.ocr-structured-list{display:grid;gap:7px;grid-template-columns:repeat(2,minmax(0,1fr))}
+.ocr-structure-item{min-width:0;border:1px solid #456071;border-radius:9px;padding:10px;background:#223748}
+.ocr-structure-item:first-child{grid-column:1/-1;border-color:#728b8f}
+.ocr-structure-item strong{display:block;color:#9fdacb;font-size:.73rem;margin-bottom:5px}
+.ocr-structure-item p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.8;font-size:.81rem;color:#ebf3fb}
+@media(max-width:560px){.ocr-structured-list{grid-template-columns:1fr}}
