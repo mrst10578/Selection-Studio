@@ -5,6 +5,7 @@ import {
 import {putPreview} from "./preview-db.js";
 import {PdfCropper,validRegion} from "./pdf-crop.js";
 import {createCropQueue} from "./crop-queue.js";
+import {installOcrWorkbench} from "./ocr-panel.js";
 import {isTypingTarget,toast} from "./ui-runtime.js";
 import "./operator-auth.js";
 import {installWindowsMetadataShortcuts} from "./windows-shortcuts.js";
@@ -17,6 +18,7 @@ let exam=loadExamDraft();
 let activePane="question";
 let submittingQuestion=false;
 let biologyGate={ready:false,issues:["مشخص کن سؤال زیست ترکیبی هست یا نه"]};
+let ocrWorkbench=null;
 
 
 function pdfViewerError(error){
@@ -46,8 +48,8 @@ function installCropFreeze(crop,buttonId,clearId){
   };
   syncCropFreezeButton(buttonId,clearId,crop.isRegionLocked());
 }
-const qCrop=new PdfCropper({canvas:$("qCanvas"),stage:$("qStage"),pageLabel:$("qPage"),prevBtn:$("qPrev"),nextBtn:$("qNext"),modeBtn:$("qCropLock"),onChange:()=>renderGate(),onPageChange:(page,total)=>updatePageJump("qPageJump",page,total),onError:cropError});
-const aCrop=new PdfCropper({canvas:$("aCanvas"),stage:$("aStage"),pageLabel:$("aPage"),prevBtn:$("aPrev"),nextBtn:$("aNext"),modeBtn:$("aCropLock"),onChange:()=>renderGate(),onPageChange:(page,total)=>updatePageJump("aPageJump",page,total),onError:cropError});
+const qCrop=new PdfCropper({canvas:$("qCanvas"),stage:$("qStage"),pageLabel:$("qPage"),prevBtn:$("qPrev"),nextBtn:$("qNext"),modeBtn:$("qCropLock"),onChange:()=>{renderGate();ocrWorkbench?.syncContext()},onPageChange:(page,total)=>updatePageJump("qPageJump",page,total),onError:cropError});
+const aCrop=new PdfCropper({canvas:$("aCanvas"),stage:$("aStage"),pageLabel:$("aPage"),prevBtn:$("aPrev"),nextBtn:$("aNext"),modeBtn:$("aCropLock"),onChange:()=>{renderGate();ocrWorkbench?.syncContext()},onPageChange:(page,total)=>updatePageJump("aPageJump",page,total),onError:cropError});
 installCropFreeze(qCrop,"qRegionLock","qClear");installCropFreeze(aCrop,"aRegionLock","aClear");
 function updatePageJump(id,page,total){const input=$(id);if(!input)return;input.value=page||"";input.max=total||"";input.disabled=!total}
 function installPageJump(id,crop){const input=$(id);input.addEventListener("change",()=>{const page=Number(input.value);if(Number.isInteger(page)&&page>=1&&page<=crop.pdf?.numPages)crop.go(page);else input.value=crop.page||""})}
@@ -207,7 +209,10 @@ async function loadPdfInput(input,crop,label,stateId){
     const result=await crop.loadFile(selected);
     if(result?.status==="stale")return;
     if(result?.status==="ready"){
-      if(previousFile!==crop.file)cropQueue.clear(crop===qCrop?"question":"answer");
+      if(previousFile!==crop.file){
+        const kind=crop===qCrop?"question":"answer";
+        cropQueue.clear(kind);ocrWorkbench?.invalidate(kind);
+      }
       toast(label+" آماده شد","ok");
     }
   }catch(error){
@@ -228,11 +233,22 @@ function switchPane(name){
   $("answerPane").classList.toggle("hidden",name!=="answer");
   $("questionTab").classList.toggle("active",name==="question");
   $("answerTab").classList.toggle("active",name==="answer");
+  ocrWorkbench?.setActive(name);
   requestAnimationFrame(()=>{(name==="question"?qCrop:aCrop).refresh()});
 }
 $("questionTab").onclick=()=>switchPane("question");
 $("answerTab").onclick=()=>switchPane("answer");
-const cropQueue=createCropQueue({question:qCrop,answer:aCrop,switchPane,onNotice:message=>toast(message),onChange:()=>renderGate()});
+const cropQueue=createCropQueue({question:qCrop,answer:aCrop,switchPane,onNotice:message=>toast(message),onChange:()=>{renderGate();ocrWorkbench?.syncContext()}});
+ocrWorkbench=installOcrWorkbench({
+  capture:kind=>cropQueue.capture(kind),
+  getIdentity:()=>String(exam?.id||"not-saved")+":"+String($("sourceNumber").value||""),
+  getFingerprint:kind=>{
+    const crop=kind==="question"?qCrop:aCrop;
+    if(!crop.file||!crop.pdf)return null;
+    return JSON.stringify([crop.documentGeneration,crop.file.name,crop.page?crop.pdf.numPages:0,cropQueue.selections(kind)]);
+  },
+  onNotice:message=>toast(message,"error")
+});
 
 function setSegmented(target,value){
   $(target).value=value?String(value):"";
@@ -360,7 +376,7 @@ $("subject").addEventListener("change",()=>{renderTaxonomy();persistSticky();ren
 $("grade").addEventListener("change",()=>{if(!isMath())renderTaxonomy();persistSticky();renderGate()});
 $("chapter").addEventListener("change",()=>{renderUnits();persistSticky();renderGate()});
 $("unit").addEventListener("change",()=>{syncMathGradeFromUnit();persistSticky();renderGate()});
-$("sourceNumber").addEventListener("input",()=>{$("sourceNumber").value=normalizedDate($("sourceNumber").value);renderGate()});
+$("sourceNumber").addEventListener("input",()=>{$("sourceNumber").value=normalizedDate($("sourceNumber").value);renderGate();ocrWorkbench?.syncContext()});
 $("provider").addEventListener("input",()=>{renderProviderWarning();renderSession()});
 $("operator").addEventListener("input",renderSession);
 
@@ -373,12 +389,13 @@ $("questionForm").addEventListener("submit",async e=>{
   renderGate();
   const source=sourceQuestionNumber(),id=buildQuestionId(exam.id,source);
   try{
-    const [qCapture,aCapture]=await Promise.all([cropQueue.capture("question"),cropQueue.capture("answer")]);
+    const [qCapture,aCapture]=await ocrWorkbench.guardCapture(()=>Promise.all([cropQueue.capture("question"),cropQueue.capture("answer")]));
     const visualHash=await qCrop.visualHash(qCapture.blob);
     const record={
       id,exam_id:exam.id,source_question_number:source,subject:$("subject").value,grade:Number($("grade").value),
       chapter:$("chapter").value,unit:$("unit").value,difficulty:$("difficulty").value,correct_option:Number($("correctOption").value),
       question_regions:qCapture.regions,answer_regions:aCapture.regions,visual_hash:visualHash,
+      ...(ocrWorkbench?.reviewForSave()?{ocr_review:ocrWorkbench.reviewForSave()}:{}),
       biology_combination:$("subject").value==="BIO"?biologyEditor.getValue():null,status:"draft",review_status:"pending",
       entered_by:$("operator").value.trim(),created_at:new Date().toISOString()
     };
@@ -386,7 +403,7 @@ $("questionForm").addEventListener("submit",async e=>{
     records.push(record);
     saveRecords(records);
     $("sourceNumber").value=String(source+1);
-    qCrop.setRegionLocked(false);aCrop.setRegionLocked(false);qCrop.clearAllRegions();aCrop.clearAllRegions();cropQueue.reset();setSegmented("difficulty","");setSegmented("correctOption","");biologyEditor.reset();switchPane("question");
+    qCrop.setRegionLocked(false);aCrop.setRegionLocked(false);qCrop.clearAllRegions();aCrop.clearAllRegions();cropQueue.reset();ocrWorkbench?.reset();setSegmented("difficulty","");setSegmented("correctOption","");biologyEditor.reset();switchPane("question");
     renderRecent();
     toast(`سؤال ${source} ثبت شد · ${activeRecords().length} سؤال در فهرست`,"ok");
   }catch(error){
