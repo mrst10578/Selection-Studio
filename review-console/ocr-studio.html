@@ -7,6 +7,7 @@
   <title>استودیوی بازتایپ | Selection Studio</title>
   <link rel="stylesheet" href="../studio/design-system.css">
   <link rel="stylesheet" href="./ocr-studio.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.19.0/dist/katex.min.css" integrity="sha384-3rdsX6e5mueWyoweR9NIVmtEsUkokpBT/0ALqKKIBMr9j4qhHkaIkAcGgsE6uVlp" crossorigin="anonymous">
   <link rel="stylesheet" href="../studio/atelier-ui.css">
 </head>
 <body class="atelier atelier-ocr">
@@ -43,7 +44,29 @@
       <label class="ocr-label" for="questionTitle">عنوان سؤال</label><input id="questionTitle" placeholder="نام سؤال">
       <label class="ocr-label" for="questionText">سؤال و گزینه‌ها</label>
       <textarea id="questionText" dir="rtl" rows="12" placeholder="متن استخراج‌شده اینجا قرار می‌گیرد. اعداد، گزینه‌ها و فرمول‌ها را با تصویر اصلی تطبیق بده."></textarea>
-      <div class="ocr-actions"><button id="extractBtn" class="primary" type="button">بازشناسی هوشمند تصویر</button><button id="verifyBtn" type="button">بازبینی دوم</button><button id="extractAllBtn" type="button">بازشناسی همه تصاویر</button></div>
+      <section class="ocr-live-preview" aria-label="پیش‌نمایش زنده متن و فرمول">
+        <div class="ocr-live-head"><strong>پیش‌نمایش زنده متن و فرمول</strong><output id="latexStatus" role="status" aria-live="polite">آماده</output></div>
+        <div id="liveMathPreview" class="ocr-live-paper" dir="rtl"></div>
+        <p class="ocr-note">فرمول‌ها در قالب LaTeX نمایش داده می‌شوند. اگر کتابخانه در دسترس نباشد، متن خام حفظ می‌شود.</p>
+      </section>
+      <div class="ocr-actions ocr-stage-actions">
+        <button id="extractBtn" class="primary" type="button">۱. استخراج متن و گزینه‌ها</button>
+        <button id="verifyBtn" type="button">۲. بازبینی مستقل متن</button>
+        <button id="formulaBtn" type="button">۳. بازبینی دقیق فرمول‌ها</button>
+        <button id="extractAllBtn" type="button">استخراج تصاویر بدون متن</button>
+      </div>
+      <p class="ocr-note">مراحل بازبینی دوم و فرمول‌ها فقط با انتخاب شما درخواست جدیدی به سرویس OCR می‌فرستند. خروجی بازبینی تا تأییدتان جایگزین متن نمی‌شود.</p>
+      <section id="ocrCandidatePanel" class="ocr-candidate" aria-label="پیشنهاد اصلاح متن" hidden>
+        <div class="ocr-candidate-title"><strong id="ocrCandidateHeading">پیشنهاد بازبینی</strong><span>نیازمند تأیید اپراتور</span></div>
+        <label class="ocr-label" for="ocrCandidateText">متن پیشنهادی (قابل اصلاح)</label>
+        <textarea id="ocrCandidateText" dir="rtl" rows="7"></textarea>
+        <div id="ocrDiffWarnings" class="ocr-warnings" aria-live="polite"></div>
+        <div class="ocr-live-paper ocr-candidate-preview" id="ocrCandidatePreview" aria-label="پیش‌نمایش فرمول‌های پیشنهادی"></div>
+        <div class="ocr-actions">
+          <button id="acceptOcrCandidate" class="primary" type="button">پذیرش متن پیشنهادی</button>
+          <button id="rejectOcrCandidate" type="button">رد پیشنهاد و حفظ متن</button>
+        </div>
+      </section>
       <p id="ocrStatus" role="status" aria-live="polite">آماده</p>
       <div id="warnings" class="ocr-warnings" aria-live="polite"></div>
     </section>
