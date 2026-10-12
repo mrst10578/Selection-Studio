@@ -79,6 +79,7 @@ function render(){
  $("extractAllBtn").disabled=!state.items.length||state.busy;
  renderSource().catch(e=>notice(e.message));
  renderCandidatePanel();
+ renderStructuredPanel(q);
  scheduleLivePreview();
 }
 function move(i,delta){let j=i+delta;if(j<0||j>=state.items.length)return;[state.items[i],state.items[j]]=[state.items[j],state.items[i]];state.selected=state.items[j].id;snapshot();render()}
@@ -151,6 +152,24 @@ $("figureCanvas").onpointerup=e=>{const q=selected(),s=state.dragStart;if(!s||!q
  q.figure=c.toDataURL("image/png");state.figureMode=false;$("figureMode").textContent="انتخاب ناحیه شکل";$("figureMode").setAttribute("aria-pressed","false");alignCanvas();snapshot();render();notice("شکل علمی برای خروجی ذخیره شد.")};
 $("figureCanvas").onpointercancel=()=>{state.dragStart=null;alignCanvas()};
 
+
+function renderStructuredPanel(q){
+ const panel=$("ocrStructurePanel"),host=$("ocrStructureList"),data=q?.structured;
+ host.replaceChildren();
+ if(!data||!Array.isArray(data.options)){panel.hidden=true;return}
+ panel.hidden=false;
+ const confidence={high:"بالا",medium:"متوسط",low:"پایین"}[data.confidence]||"نامشخص";
+ $("ocrStructureMeta").textContent="مرحله "+(q.ocrStage||"extract")+" • اطمینان تخمینی "+confidence;
+ const add=(title,body)=>{
+  const row=document.createElement("div");row.className="ocr-structure-item";
+  const name=document.createElement("strong");name.textContent=title;
+  const text=document.createElement("p");text.textContent=body;
+  row.append(name,text);host.append(row);
+ };
+ add("متن سؤال",String(data.stem||""));
+ data.options.forEach((option,index)=>add("گزینه "+(option.label||digits(index+1)),String(option.text||"")));
+ if(data.figure_required)add("شکل علمی","شکل یا نمودار را از تصویر مرجع جداگانه انتخاب کن.");
+}
 
 /* The candidate is deliberately ephemeral until an operator accepts it. */
 function scheduleLivePreview(){
