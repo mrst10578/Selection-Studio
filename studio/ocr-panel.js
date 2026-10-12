@@ -171,9 +171,12 @@ export function installOcrWorkbench({capture,getFingerprint,getIdentity,onNotice
   updateStage();
  }
  function change(){
-  const s=stateNow();s.text=text.value.slice(0,12000);s.latex=latex.value.slice(0,12000);s.notes=notes.value.slice(0,700);
-  // Offsets are bound to the exact text. Never keep stale geometry after edits.
-  s.links=[];s.events=[];s.selected=-1;s.candidate=null;
+  const s=stateNow(),nextText=text.value.slice(0,12000);
+  if(nextText!==s.text){
+   // Offsets are bound to the exact transcription. Notes/LaTeX edits do not move text offsets.
+   s.links=[];s.events=[];s.selected=-1;s.candidate=null;
+  }
+  s.text=nextText;s.latex=latex.value.slice(0,12000);s.notes=notes.value.slice(0,700);
   s.confirmed=false;
   renderPreview();imageMap.render(s);
  }
@@ -204,8 +207,8 @@ export function installOcrWorkbench({capture,getFingerprint,getIdentity,onNotice
   s.imageBlob=captured.blob;
   s.imageUrl=URL.createObjectURL(captured.blob);
   s.imageRegions=Array.isArray(captured.regions)?structuredClone(captured.regions):[];
-  // No implicit bbox: a new composite image invalidates old links.
-  s.links=[];s.events=[];s.selected=-1;s.candidate=null;s.confirmed=false;
+  // The caller checks the PDF fingerprint before capture; a fresh raster of the same
+  // regions must not destroy operator mappings or an already approved transcription.
  }
  async function loadPreview(){
   syncContext();
@@ -252,7 +255,6 @@ export function installOcrWorkbench({capture,getFingerprint,getIdentity,onNotice
   updateStage();
   try{
    const captured=await guardCapture(()=>capture(kind));
-   if(controller.signal.aborted||stamp!==signature(kind))throw Error('AbortError');
    if(controller.signal.aborted||stamp!==signature(kind)||state[kind]!==s)throw Error('AbortError');
    attachImage(s,captured);
    const image=await prepareOcrImage(captured.blob);
@@ -260,7 +262,7 @@ export function installOcrWorkbench({capture,getFingerprint,getIdentity,onNotice
    s.stage=pass;updateStage();
    const draft=pass===2?{text:s.text,latex:normalizeManualLatex(s.latex)}:null;
    const result=await requestOcr({image,prompt:buildOcrPrompt({kind,pass,previous:draft}),signal:controller.signal});
-   if(controller.signal.aborted||stamp!==signature(kind)||s.version!==sequence)return;
+   if(controller.signal.aborted||stamp!==signature(kind)||state[kind]!==s||s.version!==sequence)return;
    s.text=result.text;s.latex=result.latex.join('\n');s.notes=result.notes;
    s.links=result.links||[];s.events=[];s.selected=-1;s.candidate=null;
    s.source='cloudflare-workers-ai';s.passes=Math.max(s.passes,pass);s.confirmed=false;
