@@ -244,8 +244,9 @@ ocrWorkbench=installOcrWorkbench({
   getIdentity:()=>String(exam?.id||"not-saved")+":"+String($("sourceNumber").value||""),
   getFingerprint:kind=>{
     const crop=kind==="question"?qCrop:aCrop;
-    if(!crop.file||!crop.pdf)return null;
-    return JSON.stringify([crop.documentGeneration,crop.file.name,crop.page?crop.pdf.numPages:0,cropQueue.selections(kind)]);
+    const regions=cropQueue.selections(kind);
+    if(!crop.file||!crop.pdf||!regions.length)return null;
+    return JSON.stringify([crop.documentGeneration,crop.file.name,crop.pdf.numPages,regions]);
   },
   onNotice:(message,tone="error")=>toast(message,tone)
 });
