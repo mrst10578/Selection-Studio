@@ -63,6 +63,8 @@ test.describe('ZH-75: structured OCR and safe live math',()=>{
   });
   await page.locator('#extractBtn').click();
   await expect(page.locator('#questionText')).toHaveValue(/نادرست/);
+  await expect(page.locator('#ocrStructurePanel')).toBeVisible();
+  await expect(page.locator('#ocrStructureList')).toContainText('گزینه چهارم');
   await expect(page.locator('#liveMathPreview .ocr-math-source')).toHaveCount(1);
   const original=await page.locator('#questionText').inputValue();
   await page.locator('#verifyBtn').click();
@@ -87,6 +89,7 @@ test.describe('ZH-75: structured OCR and safe live math',()=>{
   await page.route('**/api/ocr',async route=>{requests++;await route.abort()});
   await page.locator('#newQuestion').click();
   await page.locator('#questionText').fill('متن دستی: $x^2$ و ⟦نامشخص⟧');
+  await expect(page.locator('#ocrStructurePanel')).toBeHidden();
   await expect(page.locator('#liveMathPreview .ocr-math-source')).toHaveCount(1);
   expect(requests).toBe(0);
   await page.locator('#reviewed').check();
