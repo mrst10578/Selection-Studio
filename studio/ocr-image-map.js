@@ -22,11 +22,11 @@ export function createOcrImageMap({textInput,onNotice=()=>{},onCapture,onAdd,onS
  const img=el('img','studio-ocr-map-image');
  img.alt='تصویر برش ترکیبی PDF برای تطبیق OCR';img.draggable=false;
  const overlay=el('div','studio-ocr-map-overlay');
- overlay.setAttribute('aria-label','ناحیه‌های متن در تصویر');
+ overlay.setAttribute('role','group');overlay.setAttribute('aria-label','ناحیه‌های متن در تصویر');
  const dragBox=el('div','studio-ocr-map-drag');dragBox.hidden=true;
  imageFrame.append(img,overlay,dragBox);
  const links=el('div','studio-ocr-map-links');
- links.setAttribute('aria-label','پیوندهای متن و تصویر');
+ links.setAttribute('role','group');links.setAttribute('aria-label','پیوندهای متن و تصویر');
  const candidate=el('section','studio-ocr-map-candidate');candidate.hidden=true;
  const candidateLabel=el('label','studio-ocr-field');
  candidateLabel.append(el('span','','پیشنهاد OCR انتخابی؛ قبل از اعمال ویرایش کن'));
