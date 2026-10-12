@@ -83,7 +83,7 @@ export function installOcrWorkbench({capture,getFingerprint,getIdentity,onNotice
  preview.append(previewHeading,previewText,previewMath);
  host.append(header,switcher,stage,actions,editing,preview,foot);
  const imageMap=createOcrImageMap({
-  textInput:text,onNotice,
+  textInput:text,onNotice,canCapture:()=>hasCrop(active)&&isOperatorAuthenticated(),
   onCapture:()=>void loadPreview(),
   onAdd:(selection,box)=>{
    syncContext();
@@ -104,6 +104,14 @@ export function installOcrWorkbench({capture,getFingerprint,getIdentity,onNotice
    imageMap.render(s);
   },
   onReocr:()=>void runSelectedOcr(),
+  onRemove:()=>{
+   const s=stateNow(),item=s.links[s.selected];if(!item||s.busy)return;
+   s.links=s.links.filter((_,index)=>index!==s.selected);
+   s.events=s.events.filter(event=>event.link_start!==item.start);
+   s.selected=-1;s.candidate=null;s.confirmed=false;
+   imageMap.render(s);updateStage();
+   onNotice('تطبیق این عبارت حذف شد؛ متن و برش PDF تغییری نکردند.','ok');
+  },
   onCandidateEdit:value=>{const s=stateNow();if(s.candidate){s.candidate.text=value.slice(0,3000)}},
   onAccept:()=>{
    const s=stateNow(),proposal=s.candidate;
