@@ -138,7 +138,7 @@ export default {
    }finally{clearTimeout(timeout)}
   }
   if(url.pathname.startsWith("/api/"))return json({error:"Unknown API endpoint"},404);
-  if(url.pathname==="/ocr")return Response.redirect(url.origin+"/review-console/ocr-studio.html",302);
+  if(url.pathname==="/ocr")return Response.redirect(url.origin+"/admin/ocr-studio.html",302);
   if(!env.ASSETS)return json({error:"Asset binding unavailable"},503);
   const path=url.pathname==="/"?"/index.html":url.pathname;
   return env.ASSETS.fetch(new Request(new URL(path+url.search,url.origin),request));
