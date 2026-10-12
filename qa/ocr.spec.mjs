@@ -79,7 +79,8 @@ test.describe('ZH-75 multi-stage OCR, LaTeX preview and operator review',()=>{
   await expect(panel.locator('textarea[id="studioOcrText"]')).toHaveValue('سؤال ۱۲: حاصل x²؟');
   expect(requests).toHaveLength(2);
   await expect(panel.locator('.studio-ocr-preview-text')).toContainText('سؤال ۱۲');
-  await expect(panel.locator('.studio-ocr-preview-math')).toContainText('x^2');
+  await expect(panel.locator('.studio-ocr-preview-math')).not.toBeEmpty();
+  await expect(panel.locator('textarea[id="studioOcrLatex"]')).toContainText('x^2');
   expect(await page.evaluate(()=>window.__fixtureOcr.reviewForSave())).toBeNull();
   await panel.getByRole('button',{name:'۳ · تأیید اپراتور'}).click();
   let confirmed=await page.evaluate(()=>window.__fixtureOcr.reviewForSave());
@@ -122,6 +123,69 @@ test.describe('ZH-75 multi-stage OCR, LaTeX preview and operator review',()=>{
   expect(hits).toBe(0);
  });
 
+ test('confirmed optional OCR metadata is persisted with a real question and answer PDF crop',async({page},info)=>{
+  test.skip(!info.project.name.startsWith('desktop'),'Chromium desktop PDF fixture and pointer crop');
+  await page.setContent('<!doctype html><html><body style="font-size:28px;padding:35px">Question demo: X + Y = ?<br><br>Answer demo: X = 2</body></html>');
+  const pdf=await page.pdf({width:'600px',height:'800px',printBackground:true});
+  await studio(page);
+  await page.locator('#provider').fill('قلمچی');
+  await page.locator('#examMonth').fill('03');
+  await page.locator('#examDay').fill('07');
+  await page.locator('#operator').fill('گزینشگر');
+  await page.locator('#questionPdf').setInputFiles({name:'question-ocr.pdf',mimeType:'application/pdf',buffer:pdf});
+  await expect(page.locator('#questionPdfState')).toContainText('question-ocr.pdf');
+  await page.locator('#answerPdf').setInputFiles({name:'answer-ocr.pdf',mimeType:'application/pdf',buffer:pdf});
+  await expect(page.locator('#answerPdfState')).toContainText('answer-ocr.pdf');
+  await page.locator('#saveSession').click();
+  await expect(page.locator('#sessionCard')).toHaveClass(/ready/);
+  const crop=async(selector)=>{
+   const canvas=page.locator(selector);
+   await canvas.scrollIntoViewIfNeeded();
+   const box=await canvas.boundingBox();
+   const stage=await page.locator(selector==='#qCanvas'?'#qStage':'#aStage').boundingBox();
+   expect(box).toBeTruthy();expect(stage).toBeTruthy();
+   const left=Math.max(box.x,stage.x)+22,top=Math.max(box.y,stage.y)+26;
+   const right=Math.min(box.x+box.width,stage.x+stage.width)-28;
+   const bottom=Math.min(box.y+box.height,stage.y+stage.height)-30;
+   expect(right-left).toBeGreaterThan(100);
+   expect(bottom-top).toBeGreaterThan(65);
+   await page.mouse.move(left,top);
+   await page.mouse.down();
+   await page.mouse.move(left+(right-left)*.64,top+(bottom-top)*.5,{steps:6});
+   await page.mouse.up();
+  };
+  await page.locator('#questionTab').click();
+  await crop('#qCanvas');
+  await expect(page.locator('[data-check="question"]')).toHaveClass(/done/);
+  const panel=page.locator('#studioOcrPanel');
+  await panel.locator('textarea[id="studioOcrText"]').fill('متن دستی سؤال: ۲ + x');
+  await panel.locator('textarea[id="studioOcrLatex"]').fill('x^2 + 1');
+  await panel.getByRole('button',{name:'۳ · تأیید اپراتور'}).click();
+  await page.locator('#answerTab').click();
+  await crop('#aCanvas');
+  await expect(page.locator('[data-check="answer"]')).toHaveClass(/done/);
+  await panel.locator('textarea[id="studioOcrText"]').fill('پاسخ تشریحی');
+  await panel.locator('textarea[id="studioOcrLatex"]').fill('x = 2');
+  await panel.getByRole('button',{name:'۳ · تأیید اپراتور'}).click();
+  await page.locator('#subject').selectOption('PHY');
+  await page.locator('#grade').selectOption('10');
+  await page.locator('#chapter').selectOption({index:1});
+  await page.locator('#unit').selectOption({index:1});
+  await page.locator('#sourceNumber').fill('1');
+  await page.locator('.segmented[data-target="difficulty"] [data-value="level_2"]').click();
+  await page.locator('.segmented[data-target="correctOption"] [data-value="1"]').click();
+  await expect(page.locator('#saveQuestion')).toBeEnabled();
+  await page.locator('#saveQuestion').click();
+  await expect(page.locator('#recordCount')).toHaveText('1');
+  const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('testbank-studio.records.v1')||'[]'));
+  expect(saved).toHaveLength(1);
+  expect(saved[0].ocr_review).toMatchObject({
+   schema_version:1,
+   question:{text:'متن دستی سؤال: ۲ + x',latex:['x^2 + 1'],source:'manual',status:'operator_confirmed'},
+   answer:{text:'پاسخ تشریحی',latex:['x = 2'],source:'manual',status:'operator_confirmed'}
+  });
+  await expect(panel.locator('textarea[id="studioOcrText"]')).toBeEmpty();
+ });
  test('mobile workspace exposes readable OCR editing and approval controls without page overflow',async({page},info)=>{
   test.skip(!info.project.name.includes('mobile'),'Only mobile geometry');
   await studio(page);
