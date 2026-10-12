@@ -86,7 +86,7 @@ function move(i,delta){let j=i+delta;if(j<0||j>=state.items.length)return;[state
 
 $("questionTitle").addEventListener("input",e=>{const q=selected();if(q){q.title=e.target.value;snapshot();renderListTitle()}});
 function renderListTitle(){const q=selected();const i=state.items.indexOf(q);if(i>=0){const button=$("questionList").children[i]?.querySelector(".ocr-pick");if(button)button.textContent=digits(i+1)+". "+q.title+(q.reviewed?" ✓":"")}}
-$("questionText").addEventListener("input",e=>{const q=selected();if(q){q.text=e.target.value;q.reviewed=false;q.structured=null;q.ocrStage="edited";$("reviewed").checked=false;state.candidate=null;renderCandidatePanel();scheduleLivePreview();snapshot()}});
+$("questionText").addEventListener("input",e=>{const q=selected();if(q){q.text=e.target.value;q.reviewed=false;q.structured=null;q.ocrStage="edited";$("reviewed").checked=false;state.candidate=null;$("verifyBtn").disabled=!q.text.trim()||state.busy;$("formulaBtn").disabled=!q.text.trim()||state.busy;renderCandidatePanel();renderStructuredPanel(q);scheduleLivePreview();snapshot()}});
 $("reviewed").addEventListener("change",e=>{const q=selected();if(q){q.reviewed=e.target.checked;snapshot();renderListTitle()}});
 $("addImages").onclick=()=>$("images").click();
 let pdfModule=null;
