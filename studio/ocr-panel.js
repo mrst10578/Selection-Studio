@@ -36,7 +36,7 @@ export function installOcrWorkbench({capture,getFingerprint,getIdentity,onNotice
  const readiness=form?.querySelector('.readiness');
  if(!form||!readiness)return null;
  const state={question:emptyState(),answer:emptyState()};
- let active='question',disposed=false;
+ let active='question',disposed=false,contextPause=0;
  const host=make('section','studio-ocr-panel');host.id='studioOcrPanel';
  host.setAttribute('aria-label','تشخیص و بازبینی متن سؤال و فرمول');
  const header=make('div','studio-ocr-head');
@@ -140,6 +140,7 @@ export function installOcrWorkbench({capture,getFingerprint,getIdentity,onNotice
   if(kind===active)show();
  }
  function syncContext(){
+  if(contextPause>0)return;
   for(const kind of ['question','answer']){
    const s=state[kind];
    if(s.busy&&s.stage===-1)continue; // Internal crop stitching briefly switches pages.
@@ -147,6 +148,11 @@ export function installOcrWorkbench({capture,getFingerprint,getIdentity,onNotice
    if(next!==s.signature)invalidate(kind,next);
   }
   updateStage();
+ }
+ async function guardCapture(task){
+  contextPause++;
+  try{return await task()}
+  finally{contextPause--;syncContext()}
  }
  async function runPass(pass){
   syncContext();
@@ -157,7 +163,7 @@ export function installOcrWorkbench({capture,getFingerprint,getIdentity,onNotice
   const controller=new AbortController();s.abort=controller;s.busy=true;s.stage=-1;
   updateStage();
   try{
-   const captured=await capture(kind);
+   const captured=await guardCapture(()=>capture(kind));
    if(controller.signal.aborted||stamp!==signature(kind))throw Error('AbortError');
    const image=await prepareOcrImage(captured.blob);
    if(controller.signal.aborted||stamp!==signature(kind))throw Error('AbortError');
@@ -203,5 +209,5 @@ export function installOcrWorkbench({capture,getFingerprint,getIdentity,onNotice
  // Initialize signatures without requiring an already-loaded PDF.
  for(const kind of ['question','answer'])state[kind].signature=signature(kind);
  show();
- return {host,syncContext,invalidate,reset,reviewForSave,setActive:kind=>{if(['question','answer'].includes(kind)){active=kind;show()}},getState:kind=>({...state[kind],abort:undefined})};
+ return {host,syncContext,invalidate,reset,reviewForSave,guardCapture,setActive:kind=>{if(['question','answer'].includes(kind)){active=kind;show()}},getState:kind=>({...state[kind],abort:undefined})};
 }
