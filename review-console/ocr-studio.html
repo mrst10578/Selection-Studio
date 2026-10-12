@@ -45,7 +45,7 @@
       <label class="ocr-label" for="questionText">سؤال و گزینه‌ها</label>
       <textarea id="questionText" dir="rtl" rows="12" placeholder="متن استخراج‌شده اینجا قرار می‌گیرد. اعداد، گزینه‌ها و فرمول‌ها را با تصویر اصلی تطبیق بده."></textarea>
       <section class="ocr-live-preview" aria-label="پیش‌نمایش زنده متن و فرمول">
-        <div class="ocr-live-head"><strong>پیش‌نمایش زنده متن و فرمول</strong><output id="latexStatus" role="status" aria-live="polite">آماده</output></div>
+        <div class="ocr-live-head"><strong>پیش‌نمایش زنده متن و فرمول</strong><output id="latexStatus" aria-live="polite">آماده</output></div>
         <div id="liveMathPreview" class="ocr-live-paper" dir="rtl"></div>
         <p class="ocr-note">فرمول‌ها در قالب LaTeX نمایش داده می‌شوند. اگر کتابخانه در دسترس نباشد، متن خام حفظ می‌شود.</p>
       </section>
@@ -61,7 +61,7 @@
         <label class="ocr-label" for="ocrCandidateText">متن پیشنهادی (قابل اصلاح)</label>
         <textarea id="ocrCandidateText" dir="rtl" rows="7"></textarea>
         <div id="ocrDiffWarnings" class="ocr-warnings" aria-live="polite"></div>
-        <div class="ocr-live-paper ocr-candidate-preview" id="ocrCandidatePreview" aria-label="پیش‌نمایش فرمول‌های پیشنهادی"></div>
+        <div class="ocr-live-paper ocr-candidate-preview" id="ocrCandidatePreview"></div>
         <div class="ocr-actions">
           <button id="acceptOcrCandidate" class="primary" type="button">پذیرش متن پیشنهادی</button>
           <button id="rejectOcrCandidate" type="button">رد پیشنهاد و حفظ متن</button>
