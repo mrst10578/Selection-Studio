@@ -247,7 +247,7 @@ ocrWorkbench=installOcrWorkbench({
     if(!crop.file||!crop.pdf)return null;
     return JSON.stringify([crop.documentGeneration,crop.file.name,crop.page?crop.pdf.numPages:0,cropQueue.selections(kind)]);
   },
-  onNotice:message=>toast(message,"error")
+  onNotice:(message,tone="error")=>toast(message,tone)
 });
 
 function setSegmented(target,value){
@@ -391,11 +391,12 @@ $("questionForm").addEventListener("submit",async e=>{
   try{
     const [qCapture,aCapture]=await ocrWorkbench.guardCapture(()=>Promise.all([cropQueue.capture("question"),cropQueue.capture("answer")]));
     const visualHash=await qCrop.visualHash(qCapture.blob);
+    const approvedOcr=ocrWorkbench?.reviewForSave();
     const record={
       id,exam_id:exam.id,source_question_number:source,subject:$("subject").value,grade:Number($("grade").value),
       chapter:$("chapter").value,unit:$("unit").value,difficulty:$("difficulty").value,correct_option:Number($("correctOption").value),
       question_regions:qCapture.regions,answer_regions:aCapture.regions,visual_hash:visualHash,
-      ...(ocrWorkbench?.reviewForSave()?{ocr_review:ocrWorkbench.reviewForSave()}:{}),
+      ...(approvedOcr?{ocr_review:approvedOcr}:{}),
       biology_combination:$("subject").value==="BIO"?biologyEditor.getValue():null,status:"draft",review_status:"pending",
       entered_by:$("operator").value.trim(),created_at:new Date().toISOString()
     };
