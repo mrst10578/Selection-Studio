@@ -1,0 +1,176 @@
+/* ZH-75. OCR is non-blocking, operator-approved metadata alongside existing PDF crops. */
+body.atelier-studio .studio-ocr-panel{
+ display:grid;
+ gap:12px;
+ padding:16px;
+ margin:14px 0;
+ border:1px solid #536980;
+ border-radius:17px;
+ background:linear-gradient(155deg,#223144,#152533 70%,#122230);
+ color:#edf4fa;
+ min-width:0;
+}
+.studio-ocr-head{display:grid;gap:4px}
+.studio-ocr-overline{
+ font:700 .62rem ui-monospace,Consolas,monospace;
+ letter-spacing:.13em;
+ color:#8fc8be;
+ direction:ltr;
+ text-align:start;
+}
+.studio-ocr-head h3{margin:0;font-size:1.15rem}
+.studio-ocr-head p{margin:0;color:#c1d4df;font-size:.79rem;line-height:1.7}
+.studio-ocr-tabs{
+ display:grid;
+ grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:6px;
+ padding:4px;
+ border:1px solid #485c74;
+ border-radius:11px;
+ background:#101c2c;
+}
+body.atelier-studio .studio-ocr-tabs button{
+ min-width:0;
+ min-height:42px;
+ padding:8px;
+ background:transparent;
+ border:1px solid transparent;
+ border-radius:8px;
+ color:#c2d9e8;
+}
+body.atelier-studio .studio-ocr-tabs button[aria-pressed="true"]{
+ background:linear-gradient(115deg,#39515a,#2a5557);
+ border-color:#6b9b99;
+ color:#fff;
+}
+.studio-ocr-stage{
+ padding:9px 11px;
+ border:1px solid #516b7e;
+ border-radius:9px;
+ font-size:.79rem;
+ font-weight:750;
+ color:#cae6dc;
+ background:#192c3c;
+ line-height:1.7;
+}
+.studio-ocr-stage[data-state="busy"]{
+ border-color:#c4a370;
+ color:#ffdcac;
+}
+.studio-ocr-stage[data-state="confirmed"]{
+ border-color:#71bda1;
+ color:#baf4db;
+ background:#1c3b39;
+}
+.studio-ocr-actions{
+ display:grid;
+ grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:7px;
+}
+body.atelier-studio .studio-ocr-actions button{
+ min-width:0;
+ min-height:43px;
+ padding:7px 9px;
+ font-size:.79rem;
+ font-weight:700;
+ white-space:normal;
+ line-height:1.65;
+ border:1px solid #58728a;
+ background:#24374a;
+ color:#eaf3fa;
+}
+body.atelier-studio .studio-ocr-actions button:nth-child(3):not(:disabled){
+ border-color:#83b9a9;
+ color:#d9f7e6;
+ background:#265049;
+}
+body.atelier-studio .studio-ocr-actions button:disabled{
+ opacity:.48;
+ cursor:not-allowed;
+}
+.studio-ocr-editors{display:grid;gap:9px}
+.studio-ocr-field{display:grid;gap:5px;font-size:.76rem;font-weight:700;color:#d2e2eb}
+body.atelier-studio .studio-ocr-field textarea{
+ display:block;
+ width:100%;
+ max-width:100%;
+ min-width:0;
+ min-height:65px;
+ padding:10px;
+ border:1px solid #617a92;
+ border-radius:9px;
+ background:#0d1a2a;
+ color:#f4f8fc;
+ font:500 .85rem/1.85 Tahoma,"Segoe UI",system-ui,sans-serif;
+ resize:vertical;
+}
+body.atelier-studio #studioOcrLatex{
+ font-family:ui-monospace,Consolas,monospace;
+ direction:ltr;
+ text-align:left;
+}
+body.atelier-studio .studio-ocr-field textarea:focus-visible{
+ outline:2px solid #8fd9cd;
+ outline-offset:1px;
+}
+.studio-ocr-preview{
+ display:grid;
+ gap:10px;
+ padding:13px;
+ border:1px solid #3e6470;
+ border-radius:12px;
+ background:#091725;
+ min-width:0;
+}
+.studio-ocr-preview>strong{font-size:.8rem;color:#aee8d7}
+.studio-ocr-preview-text{
+ min-width:0;
+ overflow-wrap:anywhere;
+ white-space:pre-wrap;
+ font:500 .88rem/2.05 Tahoma,"Segoe UI",system-ui,sans-serif;
+ color:#f4f7fc;
+}
+.studio-ocr-preview-text.is-placeholder{
+ color:#98b2c5;
+ font-size:.8rem;
+}
+.studio-ocr-preview-math{
+ display:grid;
+ gap:8px;
+ direction:ltr;
+ min-width:0;
+}
+.studio-ocr-equation{
+ overflow-x:auto;
+ overflow-y:hidden;
+ max-width:100%;
+ padding:10px 12px;
+ border:1px solid #395367;
+ border-radius:8px;
+ background:#f1f5f9;
+ color:#10243b;
+ font-size:1.04rem;
+ text-align:center;
+}
+.studio-ocr-equation code{
+ white-space:pre-wrap;
+ overflow-wrap:anywhere;
+ font:500 .8rem ui-monospace,Consolas,monospace;
+ direction:ltr;
+}
+.studio-ocr-footer{
+ margin:0;
+ color:#acc8d6;
+ font-size:.71rem;
+ line-height:1.8;
+}
+@media(max-width:540px){
+ body.atelier-studio .studio-ocr-panel{
+  padding:12px;
+  margin:12px 0;
+  border-radius:13px;
+ }
+ .studio-ocr-actions{gap:6px}
+ body.atelier-studio .studio-ocr-actions button{min-height:47px;font-size:.75rem}
+ body.atelier-studio .studio-ocr-field textarea{font-size:16px}
+}
