@@ -6,7 +6,7 @@ const el=(tag,cls='',label='')=>{
  if(label)node.textContent=label;
  return node;
 };
-export function createOcrImageMap({textInput,onNotice=()=>{},onCapture,onAdd,onSelect,onReocr,onAccept,onReject,onCandidateEdit}){
+export function createOcrImageMap({textInput,onNotice=()=>{},canCapture=()=>false,onCapture,onAdd,onRemove,onSelect,onReocr,onAccept,onReject,onCandidateEdit}){
  const host=el('section','studio-ocr-image-map');host.id='studioOcrImageMap';
  host.setAttribute('aria-label','تطبیق متن OCR با تصویر');
  const header=el('div','studio-ocr-map-heading');
@@ -15,7 +15,8 @@ export function createOcrImageMap({textInput,onNotice=()=>{},onCapture,onAdd,onS
  const load=el('button','','نمایش برش بدون OCR');load.type='button';load.id='studioOcrMapLoad';
  const link=el('button','','اتصال متن انتخاب‌شده به تصویر');link.type='button';link.id='studioOcrMapLink';
  const retry=el('button','','OCR مجدد همین محدوده');retry.type='button';retry.id='studioOcrMapRetry';
- controls.append(load,link,retry);
+ const remove=el('button','','حذف تطبیق انتخاب‌شده');remove.type='button';remove.id='studioOcrMapRemove';
+ controls.append(load,link,retry,remove);
  const info=el('p','studio-ocr-map-info','برای شروع برش PDF را نمایش بده، قسمتی از متن را انتخاب کن و روی تصویر کادر بکش.');
  info.setAttribute('aria-live','polite');
  const imageFrame=el('div','studio-ocr-map-frame');
@@ -47,9 +48,10 @@ export function createOcrImageMap({textInput,onNotice=()=>{},onCapture,onAdd,onS
   if(ready&&urlSeen.value!==state.imageUrl){img.src=state.imageUrl;urlSeen.value=state.imageUrl;clearPending()}
   if(!ready){img.removeAttribute('src');urlSeen.value='';clearPending()}
   imageFrame.hidden=!ready;
-  load.disabled=Boolean(state?.busy);
+  load.disabled=Boolean(state?.busy)||!canCapture();
   link.disabled=!ready||Boolean(state?.busy)||!state?.text;
   retry.disabled=!ready||Boolean(state?.busy)||!state?.links?.[state?.selected];
+  remove.disabled=Boolean(state?.busy)||!state?.links?.[state?.selected];
   links.replaceChildren();overlay.replaceChildren();
   const items=state?.links||[];
   items.forEach((item,index)=>{
@@ -119,6 +121,7 @@ export function createOcrImageMap({textInput,onNotice=()=>{},onCapture,onAdd,onS
  });
  overlay.addEventListener('pointercancel',()=>{clearPending();if(current)render(current)});
  retry.addEventListener('click',()=>onReocr());
+ remove.addEventListener('click',()=>onRemove());
  candidateText.addEventListener('input',()=>onCandidateEdit(candidateText.value));
  accept.addEventListener('click',()=>onAccept());
  reject.addEventListener('click',()=>onReject());
