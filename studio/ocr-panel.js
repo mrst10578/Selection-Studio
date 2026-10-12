@@ -188,9 +188,9 @@ export function installOcrWorkbench({capture,getFingerprint,getIdentity,onNotice
  second.addEventListener('click',()=>void runPass(2));
  approve.addEventListener('click',()=>{
   const s=stateNow();if(!validReview(s)||s.busy)return;
-  s.confirmed=true;updateStage();onNotice('متن '+(active==='question'?'سؤال':'پاسخ')+' تأیید شد و همراه سؤال ذخیره می‌شود.');
+  s.confirmed=true;updateStage();onNotice('متن '+(active==='question'?'سؤال':'پاسخ')+' تأیید شد و همراه سؤال ذخیره می‌شود.','ok');
  });
- clear.addEventListener('click',()=>{invalidate(active);onNotice('متن OCR پاک شد؛ PDF و صف برش تغییری نکردند.')});
+ clear.addEventListener('click',()=>{invalidate(active);onNotice('متن OCR پاک شد؛ PDF و صف برش تغییری نکردند.','ok')});
  function reviewForSave(){
   syncContext();
   const result={schema_version:1};
