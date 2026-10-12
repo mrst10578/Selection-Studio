@@ -98,6 +98,25 @@ test.describe('ZH-76 OCR text–image mapping and selective OCR',()=>{
   expect(await page.evaluate(()=>window.__bboxWorkbench.reviewForSave())).toBeNull();
  });
 
+ test('operator can correct a suggested rectangle or remove the link without changing PDF/text',async({page})=>{
+  const panel=await install(page);
+  const editor=panel.locator('#studioOcrText');
+  await editor.fill('توضیح سؤال مهم');
+  await panel.locator('#studioOcrMapLoad').click();
+  await mapText(page,panel,0,5,.12,.1,.42,.38);
+  const before=await page.evaluate(()=>window.__bboxWorkbench.getState('question').links[0].bbox_norm);
+  await panel.getByRole('button',{name:'۳ · تأیید اپراتور'}).click();
+  expect(await page.evaluate(()=>window.__bboxWorkbench.reviewForSave())).not.toBeNull();
+  await mapText(page,panel,0,5,.37,.4,.87,.79);
+  const after=await page.evaluate(()=>window.__bboxWorkbench.getState('question').links[0].bbox_norm);
+  expect(after[0]).toBeGreaterThan(before[0]+.2);
+  expect(await page.evaluate(()=>window.__bboxWorkbench.reviewForSave())).toBeNull();
+  await panel.locator('#studioOcrMapRemove').click();
+  await expect(panel.locator('.studio-ocr-map-region')).toHaveCount(0);
+  await expect(editor).toHaveValue('توضیح سؤال مهم');
+  await expect(panel.locator('.studio-ocr-map-frame')).toBeVisible();
+ });
+
  test('selected-region re-OCR shows editable proposal, reject is safe, accept patches only the linked text',async({page})=>{
   const panel=await install(page);
   const requests=[];
