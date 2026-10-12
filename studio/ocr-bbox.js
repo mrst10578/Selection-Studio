@@ -30,8 +30,9 @@ export function normalizeOcrLinks(items,text,{source='model'}={}){
 }
 export function addOcrLink(existing,text,start,end,bbox_norm){
  if(!validOcrBox(bbox_norm)||!Number.isSafeInteger(start)||!Number.isSafeInteger(end)||start<0||end<=start||end>text.length||end-start>1200)throw Error('OCR_LINK_INVALID');
- if(existing.some(item=>Math.max(start,item.start)<Math.min(end,item.end)))throw Error('OCR_LINK_OVERLAP');
- return normalizeOcrLinks([...existing,{start,end,bbox_norm,source:'operator'}],text);
+ if(existing.some(item=>Math.max(start,item.start)<Math.min(end,item.end)&&(item.start!==start||item.end!==end)))throw Error('OCR_LINK_OVERLAP');
+ // Matching text span: operator may correct an inaccurate model-proposed rectangle.
+ return normalizeOcrLinks([...existing.filter(item=>item.start!==start||item.end!==end),{start,end,bbox_norm,source:'operator'}],text);
 }
 export function replaceLinkedSpan(text,links,index,replacement){
  const target=links[index];
