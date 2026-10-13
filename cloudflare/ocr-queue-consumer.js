@@ -113,4 +113,25 @@ export async function consumeOcrBatch(batch,env){
   catch{message.retry({delaySeconds:120})}
  }
 }
-export default {async queue(batch,env){return consumeOcrBatch(batch,env)}};
+/* Daily cleanup removes inputs/results older than 7 days, including abandoned jobs.
+ * Delete stored image first: a failed R2 delete must not silently orphan pixels. */
+export async function cleanupExpiredBatches(env){
+ if(!env.SECURITY_DB?.prepare||!env.OCR_JOB_ASSETS?.delete)return 0;
+ const db=env.SECURITY_DB;
+ const expired=await sql(db,"SELECT id FROM ocr_batch_jobs WHERE created_at < datetime('now','-7 days') ORDER BY created_at ASC LIMIT 80").all();
+ let purged=0;
+ for(const job of expired.results||[]){
+  const children=await sql(db,'SELECT asset_key FROM ocr_batch_items WHERE job_id=?1',job.id).all();
+  try{
+   for(const item of children.results||[])await env.OCR_JOB_ASSETS.delete(item.asset_key);
+   await sql(db,'DELETE FROM ocr_batch_items WHERE job_id=?1',job.id).run();
+   await sql(db,'DELETE FROM ocr_batch_jobs WHERE id=?1',job.id).run();
+   purged++;
+  }catch{ /* Next scheduled run retries. */ }
+ }
+ return purged;
+}
+export default {
+ async queue(batch,env){return consumeOcrBatch(batch,env)},
+ async scheduled(event,env){await cleanupExpiredBatches(env)}
+};
