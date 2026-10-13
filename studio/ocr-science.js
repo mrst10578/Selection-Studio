@@ -4,7 +4,7 @@ import {validOcrBox} from './ocr-bbox.js';
 
 const digits=input=>String(input??'').replace(/[۰-۹]/g,c=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(c))).replace(/[٠-٩]/g,c=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(c)));
 const cap=(v,max)=>String(v??'').replace(/\u0000/g,'').slice(0,max);
-const normalize=value=>digits(value).replace(/[‐‑‒–—−]/g,'-').replace(/[٫]/g,'.').replace(/[\u200c\u200e\u200f]/g,'').normalize('NFKC');
+const normalize=value=>digits(value).replace(/[‐‑‒–—−]/g,'-').replace(/[٫]/g,'.').replace(/[\u200c\u200e\u200f]/g,'');
 export function modelConfidence(value){
  return typeof value==='number'&&Number.isFinite(value)&&value>=0&&value<=1?Number(value.toFixed(3)):null;
 }
