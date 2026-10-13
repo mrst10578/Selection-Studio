@@ -17,7 +17,7 @@ export function createSciencePanel({
  const status=node('p','studio-science-status');status.setAttribute('role','status');status.setAttribute('aria-live','polite');
  const restore=node('button','studio-science-restore','بازگردانی متن مرحله اول');restore.type='button';restore.hidden=true;
  restore.addEventListener('click',()=>onRestoreBaseline());
- const warnings=node('div','studio-science-warnings');warnings.setAttribute('aria-label','موارد نیازمند بررسی');
+ const warnings=node('div','studio-science-warnings');warnings.setAttribute('role','group');warnings.setAttribute('aria-label','موارد نیازمند بررسی');
  const figureHeader=node('div','studio-science-figure-head');
  figureHeader.append(node('strong','','شکل‌ها و نمودارهای سؤال'),
   node('p','','کادرهای پیشنهادشده تا زمان تأیید وارد اطلاعات نهایی نمی‌شوند. هر تصویر فقط از برش فعلی جدا می‌شود.'));
