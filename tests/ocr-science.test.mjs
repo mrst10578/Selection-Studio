@@ -47,3 +47,18 @@ test('ZH-77: candidate figures are bounded and only approved items persist',()=>
  assert.equal(manualFigure([.1,.3,.6,.9]).source,'operator');
  assert.throws(()=>manualFigure([.2,.2,.2,.4]),/FIGURE_BOX_INVALID/);
 });
+
+
+test('ZH-77: approved text whitespace normalization preserves source-box character offsets',async()=>{
+ const {safeOcrReview}=await import('../studio/ocr-core.js');
+ const result=safeOcrReview({
+  text:'  ۲ + ۲  ',latex:[],notes:'',source:'manual',passes:0,
+  links:[{start:2,end:3,bbox_norm:[.1,.1,.35,.3],source:'operator'}],
+  imageRegions:[{page:2,bbox_norm:[.2,.1,.8,.9]}],
+  events:[{type:'linked_manually',link_start:2,bbox_norm:[.1,.1,.35,.3],at:'2026-10-13T00:00:00Z'}]
+ });
+ assert.equal(result.text,'۲ + ۲');
+ assert.equal(result.image_map.links[0].start,0);
+ assert.equal(result.image_map.links[0].end,1);
+ assert.equal(result.image_map.events[0].link_start,0);
+});
