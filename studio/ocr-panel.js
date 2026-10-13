@@ -122,9 +122,10 @@ export function installOcrWorkbench({capture,getFingerprint,getIdentity,onNotice
    try{
     const linked=s.links[proposal.index];
     if(!linked||s.text.slice(linked.start,linked.end)!==proposal.original)throw Error('OCR_LINK_STALE');
+    const prior={text:s.text,latex:normalizeManualLatex(s.latex),notes:s.notes,passes:s.passes};
     const updated=replaceLinkedSpan(s.text,s.links,proposal.index,proposal.text);
     s.text=updated.text;s.links=updated.links;s.selected=s.links.findIndex(x=>x.start===linked.start);
-    s.baseline={text:s.text,latex:normalizeManualLatex(s.latex)};
+    s.baseline=prior;
     s.source='cloudflare-workers-ai';s.confirmed=false;s.candidate=null;
     s.modelFlags=[];s.modelConfidence=null;s.acknowledged=[];
     s.scienceWarnings=scientificWarnings({text:updated.text,latex:normalizeManualLatex(s.latex),kind:active,previous:s.baseline});
@@ -169,7 +170,7 @@ export function installOcrWorkbench({capture,getFingerprint,getIdentity,onNotice
    const s=stateNow();
    if(!s.baseline||s.busy)return;
    s.text=s.baseline.text;s.latex=s.baseline.latex.join('\n');
-   s.notes=s.baseline.notes||s.notes;s.passes=1;s.baseline=null;
+   s.notes=s.baseline.notes||s.notes;s.passes=s.baseline.passes??1;s.baseline=null;
    s.links=[];s.events=[];s.selected=-1;s.candidate=null;
    s.modelFlags=[];s.modelConfidence=null;
    s.acknowledged=[];
