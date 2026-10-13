@@ -6,6 +6,7 @@ import {createOcrImageMap} from './ocr-image-map.js';
 import {addOcrLink,cropOcrBox,replaceLinkedSpan} from './ocr-bbox.js';
 import {createSciencePanel} from './ocr-science-panel.js';
 import {scientificWarnings,manualFigure} from './ocr-science.js';
+import {createBatchOcrPanel} from './ocr-batch-panel.js';
 
 /* ZH-75: the OCR workbench is optional, and cannot silently alter question metadata.
  * Operator-edited text is NOT part of the Cloudflare form autosave or any network sync.
@@ -181,6 +182,27 @@ export function installOcrWorkbench({capture,getFingerprint,getIdentity,onNotice
  });
  host.insertBefore(imageMap.host,foot);
  host.insertBefore(sciencePanel.host,foot);
+ const batchPanel=createBatchOcrPanel({
+  capture:kind=>guardCapture(()=>capture(kind)),
+  getFingerprint:kind=>getFingerprint?.(kind)||'',
+  getIdentity:()=>String(getIdentity?.()||''),
+  onNotice,
+  onUse:(kind,expected,result)=>{
+   syncContext();
+   const s=state[kind];
+   if(s.busy||s.signature!==expected||!result||typeof result.text!=='string'){onNotice('این نتیجه با سند و برش فعلی تطابق ندارد.');return}
+   s.text=result.text.slice(0,12000);
+   s.latex=Array.isArray(result.latex)?result.latex.slice(0,18).filter(x=>typeof x==='string').map(x=>x.slice(0,1200)).join('\n'):'';
+   s.notes=typeof result.notes==='string'?result.notes.slice(0,700):'';
+   s.links=[];s.events=[];s.selected=-1;s.candidate=null;
+   s.figures=[];s.baseline=null;s.source='cloudflare-workers-ai';s.passes=1;s.confirmed=false;
+   updateScientificReview(s,{kind,previous:null,flags:[],confidence:null});
+   active=kind;
+   document.getElementById(kind==='question'?'questionTab':'answerTab')?.click();
+   show();onNotice('متن صف به ویرایشگر منتقل شد؛ پیش از ثبت باید آن را تأیید کنی.','ok');
+  }
+ });
+ host.insertBefore(batchPanel.host,foot);
  readiness.insertAdjacentElement('beforebegin',host);
 
  let renderNumber=0;
@@ -385,5 +407,5 @@ export function installOcrWorkbench({capture,getFingerprint,getIdentity,onNotice
  // Initialize signatures without requiring an already-loaded PDF.
  for(const kind of ['question','answer'])state[kind].signature=signature(kind);
  show();
- return {host,syncContext,invalidate,reset,reviewForSave,guardCapture,setActive:kind=>{if(['question','answer'].includes(kind)){imageMap.clearPending();active=kind;show()}},getState:kind=>({...state[kind],abort:undefined})};
+ return {host,syncContext,invalidate,reset,reviewForSave,guardCapture,setActive:kind=>{if(['question','answer'].includes(kind)){imageMap.clearPending();active=kind;show()}},getState:kind=>({...state[kind],abort:undefined}),batchPanel};
 }
