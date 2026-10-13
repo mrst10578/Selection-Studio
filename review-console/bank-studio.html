@@ -21,7 +21,7 @@
    <div class="bank-actions"><input id="projectName" maxlength="120" placeholder="نام پروژه جدید" aria-label="نام پروژه جدید" disabled><button id="createProject" type="button" disabled>ساخت پروژه</button></div>
    <h2>سؤال‌های پروژه</h2>
    <button id="newQuestion" type="button" disabled>+ پیش‌نویس جدید</button>
-   <div id="questionList" class="bank-list" aria-label="فهرست پیش‌نویس‌ها"></div>
+   <div id="questionList" class="bank-list" role="list" aria-label="فهرست پیش‌نویس‌ها"></div>
    <p class="bank-help">نمایش فهرست فقط به حساب اپراتور واردشده محدود است. تغییر پروژه، متن ذخیره‌نشده را خودکار ارسال نمی‌کند.</p>
   </aside>
   <section class="bank-panel bank-editor" aria-label="ویرایش پیش‌نویس">
@@ -31,7 +31,7 @@
    <textarea id="questionText" rows="11" dir="rtl" maxlength="16000" placeholder="متن بررسی‌شده را دستی وارد یا جای‌گذاری کن." disabled></textarea>
    <label for="answerText">متن پاسخ (اختیاری)</label>
    <textarea id="answerText" rows="5" dir="rtl" maxlength="16000" disabled></textarea>
-   <div class="bank-fields"><label for="taxonomyId">شناسه موضوع<input id="taxonomyId" maxlength="80" placeholder="مثلاً bio_cell" disabled></label><label for="sourceLabel">نام منبع<input id="sourceLabel" maxlength="160" placeholder="نام دفترچه / صفحه" disabled></label></div>
+   <div class="bank-fields"><label>شناسه موضوع<input id="taxonomyId" maxlength="80" placeholder="مثلاً bio_cell" disabled></label><label>نام منبع<input id="sourceLabel" maxlength="160" placeholder="نام دفترچه / صفحه" disabled></label></div>
    <div class="bank-actions"><button class="bank-primary" id="saveDraft" type="button" disabled>ثبت پیش‌نویس</button><button id="deleteDraft" type="button" disabled>حذف نرم</button><button id="showHistory" type="button" disabled>تاریخچه نسخه‌ها</button></div>
    <section id="historyPanel" aria-label="تاریخچه تغییرات" hidden><h3>تاریخچه نسخه‌ها</h3><div id="historyList"></div></section>
   </section>
