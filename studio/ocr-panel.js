@@ -189,10 +189,10 @@ export function installOcrWorkbench({capture,getFingerprint,getIdentity,onNotice
  function stateNow(){return state[active]}
  function validReview(s){return Boolean(s.text.trim()||normalizeManualLatex(s.latex).length)}
  function criticalPending(s){return s.scienceWarnings.some(w=>w.severity==='critical'&&!s.acknowledged.includes(w.id))}
- function updateScientificReview(s,{previous=null,flags=s.modelFlags,confidence=s.modelConfidence}={}){
+ function updateScientificReview(s,{kind=active,previous=null,flags=s.modelFlags,confidence=s.modelConfidence}={}){
   s.modelFlags=flags;s.modelConfidence=confidence;
   s.scienceWarnings=scientificWarnings({
-   text:s.text,latex:normalizeManualLatex(s.latex),kind:active,previous,modelFlags:flags,confidence
+   text:s.text,latex:normalizeManualLatex(s.latex),kind,previous,modelFlags:flags,confidence
   });
   s.acknowledged=[];
  }
@@ -318,7 +318,7 @@ export function installOcrWorkbench({capture,getFingerprint,getIdentity,onNotice
    const answer=await requestOcr({image,prompt,signal:controller.signal});
    if(controller.signal.aborted||stamp!==signature(kind)||state[kind]!==s||s.version!==seq||s.text!==baseText)return;
    s.candidate={text:answer.text,index,original,baseText,signature:stamp};
-   imageMap.render(s);
+   if(active===kind)imageMap.render(s);
    onNotice('پیشنهاد قسمت انتخاب‌شده آماده است؛ می‌توانی آن را رد یا ویرایش و اعمال کنی.','ok');
   }catch(error){if(error?.name!=='AbortError'&&error?.message!=='AbortError')onNotice(formatOcrError(error))}
   finally{if(state[kind]===s&&s.version===seq){s.busy=false;s.abort=null;s.stage=0;if(active===kind)show()}}
@@ -347,7 +347,7 @@ export function installOcrWorkbench({capture,getFingerprint,getIdentity,onNotice
    const confirmed=s.figures.filter(x=>x.status==='operator_confirmed');
    s.figures=[...confirmed,...(result.figures||[]).filter(f=>!confirmed.some(x=>
     x.bbox_norm.every((v,i)=>Math.abs(v-f.bbox_norm[i])<.01)))].slice(0,8);
-   updateScientificReview(s,{previous:s.baseline,flags:result.reviewFlags,confidence:result.confidence});
+   updateScientificReview(s,{kind,previous:s.baseline,flags:result.reviewFlags,confidence:result.confidence});
    s.source='cloudflare-workers-ai';s.passes=Math.max(s.passes,pass);s.confirmed=false;
    if(result.format==='plain')onNotice('پاسخ OCR ساختار مشخصی نداشت؛ متن را دقیق‌تر بازبینی کن.');
    show();
