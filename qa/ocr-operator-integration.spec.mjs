@@ -122,9 +122,10 @@ test.describe('ZH-75 operator OCR integration',()=>{
   expect(requests).toHaveLength(2);
   expect(requests.every(x=>x.image.startsWith('data:image/webp;base64,'))).toBe(true);
   // Scientific differences between the two passes require explicit operator checking.
-  while(await host.locator('.studio-science-warning[data-severity="critical"] input:not(:checked)').count()){
-   await host.locator('.studio-science-warning[data-severity="critical"] input:not(:checked)').first().check();
-  }
+  // nth(i) retains identity when the UI re-renders after checkbox change.
+  const criticalInputs=host.locator('.studio-science-warning[data-severity="critical"] input');
+  const criticalCount=await criticalInputs.count();
+  for(let i=0;i<criticalCount;i++)await criticalInputs.nth(i).check();
   await buttons.nth(2).click();
   const approved=await page.evaluate(()=>window.__testOcr.reviewForSave());
   expect(approved.question.status).toBe('operator_confirmed');
