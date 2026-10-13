@@ -106,7 +106,7 @@ export default {
    const isBatch=url.pathname==="/api/ocr/jobs"||url.pathname.startsWith("/api/ocr/jobs/");
    const isDraft=url.pathname==="/api/draft";
    const method=isDraft?"GET, PUT":isBatch?"GET, POST":isOcr?"POST":"GET";
-   if(!isBatch&&isDraft&&!["GET","PUT"].includes(request.method)||!isDraft&&request.method!==method)return json({error:"Method not allowed"},405,{"Allow":method});
+   if(!isBatch&&((isDraft&&!["GET","PUT"].includes(request.method))||(!isDraft&&request.method!==method)))return json({error:"Method not allowed"},405,{"Allow":method});
    if(!env.ACCESS_TEAM_DOMAIN||!env.ACCESS_AUD||!env.OPERATOR_EMAILS)return json({error:"Identity not configured"},503);
    const identity=await verifyAccess(request,env);
    if(!identity)return json({error:"Unauthorized"},401);
