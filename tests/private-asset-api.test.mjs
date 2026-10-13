@@ -48,7 +48,7 @@ test('actor isolation prevents listing, reads or uploads to foreign projects',as
 });
 test('wrong magic bytes, invalid role, and unsafe media are rejected before storage',async()=>{
  const f=fixture();
- assert.equal((await f.call(actorA,'','POST',pdf,{'Content-Type':'image/png','X-Asset-Role':'figure'})).status,503);
+ assert.equal((await f.call(actorA,'','POST',pdf,{'Content-Type':'image/png','X-Asset-Role':'figure'})).status,415);
  assert.equal(f.stored.size,0);
  assert.equal((await f.call(actorA,'','POST',pdf,{'Content-Type':'application/pdf','X-Asset-Role':'figure'})).status,400);
  assert.equal((await f.call(actorA,'','POST',pdf,{'Content-Type':'text/html','X-Asset-Role':'export'})).status,400);
