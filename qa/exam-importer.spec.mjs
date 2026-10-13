@@ -1,0 +1,50 @@
+import {test,expect} from '@playwright/test';
+const P='12345678-1234-1234-1234-123456789012',digest='d'.repeat(64);
+async function mock(page){
+ const posted=[];
+ await page.route('**/api/v1/projects**',route=>{
+  const req=route.request(),url=new URL(req.url());let status=200,data={};
+  if(url.pathname==='/api/v1/projects')data={projects:[{id:P,name:'نمونه زیست'}]};
+  else if(url.pathname==='/api/v1/projects/'+P+'/assets')data={assets:[{digest,role:'question_pdf',mime:'application/pdf',size:300}]};
+  else if(url.pathname==='/api/v1/projects/'+P+'/questions'&&req.method()==='POST'){
+   posted.push(req.postDataJSON());status=201;
+   data={question:{id:'87654321-1234-1234-1234-123456789012',state:'draft',revision:1,content:req.postDataJSON().content}};
+  }else status=404;
+  return route.fulfill({status,contentType:'application/json',body:JSON.stringify(data)});
+ });
+ return posted;
+}
+test.describe('ZH-82 reviewed answer importer',()=>{
+ test('matching is local and no question is saved until explicit checkbox and button',async({page})=>{
+  const posted=await mock(page);
+  await page.goto('/review-console/exam-importer.html');
+  await expect(page.locator('#importProject')).toBeEnabled();
+  await page.locator('#importSource').selectOption(digest);
+  await page.locator('#rawQuestions').fill('۱) مقدار x چیست؟\n۲) پاسخ کدام گزینه است؟');
+  await page.locator('#rawAnswers').fill('۱) x=۲\n۲) گزینه سه');
+  await page.locator('#matchNow').click();
+  expect(posted).toHaveLength(0);
+  await expect(page.locator('[data-number]')).toHaveCount(2);
+  await page.locator('[data-number="1"]').check();
+  await page.locator('#importDrafts').click();
+  await expect(page.locator('#importNotice')).toContainText('منتقل شد');
+  expect(posted).toHaveLength(1);
+  expect(posted[0].content.operatorConfirmed).toBe(false);
+  expect(posted[0].content.sourceDigest).toBe(digest);
+  expect(posted[0].content.sourceNumber).toBe(1);
+ });
+ test('mismatched numbers are never selectable and stale analysis is reset on edit',async({page})=>{
+  const posted=await mock(page);
+  await page.goto('/review-console/exam-importer.html');
+  await page.locator('#importSource').selectOption(digest);
+  await page.locator('#rawQuestions').fill('۱) سؤال اول\n۲) سؤال دوم');
+  await page.locator('#rawAnswers').fill('۱) پاسخ اول\n۳) پاسخ بدون سؤال');
+  await page.locator('#matchNow').click();
+  await expect(page.locator('[data-number]')).toHaveCount(1);
+  await expect(page.locator('#matchList')).toContainText('نیازمند اصلاح');
+  await page.locator('[data-number="1"]').check();
+  await page.locator('#rawAnswers').fill('۲) پاسخ تغییر کرد');
+  await expect(page.locator('#importDrafts')).toBeDisabled();
+  expect(posted).toHaveLength(0);
+ });
+});
