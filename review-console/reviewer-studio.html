@@ -15,7 +15,7 @@
  <nav aria-label="ناوبری"><a href="./bank-studio.html">بانک پیش‌نویس‌ها</a><a href="../studio/">استودیوی PDF</a></nav>
 </header>
 <main class="bank-layout">
- <aside class="bank-panel bank-sidebar">
+ <aside class="bank-panel bank-sidebar" aria-label="پروژه‌های ارجاع‌شده">
   <h2>پروژه‌های ارجاع‌شده</h2>
   <label for="assignedProjects">پروژه</label><select id="assignedProjects" disabled><option value="">در حال بررسی هویت</option></select>
   <h2>فهرست بازبینی</h2><div id="reviewQueue" class="bank-list"></div>
@@ -37,7 +37,7 @@
   </fieldset>
   <div class="bank-actions"><button type="button" id="approveReview" class="bank-primary" disabled>ثبت تأیید علمی</button><button type="button" id="rejectReview" disabled>رد و بازگشت برای اصلاح</button></div>
  </section>
- <aside class="bank-panel bank-review">
+ <aside class="bank-panel bank-review" aria-label="تاریخچه تصمیم‌های علمی">
   <span class="bank-eyebrow">REVISION / HUMAN SIGNOFF</span><h2>تاریخچه تصمیم‌ها</h2>
   <p>با هر ویرایش، تأیید نسخه قبلی منقضی می‌شود. این صفحه هیچ سؤال یا پاسخی را منتشر نمی‌کند.</p>
   <div id="reviewHistory" class="bank-results"></div>
