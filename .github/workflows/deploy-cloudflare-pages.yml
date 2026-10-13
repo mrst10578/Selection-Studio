@@ -25,6 +25,7 @@ jobs:
           cp -R studio/. _site/studio/
           cp -R review-console/. _site/admin/
           cp cloudflare/_worker.js _site/_worker.js
+          cp cloudflare/ocr-batch-api.js cloudflare/ocr-batch-core.js _site/
           cat > _site/_headers <<'HEADERS'
           /*
             X-Content-Type-Options: nosniff
@@ -35,6 +36,8 @@ jobs:
           test -f _site/studio/index.html
           test -f _site/admin/ocr-studio.html
           test -f _site/_worker.js
+          test -f _site/ocr-batch-api.js
+          test -f _site/ocr-batch-core.js
           ! grep -R -n 'mrst10578.github.io' _site/*.html _site/studio/*.html || exit 1
       - name: Syntax and security regression checks
         run: |
