@@ -41,14 +41,14 @@ export async function handleApprovedBankApi(request,env,actor,url){
   }
   if(path==='/api/v1/bank/exams/compose'&&method==='POST'){
    const data=await input(request);
-   if(!data||typeof data!=='object'||Array.isArray(data)||Object.keys(data).some(k=>!['title','questionIds','includeAnswers'].includes(k))||
+   if(!data||typeof data!=='object'||Array.isArray(data)||Object.keys(data).some(k=>!['title','questionIds','sourceRevisions','includeAnswers'].includes(k))||
     typeof data.title!=='string'||!data.title.trim()||data.title.length>140||
     !Array.isArray(data.questionIds)||!data.questionIds.length||data.questionIds.length>100||
-    data.questionIds.some(v=>!id.test(v))||new Set(data.questionIds).size!==data.questionIds.length||
+    data.questionIds.some(v=>!id.test(v))||new Set(data.questionIds).size!==data.questionIds.length||!Array.isArray(data.sourceRevisions)||data.sourceRevisions.length!==data.questionIds.length||data.sourceRevisions.some(v=>!Number.isSafeInteger(v)||v<1)||
     typeof data.includeAnswers!=='boolean')return j({error:'INVALID_EXAM_REQUEST'},400);
    const available=await validApproved(env.SECURITY_DB,actor,null),map=new Map(available.map(x=>[x.id,x]));
    const selected=data.questionIds.map(q=>map.get(q));
-   if(selected.some(q=>!q))return j({error:'UNAPPROVED_OR_STALE_QUESTION'},409);
+   if(selected.some((q,i)=>!q||q.revision!==data.sourceRevisions[i]))return j({error:'UNAPPROVED_OR_STALE_QUESTION'},409);
    if(data.includeAnswers&&selected.some(q=>!q.answerText.trim()))return j({error:'ANSWER_MISSING'},422);
    const manifest={title:data.title.trim(),answersIncluded:data.includeAnswers,publishable:false,
     items:selected.map((q,i)=>({index:i+1,id:q.id,revision:q.revision,question:q.questionText,
