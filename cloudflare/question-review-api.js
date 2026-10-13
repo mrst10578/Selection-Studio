@@ -1,3 +1,4 @@
+import {readPrivateAsset} from './private-assets.js';
 /* ZH-83 | Independent reviewer gate. Called after Pages Access signature validation.
  * Review evidence is revision-pinned, stored in D1, and never triggers publish. */
 const uuid=/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
@@ -23,6 +24,21 @@ export async function handleReviewApi(request,env,identity,actor,url){
  const ownerRole=!!mail&&listed(mail,env.OPERATOR_EMAILS),reviewerRole=!!mail&&listed(mail,env.REVIEWER_EMAILS);
  if(!ownerRole&&!reviewerRole)return json({error:'FORBIDDEN'},403);
  const path=url.pathname,method=request.method;
+  // Assigned reviewers can download source documents, never raw bucket keys or public URLs.
+  const assetRoute=/^\/api\/v1\/reviews\/projects\/([^/]+)\/assets\/([a-f0-9]{64})$/i.exec(path);
+  if(assetRoute){
+   if(method!=='GET'||!reviewerRole||!uuid.test(assetRoute[1]))return json({error:'NOT_FOUND'},404);
+   const [_,pid,digestId]=assetRoute,project=await sql(db,'SELECT id,actor FROM bank_projects WHERE id=? AND deleted_at IS NULL',pid).first();
+   if(!project||project.actor===actor)return json({error:'NOT_FOUND'},404);
+   const member=await sql(db,'SELECT project_id FROM bank_project_reviewers WHERE project_id=? AND reviewer_email_hash=?',pid,await digest(mail)).first();
+   if(!member)return json({error:'NOT_FOUND'},404);
+   const asset=await sql(db,"SELECT mime,role FROM bank_assets WHERE project_id=? AND actor=? AND digest=? AND role IN ('question_pdf','answer_pdf') AND deleted_at IS NULL",pid,project.actor,digestId).first();
+   if(!asset)return json({error:'ASSET_NOT_FOUND'},404);
+   if(!env.QUESTION_ASSETS?.get)return json({error:'SOURCE_STORAGE_NOT_CONFIGURED'},503);
+   const file=await readPrivateAsset(env,project.actor,{digest:digestId,mime:asset.mime});
+   if(!file)return json({error:'SOURCE_NOT_FOUND'},503);
+   return new Response(file.object.body,{status:200,headers:{'Content-Type':'application/pdf','Content-Disposition':'attachment; filename="review-source-'+digestId.slice(0,12)+'.pdf"','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'none'; sandbox"}});
+  }
  try{
   if(path==='/api/v1/reviews/assignments'&&method==='POST'){
    if(!ownerRole)return json({error:'OPERATOR_REQUIRED'},403);
