@@ -40,7 +40,7 @@ export function createBatchOcrPanel({capture,getFingerprint,getIdentity,onNotice
  const summary=node('h4','','درخواست‌های ثبت‌شده');
  host.append(heading,actions,status,staged,summary,history);
  const pending=[],own=new Map();
- let jobs=[],busy=false,poll=null;
+ let jobs=[],busy=false,poll=null,pendingKey=null;
  function button(label,fn,disabled=false){
   const e=node('button','',label);e.type='button';e.disabled=disabled;e.addEventListener('click',fn);return e;
  }
@@ -56,7 +56,7 @@ export function createBatchOcrPanel({capture,getFingerprint,getIdentity,onNotice
   pending.forEach((item,index)=>{
    const row=node('div','studio-batch-row');
    row.append(node('span','',(index+1)+' · '+(item.kind==='question'?'سؤال':'پاسخ')+' · '+item.label),
-    button('حذف',()=>{pending.splice(index,1);draw()},busy));
+    button('حذف',()=>{pending.splice(index,1);pendingKey=null;draw()},busy));
    staged.append(row);
   });
   history.replaceChildren();
@@ -111,6 +111,7 @@ export function createBatchOcrPanel({capture,getFingerprint,getIdentity,onNotice
    const image=await prepareOcrImage(captured.blob);
    if(pending.reduce((n,x)=>n+x.image.length,0)+image.length>15500000)throw Error('حجم تصاویر آماده از ظرفیت یک درخواست بیشتر شده؛ ابتدا موارد فعلی را ارسال کن.');
    const clientRef=crypto.randomUUID();
+   pendingKey=null;
    pending.push({kind,image,clientRef,prompt:buildOcrPrompt({kind,pass:1}),
     label:(kind==='question'?'سؤال':'پاسخ')+' · '+String(identity).slice(0,48),identity,fingerprint,signature});
    setStatus('برش آماده شد. تا «شروع پردازش گروهی» را نزنی هیچ درخواست OCR ارسال نمی‌شود.');
@@ -120,12 +121,12 @@ export function createBatchOcrPanel({capture,getFingerprint,getIdentity,onNotice
  async function startJob(){
   if(busy||!pending.length||!isOperatorAuthenticated())return;
   busy=true;draw();
-  const requestKey=crypto.randomUUID();
+  const requestKey=pendingKey||(pendingKey=crypto.randomUUID());
   const input=pending.map(({clientRef,kind,image,prompt})=>({clientRef,kind,image,prompt}));
   try{
    const created=await fetchJob('','POST',{requestKey,items:input});
    for(const item of pending)own.set(item.clientRef,{identity:item.identity,fingerprint:item.fingerprint,signature:item.signature});
-   pending.splice(0);jobs=[created,...jobs.filter(x=>x.id!==created.id)].slice(0,8);
+   pending.splice(0);pendingKey=null;jobs=[created,...jobs.filter(x=>x.id!==created.id)].slice(0,8);
    setStatus('درخواست ثبت شد؛ وضعیت روی سرور ذخیره شده و بعد از خروج هم قابل مشاهده است.');
    beginPolling();
   }catch(e){onNotice(e.message);setStatus('ثبت صف انجام نشد. تصاویر آماده باقی مانده‌اند و می‌توانی دوباره تلاش کنی.')}
@@ -159,9 +160,9 @@ export function createBatchOcrPanel({capture,getFingerprint,getIdentity,onNotice
  addQ.addEventListener('click',()=>void append('question'));
  addA.addEventListener('click',()=>void append('answer'));
  start.addEventListener('click',()=>void startJob());
- clear.addEventListener('click',()=>{if(busy)return;pending.splice(0);draw()});
+ clear.addEventListener('click',()=>{if(busy)return;pending.splice(0);pendingKey=null;draw()});
  reload.addEventListener('click',()=>{void refresh();beginPolling()});
  draw();
  // No background queue polling until a user explicitly requests or submits work.
- return {host,refresh,resetPending:()=>{pending.splice(0);draw()},sync:draw};
+ return {host,refresh,resetPending:()=>{pending.splice(0);pendingKey=null;draw()},sync:draw};
 }
