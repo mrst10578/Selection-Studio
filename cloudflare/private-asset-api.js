@@ -59,5 +59,9 @@ export async function handleAssetApi(request,env,actor,url){
    return json({digest:asset.digest,mime,role,size:asset.bytes,existing:asset.existing},201);
   }
   return json({error:'METHOD_NOT_ALLOWED'},405);
- }catch{return json({error:'ASSET_STORAGE_UNAVAILABLE'},503)}
+ }catch(error){
+  if(error?.message==='INVALID_ASSET_TYPE')return json({error:'INVALID_ASSET_TYPE'},415);
+  if(error?.message==='INVALID_ASSET_SIZE')return json({error:'ASSET_TOO_LARGE'},413);
+  return json({error:'ASSET_STORAGE_UNAVAILABLE'},503);
+ }
 }
