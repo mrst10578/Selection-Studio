@@ -25,7 +25,7 @@ function enableSession(){
 }
 function enableContext(){
  const hasProject=!!state.projectId,hasQuestion=!!state.current;
- for(const id of ['newQuestion','questionText','answerText','taxonomyId','sourceLabel','saveDraft','findDuplicates','suggestCategories','compareDrafts'])$(id).disabled=!state.authenticated||!hasProject;
+ for(const id of ['newQuestion','questionText','answerText','taxonomyId','sourceLabel','saveDraft','findDuplicates','suggestCategories','compareDrafts','sourcePdf','answerPdf','figureImage','refreshAssets'])$(id).disabled=!state.authenticated||!hasProject;
  $('deleteDraft').disabled=!hasQuestion;
  $('showHistory').disabled=!hasQuestion;
  $('revision').textContent='نسخه: '+(hasQuestion?state.current.revision:'جدید');
@@ -54,13 +54,39 @@ async function loadProjects(selectId){
  for(const row of state.projects)sel.add(new Option(row.name,row.id));
  const id=selectId&&state.projects.some(p=>p.id===selectId)?selectId:state.projects[0]?.id||'';
  sel.value=id;state.projectId=id;
- if(id)await loadQuestions();else{state.questions=[];loadEditor(null);renderQuestions()}
+ if(id)await loadQuestions();else{state.questions=[];loadEditor(null);renderQuestions();$('assetList').replaceChildren()}
  enableContext();
 }
 async function loadQuestions(){
  if(!state.projectId)return;
  const result=await api('/'+state.projectId+'/questions');
- state.questions=result.questions||[];loadEditor(null);renderQuestions();
+ state.questions=result.questions||[];loadEditor(null);renderQuestions();void loadAssets().catch(showAssetsUnavailable);
+}
+
+function showAssetsUnavailable(err){
+ $('assetList').replaceChildren(elem('p',err?.message==='ASSET_STORAGE_NOT_CONFIGURED'?'فضای R2 هنوز فعال نیست؛ فایلی ارسال نشد.':'فایل‌های این پروژه فعلاً در دسترس نیستند.','bank-help'));
+}
+async function loadAssets(){
+ const list=$('assetList');list.replaceChildren();if(!state.projectId)return;
+ const result=await api('/'+state.projectId+'/assets');
+ if(!result.assets?.length){list.append(elem('p','هنوز فایلی ثبت نشده است.','bank-help'));return}
+ for(const asset of result.assets){
+  const box=elem('div',undefined,'bank-result');
+  box.append(elem('span',({question_pdf:'دفترچه سؤال',answer_pdf:'پاسخنامه',figure:'شکل',export:'خروجی'}[asset.role]||asset.role)+' · '+Math.ceil(asset.size/1024)+' کیلوبایت'));
+  const link=elem('a','دریافت خصوصی');link.className='bank-download';
+  link.href='/api/v1/projects/'+encodeURIComponent(state.projectId)+'/assets/'+encodeURIComponent(asset.digest)+'?role='+encodeURIComponent(asset.role);
+  link.rel='nofollow';box.append(link);list.append(box);
+ }
+}
+async function uploadAsset(file,role){
+ if(!state.projectId||!state.authenticated)throw Error('ابتدا پروژه را انتخاب کن');
+ if(file.size>8*1024*1024)throw Error('سقف فایل ۸ مگابایت است');
+ const mime=file.type||({'question_pdf':'application/pdf','answer_pdf':'application/pdf'}[role]||'');
+ if(!['application/pdf','image/png','image/jpeg','image/webp'].includes(mime))throw Error('نوع فایل پشتیبانی نمی‌شود');
+ notice('در حال بارگذاری خصوصی فایل…');
+ const result=await api('/'+state.projectId+'/assets',{method:'POST',headers:{'Content-Type':mime,'X-Asset-Role':role},body:file});
+ notice('فایل خصوصی ثبت شد؛ OCR و انتشار اجرا نشده‌اند. '+result.digest.slice(0,12));
+ await loadAssets();
 }
 async function createProject(){
  const name=$('projectName').value.trim();if(!name){notice('نام پروژه را وارد کن',true);return}
@@ -125,6 +151,13 @@ $('showHistory').addEventListener('click',()=>void safely(showHistory));
 $('findDuplicates').addEventListener('click',findDuplicates);
 $('suggestCategories').addEventListener('click',suggestCategories);
 $('compareDrafts').addEventListener('click',compareDrafts);
+$('refreshAssets').addEventListener('click',()=>void loadAssets().catch(showAssetsUnavailable));
+for(const [id,role] of [['sourcePdf','question_pdf'],['answerPdf','answer_pdf'],['figureImage','figure']]){
+ $(id).addEventListener('change',event=>void safely(async()=>{
+  const file=event.target.files?.[0];if(!file)return;
+  try{await uploadAsset(file,role)}finally{event.target.value=''}
+ }));
+}
 void safely(async()=>{
  const session=await api('/api/session');
  if(!session.authenticated||session.role!=='operator')throw Error('دسترسی اپراتور تأیید نشد');
