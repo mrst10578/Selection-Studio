@@ -69,6 +69,14 @@ async function act(env,actor,id,action){
  }else if(action==='resume'){
   if(!['running','paused'].includes(job.status))return error('BATCH_CANNOT_RESUME',409);
   await q(db,"UPDATE ocr_batch_jobs SET status='running',updated_at=CURRENT_TIMESTAMP WHERE id=?1 AND actor=?2 AND status='paused'",id,actor).run();
+  // Queue delivery is at-least-once, but exhausted/dropped messages can leave D1
+  // records stranded. Explicit operator Resume safely redispatches only stale work.
+  // Live leases remain untouched. A duplicate old message is protected by the
+  // consumer's conditional claim and cannot cause concurrent inference.
+  const now=Date.now();
+  await q(db,"UPDATE ocr_batch_items SET status='failed',error_code='OCR_LEASE_EXPIRED',lease_until=NULL,updated_at=CURRENT_TIMESTAMP WHERE job_id=?1 AND status='processing' AND attempts>=3 AND lease_until<?2",id,now).run();
+  await q(db,"UPDATE ocr_batch_items SET status='staged',lease_until=NULL,updated_at=CURRENT_TIMESTAMP WHERE job_id=?1 AND status='processing' AND attempts<3 AND lease_until<?2",id,now).run();
+  await q(db,"UPDATE ocr_batch_items SET status='staged',updated_at=CURRENT_TIMESTAMP WHERE job_id=?1 AND status='queued' AND updated_at<datetime('now','-5 minutes')",id).run();
   await enqueue(env,id,await itemsFor(db,id));
  }else if(action==='retry'){
   if(job.status==='cancelled')return error('BATCH_CANCELLED',409);
