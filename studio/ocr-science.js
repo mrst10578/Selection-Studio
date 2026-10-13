@@ -23,7 +23,7 @@ export function normalizeFigureCandidates(raw,{source='model'}={}){
    source:value.source==='operator'?'operator':source==='operator'?'operator':'model',
    status:'pending_review'
   };
-  const score=modelConfidence(value.confidence);
+  const score=modelConfidence(value.model_confidence??value.confidence);
   if(score!==null)candidate.model_confidence=score;
   result.push(candidate);
   if(result.length>=8)break;
@@ -53,7 +53,7 @@ export function scientificWarnings({text='',latex=[],kind='question',previous=nu
  };
  const negation=s=>Array.from(s.matchAll(/(?:نمی\s*|نمی‌|نباید|نیست|نادرست|غلط|به\s*جز|بجز|مگر|فاقد|به\s*غیر\s*از|not\b|except\b|without\b|incorrect\b)/giu)).map(x=>x[0].replace(/\s+/g,''));
  const negative=s=>Array.from(s.matchAll(/[-−]\s*(?:\d+(?:[.,]\d+)?|[a-zA-Z]|\\(?:frac|sqrt))/g)).map(x=>x[0].replace(/\s+/g,''));
- const decimal=s=>Array.from(s.matchAll(/(?<![\w\d])\d+[.,]\d+(?![\w\d])/g)).map(x=>x[0].replace(',','.'));
+ const decimal=s=>Array.from(s.matchAll(/(?<![\d.])\d+[.,]\d+(?![\d.])/g)).map(x=>x[0].replace(',','.'));
  const exponent=s=>Array.from(s.matchAll(/(?:\^\s*(?:\{[^}\r\n]{1,18}\}|[-+]?\w{1,8})|[⁰¹²³⁴⁵⁶⁷⁸⁹⁻⁺]+)/gu)).map(x=>x[0].replace(/\s+/g,''));
  const numerical=s=>Array.from(s.matchAll(/\d+(?:[.,]\d+)?/g)).map(x=>x[0].replace(',','.'));
  const same=(x,y)=>JSON.stringify(x)===JSON.stringify(y);
