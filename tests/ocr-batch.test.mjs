@@ -167,3 +167,32 @@ test('unauthenticated batch route fails closed before D1, R2 or queue access',as
  const noJwt=await worker.fetch(req,{ACCESS_TEAM_DOMAIN:'test.cloudflareaccess.com',ACCESS_AUD:'aud',OPERATOR_EMAILS:'user@example.com'});
  assert.equal(noJwt.status,401);
 });
+
+test('operator resume recovers stranded deliveries without duplicating fresh queue sends',async()=>{
+ const f=fixture(),job=await (await call(f.env,actor,'','POST',example('qa-idempotency-recovery-001'))).json();
+ assert.equal(f.calls.length,2);
+ // A healthy queued message must never be re-dispatched just for clicking Resume.
+ await call(f.env,actor,'/'+job.id+'/resume','POST');
+ assert.equal(f.calls.length,2);
+ f.local.prepare("UPDATE ocr_batch_items SET updated_at=datetime('now','-10 minutes') WHERE id=?").run(job.items[0].id);
+ // Expired processing lease with a remaining attempt is also safely recoverable.
+ f.local.prepare("UPDATE ocr_batch_items SET status='processing',attempts=1,lease_until=1 WHERE id=?").run(job.items[1].id);
+ const recovered=await (await call(f.env,actor,'/'+job.id+'/resume','POST')).json();
+ assert.equal(recovered.counts.queued,2);
+ assert.equal(f.calls.length,4);
+ assert.deepEqual(f.calls.slice(2).map(x=>x.itemId).sort(),job.items.map(x=>x.id).sort());
+ const stale=signedMessage(f.calls[0]),fresh=signedMessage(f.calls[2]);
+ // The old and new delivery both reference one D1 item, never new storage/cost.
+ assert.equal(stale.body.itemId,fresh.body.itemId);
+ f.local.close();
+});
+test('exhausted stale processing lease needs manual retry rather than hidden extra inference',async()=>{
+ const f=fixture(),job=await (await call(f.env,actor,'','POST',example('qa-idempotency-recovery-002'))).json();
+ f.local.prepare("UPDATE ocr_batch_items SET status='processing',attempts=3,lease_until=1 WHERE id=?").run(job.items[0].id);
+ const before=f.calls.length;
+ const snapshot=await (await call(f.env,actor,'/'+job.id+'/resume','POST')).json();
+ assert.equal(snapshot.counts.failed,1);
+ assert.equal(snapshot.items[0].error,'OCR_LEASE_EXPIRED');
+ assert.equal(f.calls.length,before);
+ f.local.close();
+});
