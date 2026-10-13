@@ -48,15 +48,27 @@ async function consumeOne(msg,env){
  const item=await sql(db,'SELECT id,status,attempts,asset_key FROM ocr_batch_items WHERE job_id=?1 AND id=?2',jobId,itemId).first();
  if(!job||!item||['done','cancelled','failed'].includes(item.status)||['completed','cancelled'].includes(job.status)){msg.ack();return}
  if(job.status==='paused'){
-  await sql(db,"UPDATE ocr_batch_items SET status='staged' WHERE id=?1 AND status='queued' AND EXISTS (SELECT 1 FROM ocr_batch_jobs WHERE id=?2 AND status='paused')",itemId,jobId).run();
-  msg.ack();return;
+  const staged=await sql(db,"UPDATE ocr_batch_items SET status='staged' WHERE id=?1 AND status='queued' AND EXISTS (SELECT 1 FROM ocr_batch_jobs WHERE id=?2 AND status='paused') RETURNING id",itemId,jobId).first();
+  // If Resume raced with Pause, do not ack a message that was never re-dispatched.
+  if(staged||item.status==='staged'){msg.ack();return}
+  msg.retry({delaySeconds:15});return;
  }
  const claim=await sql(db,
   "UPDATE ocr_batch_items SET status='processing',attempts=attempts+1,lease_until=?3,updated_at=CURRENT_TIMESTAMP WHERE id=?1 AND job_id=?2 AND attempts<3 AND (status IN ('queued','staged') OR (status='processing' AND lease_until<?4)) AND EXISTS(SELECT 1 FROM ocr_batch_jobs WHERE id=?2 AND status='running') RETURNING attempts",
   itemId,jobId,Date.now()+180000,Date.now()).first();
  if(!claim){
-  if(item.status==='processing'||item.status==='queued'){msg.retry({delaySeconds:45});return}
-  msg.ack();return;
+  const latest=await sql(db,'SELECT status,attempts,lease_until FROM ocr_batch_items WHERE id=?1',itemId).first();
+  const parent=await sql(db,'SELECT status FROM ocr_batch_jobs WHERE id=?1',jobId).first();
+  if(!latest||!parent||['done','cancelled','failed'].includes(latest.status)||['cancelled','completed'].includes(parent.status)){msg.ack();return}
+  if(parent.status==='paused'){
+   const parked=await sql(db,"UPDATE ocr_batch_items SET status='staged' WHERE id=?1 AND status='queued' AND EXISTS (SELECT 1 FROM ocr_batch_jobs WHERE id=?2 AND status='paused') RETURNING id",itemId,jobId).first();
+   if(parked||latest.status==='staged'){msg.ack();return}
+  }
+  if(latest.status==='processing'&&latest.attempts>=3&&latest.lease_until<Date.now()){
+   await sql(db,"UPDATE ocr_batch_items SET status='failed',error_code='OCR_LEASE_EXPIRED',lease_until=NULL WHERE id=?1 AND status='processing' AND lease_until<?2",itemId,Date.now()).run();
+   await settleJob(db,jobId);msg.ack();return;
+  }
+  msg.retry({delaySeconds:45});return;
  }
  const attempt=claim.attempts;
  let code='OCR_UPSTREAM_FAILED',retryable=false;
