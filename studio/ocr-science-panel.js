@@ -114,7 +114,7 @@ export function createSciencePanel({
    const tag=node('small','studio-science-warning-tag',item.severity==='critical'?'اختلاف حساس':'بررسی پیشنهادی');
    row.append(checkbox,body,tag);warnings.append(row);
   }
-  restore.hidden=!s?.baseline||s?.passes<2;
+  restore.hidden=!s?.baseline;
   restore.disabled=Boolean(s?.busy);
   mark.disabled=!s?.imageBlob||Boolean(s?.busy);
   frame.hidden=!s?.imageBlob;
