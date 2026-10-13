@@ -83,18 +83,18 @@ test.describe('ZH-75 multi-stage OCR, LaTeX preview and operator review',()=>{
   await expect(panel.locator('textarea[id="studioOcrLatex"]')).toHaveValue(/x\^2/);
   expect(await page.evaluate(()=>window.__fixtureOcr.reviewForSave())).toBeNull();
   // ZH-77: explicitly acknowledge scientific differences before OCR confirmation.
-  while(await panel.locator('.studio-science-warning[data-severity="critical"] input:not(:checked)').count()){
-   await panel.locator('.studio-science-warning[data-severity="critical"] input:not(:checked)').first().check();
-  }
+  // nth(i) retains identity when the UI re-renders after checkbox change.
+  const criticalInputs=panel.locator('.studio-science-warning[data-severity="critical"] input');
+  const criticalCount=await criticalInputs.count();
+  for(let i=0;i<criticalCount;i++)await criticalInputs.nth(i).check();
   await panel.getByRole('button',{name:'۳ · تأیید اپراتور'}).click();
   let confirmed=await page.evaluate(()=>window.__fixtureOcr.reviewForSave());
   expect(confirmed).toMatchObject({schema_version:1,question:{status:'operator_confirmed',passes:2,source:'cloudflare-workers-ai'}});
   expect(confirmed.question.text).toBe('سؤال ۱۲: حاصل x²؟');
   await panel.locator('textarea[id="studioOcrText"]').fill('متن ویرایش‌شده اپراتور');
   expect(await page.evaluate(()=>window.__fixtureOcr.reviewForSave())).toBeNull();
-  while(await panel.locator('.studio-science-warning[data-severity="critical"] input:not(:checked)').count()){
-   await panel.locator('.studio-science-warning[data-severity="critical"] input:not(:checked)').first().check();
-  }
+  const criticalEdited=panel.locator('.studio-science-warning[data-severity="critical"] input');
+  for(let i=0,n=await criticalEdited.count();i<n;i++)await criticalEdited.nth(i).check();
   await panel.getByRole('button',{name:'۳ · تأیید اپراتور'}).click();
   confirmed=await page.evaluate(()=>window.__fixtureOcr.reviewForSave());
   expect(confirmed.question.text).toBe('متن ویرایش‌شده اپراتور');
