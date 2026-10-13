@@ -545,3 +545,111 @@ body.atelier-studio .studio-science-figure-box[aria-pressed="true"]{
  .studio-science-warning-tag{grid-column:2}
  .studio-science-figure-item button{flex:1 1 43%}
 }
+
+
+/* ZH-78: persistent OCR job queue */
+.studio-batch-ocr{
+ display:grid;
+ gap:10px;
+ padding:13px;
+ min-width:0;
+ border:1px solid #4d776b;
+ border-radius:13px;
+ background:#122a30;
+ color:#dbe9ee;
+}
+.studio-batch-heading{display:grid;gap:4px}
+.studio-batch-heading strong{font-size:.92rem;color:#c7f3db}
+.studio-batch-heading p,.studio-batch-status,.studio-batch-empty{
+ margin:0;
+ font-size:.72rem;
+ line-height:1.75;
+ color:#c1d4dc;
+}
+.studio-batch-actions,.studio-batch-job-actions,.studio-batch-result-actions{
+ display:flex;
+ flex-wrap:wrap;
+ gap:7px;
+}
+body.atelier-studio .studio-batch-ocr button{
+ min-height:42px;
+ border:1px solid #6b9398;
+ border-radius:8px;
+ background:#254650;
+ color:#fff;
+ padding:7px 9px;
+ font-size:.75rem;
+ line-height:1.6;
+ overflow-wrap:anywhere;
+ cursor:pointer;
+}
+body.atelier-studio .studio-batch-ocr button:disabled{
+ opacity:.4;
+ cursor:not-allowed;
+}
+.studio-batch-actions button{flex:1 1 37%}
+.studio-batch-row{
+ display:flex;
+ align-items:center;
+ justify-content:space-between;
+ gap:8px;
+ min-width:0;
+ border:1px solid #3d626b;
+ padding:7px;
+ border-radius:8px;
+ font-size:.77rem;
+}
+.studio-batch-row span{min-width:0;overflow-wrap:anywhere}
+.studio-batch-row button{flex:0 0 auto}
+.studio-batch-job{
+ display:grid;
+ gap:9px;
+ padding:11px;
+ border:1px solid #3b6370;
+ border-radius:9px;
+ margin-bottom:8px;
+ background:#192f3b;
+ min-width:0;
+}
+.studio-batch-job-header{
+ display:flex;
+ flex-wrap:wrap;
+ align-items:center;
+ justify-content:space-between;
+ gap:6px;
+ font-size:.82rem;
+}
+.studio-batch-job-header small{color:#afcbd5}
+.studio-batch-job progress{width:100%;height:12px;accent-color:#72bca9}
+.studio-batch-results{display:grid;gap:7px}
+.studio-batch-result{
+ border:1px solid #41677a;
+ border-radius:8px;
+ padding:8px;
+ overflow-wrap:anywhere;
+}
+.studio-batch-result summary{
+ cursor:pointer;
+ font-size:.78rem;
+ line-height:1.7;
+}
+.studio-batch-transcription{
+ font-family:inherit;
+ font-size:.78rem;
+ line-height:1.9;
+ white-space:pre-wrap;
+ overflow-wrap:anywhere;
+ max-height:260px;
+ overflow:auto;
+ padding:9px;
+ border-radius:7px;
+ color:#eff8fe;
+ background:#122432;
+ direction:auto;
+}
+.studio-batch-error{font-size:.75rem;color:#ffc4ad}
+@media(max-width:520px){
+ .studio-batch-ocr{padding:9px}
+ .studio-batch-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+ .studio-batch-actions button{min-width:0}
+}
