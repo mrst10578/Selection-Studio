@@ -5,10 +5,10 @@ const state={projects:[],questions:[],projectId:'',current:null,dirty:false,auth
 const apiRoot='/api/v1/projects';
 const fields=['questionText','answerText','taxonomyId','sourceLabel'];
 const catalog=[
- {id:'bio',name:'زیست‌شناسی',keywords:['سلول','میتوکندری','ژنتیک','اندامک','کلروپلاست']},
- {id:'chem',name:'شیمی',keywords:['پیوند یونی','واکنش شیمیایی','اسید','مول']},
- {id:'math',name:'ریاضی',keywords:['تابع','مشتق','انتگرال','معادله']},
- {id:'physics',name:'فیزیک',keywords:['نیرو','انرژی','شتاب','مقاومت الکتریکی']}
+ {id:'BIO',name:'زیست‌شناسی',keywords:['سلول','میتوکندری','ژنتیک','اندامک','کلروپلاست']},
+ {id:'CHEM',name:'شیمی',keywords:['پیوند یونی','واکنش شیمیایی','اسید','مول']},
+ {id:'MATH',name:'ریاضی',keywords:['تابع','مشتق','انتگرال','معادله']},
+ {id:'PHY',name:'فیزیک',keywords:['نیرو','انرژی','شتاب','مقاومت الکتریکی']}
 ];
 const notice=(message,error=false)=>{$('notice').textContent=message;$('notice').dataset.state=error?'error':'ok'};
 const elem=(tag,text,cls='')=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e};
@@ -180,7 +180,15 @@ function findDuplicates(){
 function suggestCategories(){
  const list=suggestTaxonomy($('questionText').value,catalog);const host=$('categoryList');host.replaceChildren();
  if(!list.length){host.append(elem('p','موضوع پیشنهادی پیدا نشد؛ طبقه‌بندی را دستی بررسی کن.'));return}
- for(const item of list)host.append(elem('div',item.label+' · '+item.matched.join('، ')+' · فقط پیشنهاد','bank-result'));
+ for(const item of list){
+  const box=elem('div',item.label+' · '+item.matched.join('، '),'bank-result');
+  const accept=elem('button','انتخاب این مبحث');accept.type='button';
+  accept.addEventListener('click',()=>{
+   $('taxonomyId').value=item.id;
+   $('operatorConfirmed').checked=false;state.dirty=true;
+   notice('موضوع '+item.label+' با انتخاب تو در پیش‌نویس قرار گرفت؛ هنوز ذخیره یا تأیید نشده است.');
+  });box.append(accept);host.append(box);
+ }
 }
 function compareDrafts(){
  const a=$('questionText').value,b=$('secondDraft').value;if(!a.trim()||!b.trim()){notice('برای مقایسه، هر دو متن را وارد کن',true);return}
