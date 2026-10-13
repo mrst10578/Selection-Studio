@@ -4,7 +4,7 @@ import {normalizeFigureCandidates,confirmedFigures,modelConfidence,safeScientifi
  * This module never makes a network request on import and never holds credentials. */
 const cap=(value,limit)=>String(value??'').replace(/\u0000/g,'').slice(0,limit);
 const latinDigits=value=>String(value).replace(/[۰-۹]/g,c=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(c))).replace(/[٠-٩]/g,c=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(c)));
-const knownKeys=['text','transcription','question_text','answer_text','raw_text','latex','formulas','math','notes','warnings','figures','confidence','review_flags'];
+const knownKeys=['text','transcription','question_text','answer_text','raw_text','latex','formulas','math','notes','warnings'];
 function parseCandidate(value,depth=0){
  if(depth>7||value==null)return null;
  if(Array.isArray(value)){
