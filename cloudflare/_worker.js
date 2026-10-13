@@ -1,4 +1,5 @@
 import {handleBatchApi} from './ocr-batch-api.js';
+import {handleQuestionApi} from './question-api-v1.js';
 // Native Cloudflare Pages Worker. Fail closed if identity, quota or secret config is absent.
 const OCR_ORIGIN="https://selection-studio-ocr-secure.zh-st-2.workers.dev/ocr";
 const json=(value,status=200,extra={})=>Response.json(value,{status,headers:{"Cache-Control":"no-store","X-Content-Type-Options":"nosniff",...extra}});
@@ -101,16 +102,18 @@ export default {
  async fetch(request,env){
   const url=new URL(request.url);
   if(url.pathname==="/health")return json({ok:true,service:"selection-studio",hosting:"Cloudflare Pages",assets:"native"});
-  if(url.pathname==="/api/session"||url.pathname==="/api/ocr"||url.pathname==="/api/draft"||url.pathname==="/api/ocr/jobs"||url.pathname.startsWith("/api/ocr/jobs/")){
+  if(url.pathname==="/api/session"||url.pathname==="/api/ocr"||url.pathname==="/api/draft"||url.pathname==="/api/ocr/jobs"||url.pathname.startsWith("/api/ocr/jobs/")||url.pathname==="/api/v1/projects"||url.pathname.startsWith("/api/v1/projects/")){
    const isOcr=url.pathname==="/api/ocr";
    const isBatch=url.pathname==="/api/ocr/jobs"||url.pathname.startsWith("/api/ocr/jobs/");
    const isDraft=url.pathname==="/api/draft";
+   const isQuestions=url.pathname==="/api/v1/projects"||url.pathname.startsWith("/api/v1/projects/");
    const method=isDraft?"GET, PUT":isBatch?"GET, POST":isOcr?"POST":"GET";
-   if(!isBatch&&((isDraft&&!["GET","PUT"].includes(request.method))||(!isDraft&&request.method!==method)))return json({error:"Method not allowed"},405,{"Allow":method});
+   if(!isBatch&&!isQuestions&&((isDraft&&!["GET","PUT"].includes(request.method))||(!isDraft&&request.method!==method)))return json({error:"Method not allowed"},405,{"Allow":method});
    if(!env.ACCESS_TEAM_DOMAIN||!env.ACCESS_AUD||!env.OPERATOR_EMAILS)return json({error:"Identity not configured"},503);
    const identity=await verifyAccess(request,env);
    if(!identity)return json({error:"Unauthorized"},401);
    if(!allowed(identity,env))return json({error:"Forbidden"},403);
+   if(isQuestions)return handleQuestionApi(request,env,await actorId(identity),url);
    if(isBatch)return handleBatchApi(request,env,await actorId(identity),url);
    if(isDraft)return handleDraft(request,env,identity,url);
    if(!isOcr)return json({authenticated:true,role:"operator",email:identity.email});
