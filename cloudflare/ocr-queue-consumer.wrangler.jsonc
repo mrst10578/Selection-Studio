@@ -15,6 +15,7 @@
   "r2_buckets": [
     {"binding": "OCR_JOB_ASSETS", "bucket_name": "selection-studio-ocr-input-preview"}
   ],
+  "triggers": {"crons": ["0 3 * * *"]},
   "queues": {
     "consumers": [
       {
