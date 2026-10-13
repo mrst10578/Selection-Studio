@@ -4,6 +4,8 @@ import {
 import {isOperatorAuthenticated} from './operator-auth.js';
 import {createOcrImageMap} from './ocr-image-map.js';
 import {addOcrLink,cropOcrBox,replaceLinkedSpan} from './ocr-bbox.js';
+import {createSciencePanel} from './ocr-science-panel.js';
+import {scientificWarnings,manualFigure} from './ocr-science.js';
 
 /* ZH-75: the OCR workbench is optional, and cannot silently alter question metadata.
  * Operator-edited text is NOT part of the Cloudflare form autosave or any network sync.
@@ -16,7 +18,8 @@ const make=(tag,className='',label='')=>{
 };
 function emptyState(signature=''){
  return {signature,text:'',latex:'',notes:'',passes:0,source:'manual',confirmed:false,busy:false,stage:0,abort:null,version:0,
-  imageBlob:null,imageUrl:'',imageRegions:[],links:[],events:[],selected:-1,candidate:null};
+  imageBlob:null,imageUrl:'',imageRegions:[],links:[],events:[],selected:-1,candidate:null,
+  figures:[],scienceWarnings:[],acknowledged:[],baseline:null,modelFlags:[],modelConfidence:null};
 }
 let katexPromise;
 function loadKatex(){
@@ -121,14 +124,62 @@ export function installOcrWorkbench({capture,getFingerprint,getIdentity,onNotice
     if(!linked||s.text.slice(linked.start,linked.end)!==proposal.original)throw Error('OCR_LINK_STALE');
     const updated=replaceLinkedSpan(s.text,s.links,proposal.index,proposal.text);
     s.text=updated.text;s.links=updated.links;s.selected=s.links.findIndex(x=>x.start===linked.start);
+    s.baseline={text:s.text,latex:normalizeManualLatex(s.latex)};
     s.source='cloudflare-workers-ai';s.confirmed=false;s.candidate=null;
+    s.modelFlags=[];s.modelConfidence=null;s.acknowledged=[];
+    s.scienceWarnings=scientificWarnings({text:updated.text,latex:normalizeManualLatex(s.latex),kind:active,previous:s.baseline});
     s.events.push({type:'selective_reocr_applied',link_start:linked.start,bbox_norm:linked.bbox_norm,at:new Date().toISOString()});
     show();onNotice('پیشنهاد OCR انتخابی اعمال شد؛ متن را بررسی و دوباره تأیید کن.','ok');
    }catch{onNotice('ناحیه یا متن تغییر کرده است؛ پیشنهاد قابل اعمال نیست.')}
   },
   onReject:()=>{const s=stateNow();s.candidate=null;imageMap.render(s);onNotice('پیشنهاد OCR رد شد؛ متن قبلی حفظ شد.','ok')}
  });
+ const sciencePanel=createSciencePanel({
+  onNotice,
+  onAcknowledge:(id,checked)=>{
+   const s=stateNow();
+   if(s.busy||!s.scienceWarnings.some(w=>w.id===id))return;
+   const items=new Set(s.acknowledged);
+   if(checked)items.add(id);else items.delete(id);
+   s.acknowledged=[...items];s.confirmed=false;
+   sciencePanel.render(s);updateStage();
+  },
+  onFigureAdd:box=>{
+   const s=stateNow();if(s.busy||!s.imageBlob||s.figures.length>=8){onNotice('حداکثر ۸ شکل برای هر برش قابل ثبت است.');return}
+   try{
+    s.figures.push(manualFigure(box));s.confirmed=false;
+    sciencePanel.render(s);updateStage();
+    onNotice('کادر شکل افزوده شد؛ با پیش‌نمایش بررسی و تأییدش کن.','ok');
+   }catch{onNotice('کادر انتخابی شکل نامعتبر است.')}
+  },
+  onFigureApprove:index=>{
+   const s=stateNow();
+   if(!s.figures[index]||s.busy)return;
+   s.figures[index].status='operator_confirmed';s.confirmed=false;
+   sciencePanel.render(s);updateStage();
+   onNotice('شکل پس از تأیید همراه متادیتای سؤال ذخیره خواهد شد.','ok');
+  },
+  onFigureRemove:index=>{
+   const s=stateNow();
+   if(!s.figures[index]||s.busy)return;
+   s.figures.splice(index,1);s.confirmed=false;
+   sciencePanel.render(s);updateStage();
+  },
+  onRestoreBaseline:()=>{
+   const s=stateNow();
+   if(!s.baseline||s.busy)return;
+   s.text=s.baseline.text;s.latex=s.baseline.latex.join('\n');
+   s.notes=s.baseline.notes||s.notes;s.passes=1;s.baseline=null;
+   s.links=[];s.events=[];s.selected=-1;s.candidate=null;
+   s.modelFlags=[];s.modelConfidence=null;
+   s.acknowledged=[];
+   s.scienceWarnings=scientificWarnings({text:s.text,latex:normalizeManualLatex(s.latex),kind:active});
+   s.confirmed=false;show();
+   onNotice('متن OCR مرحله اول برگردانده شد؛ تأیید نهایی دوباره لازم است.','ok');
+  }
+ });
  host.insertBefore(imageMap.host,foot);
+ host.insertBefore(sciencePanel.host,foot);
  readiness.insertAdjacentElement('beforebegin',host);
 
  let renderNumber=0;
@@ -136,9 +187,18 @@ export function installOcrWorkbench({capture,getFingerprint,getIdentity,onNotice
  function hasCrop(kind){return Boolean(getFingerprint?.(kind))}
  function stateNow(){return state[active]}
  function validReview(s){return Boolean(s.text.trim()||normalizeManualLatex(s.latex).length)}
+ function criticalPending(s){return s.scienceWarnings.some(w=>w.severity==='critical'&&!s.acknowledged.includes(w.id))}
+ function updateScientificReview(s,{previous=null,flags=s.modelFlags,confidence=s.modelConfidence}={}){
+  s.modelFlags=flags;s.modelConfidence=confidence;
+  s.scienceWarnings=scientificWarnings({
+   text:s.text,latex:normalizeManualLatex(s.latex),kind:active,previous,modelFlags:flags,confidence
+  });
+  s.acknowledged=[];
+ }
  function updateStage(){
   const s=stateNow();
   const title=s.busy?('در حال پردازش مرحله '+s.stage+' …'):
+   criticalPending(s)?'هشدار علمی حساس · همه موارد قرمز باید بررسی و علامت‌گذاری شوند':
    s.confirmed?'مرحله ۳/۳ · متن توسط اپراتور تأیید شد':
    !validReview(s)?'مرحله ۱/۳ · آماده تشخیص یا ورود دستی':
    s.passes===2?'مرحله ۲/۳ · فرمول‌ها بازبینی شدند؛ تأیید نهایی لازم است':
@@ -150,14 +210,14 @@ export function installOcrWorkbench({capture,getFingerprint,getIdentity,onNotice
   tabs.answer.setAttribute('aria-pressed',String(active==='answer'));
   first.disabled=s.busy||!hasCrop(active)||!isOperatorAuthenticated();
   second.disabled=s.busy||s.passes<1||!hasCrop(active)||!isOperatorAuthenticated();
-  approve.disabled=s.busy||!validReview(s)||s.confirmed;
+  approve.disabled=s.busy||!validReview(s)||s.confirmed||criticalPending(s);
   clear.disabled=s.busy||!validReview(s)&&!s.confirmed;
   text.disabled=s.busy;latex.disabled=s.busy;notes.disabled=s.busy;
  }
  function show(){
   const s=stateNow();
   text.value=s.text;latex.value=s.latex;notes.value=s.notes;
-  updateStage();renderPreview();imageMap.render(s);
+  updateStage();renderPreview();imageMap.render(s);sciencePanel.render(s);
  }
  function renderPreview(){
   const s=stateNow();const version=++renderNumber;
@@ -180,18 +240,27 @@ export function installOcrWorkbench({capture,getFingerprint,getIdentity,onNotice
  }
  function change(){
   const s=stateNow(),nextText=text.value.slice(0,12000);
-  if(nextText!==s.text){
-   // Offsets are bound to the exact transcription. Notes/LaTeX edits do not move text offsets.
+  const previousText=s.text,previousLatex=s.latex;
+  if(nextText!==previousText){
+   // Character offsets are invalid after any text edit.
    s.links=[];s.events=[];s.selected=-1;s.candidate=null;
   }
   s.text=nextText;s.latex=latex.value.slice(0,12000);s.notes=notes.value.slice(0,700);
+  if(nextText!==previousText||previousLatex!==s.latex){
+   // Deliberate human edits discard stale model confidence.
+   s.modelFlags=[];s.modelConfidence=null;
+  }
+  if(nextText!==previousText||previousLatex!==s.latex){
+   updateScientificReview(s,{previous:s.baseline,flags:[],confidence:null});
+  }
   s.confirmed=false;
-  renderPreview();imageMap.render(s);
+  renderPreview();imageMap.render(s);sciencePanel.render(s);
  }
  text.addEventListener('input',change);latex.addEventListener('input',change);notes.addEventListener('input',change);
  function invalidate(kind,next=signature(kind)){
   const old=state[kind];old.abort?.abort();
   if(old.imageUrl)URL.revokeObjectURL(old.imageUrl);
+  sciencePanel.clearPreview();sciencePanel.cancelDraw();
   state[kind]=emptyState(next);
   if(kind===active)show();
  }
@@ -271,8 +340,13 @@ export function installOcrWorkbench({capture,getFingerprint,getIdentity,onNotice
    const draft=pass===2?{text:s.text,latex:normalizeManualLatex(s.latex)}:null;
    const result=await requestOcr({image,prompt:buildOcrPrompt({kind,pass,previous:draft}),signal:controller.signal});
    if(controller.signal.aborted||stamp!==signature(kind)||state[kind]!==s||s.version!==sequence)return;
+   s.baseline=pass===2?{...draft,notes:s.notes}:null;
    s.text=result.text;s.latex=result.latex.join('\n');s.notes=result.notes;
    s.links=result.links||[];s.events=[];s.selected=-1;s.candidate=null;
+   const confirmed=s.figures.filter(x=>x.status==='operator_confirmed');
+   s.figures=[...confirmed,...(result.figures||[]).filter(f=>!confirmed.some(x=>
+    x.bbox_norm.every((v,i)=>Math.abs(v-f.bbox_norm[i])<.01)))].slice(0,8);
+   updateScientificReview(s,{previous:s.baseline,flags:result.reviewFlags,confidence:result.confidence});
    s.source='cloudflare-workers-ai';s.passes=Math.max(s.passes,pass);s.confirmed=false;
    if(result.format==='plain')onNotice('پاسخ OCR ساختار مشخصی نداشت؛ متن را دقیق‌تر بازبینی کن.');
    show();
@@ -288,7 +362,7 @@ export function installOcrWorkbench({capture,getFingerprint,getIdentity,onNotice
  first.addEventListener('click',()=>void runPass(1));
  second.addEventListener('click',()=>void runPass(2));
  approve.addEventListener('click',()=>{
-  const s=stateNow();if(!validReview(s)||s.busy)return;
+  const s=stateNow();if(!validReview(s)||s.busy||criticalPending(s))return;
   s.confirmed=true;updateStage();onNotice('متن '+(active==='question'?'سؤال':'پاسخ')+' تأیید شد و همراه سؤال ذخیره می‌شود.','ok');
  });
  clear.addEventListener('click',()=>{invalidate(active);onNotice('متن OCR پاک شد؛ PDF و صف برش تغییری نکردند.','ok')});
@@ -298,7 +372,7 @@ export function installOcrWorkbench({capture,getFingerprint,getIdentity,onNotice
   let count=0;
   for(const kind of ['question','answer']){
    const s=state[kind];
-   if(!s.confirmed||s.busy||s.signature!==signature(kind))continue;
+   if(!s.confirmed||s.busy||s.signature!==signature(kind)||criticalPending(s))continue;
    const approved=safeOcrReview({...s,latex:normalizeManualLatex(s.latex)});
    if(approved){result[kind]=approved;count++}
   }
