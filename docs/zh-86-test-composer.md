@@ -7,3 +7,7 @@
 - `tests/test-composer.test.mjs`: three isolated Node tests for ordering/JSONL, approval guards, and HTML injection safety.
 
 Remaining work: authoring UI, server-side approval signature verification against actual D1 role-gated reviewer records (client-provided approval flags are insufficient), image/figure embedding from private R2, answer sheet layout, genuine PDF generation, print pagination, secure export endpoint and E2E output checks. Therefore ZH-86 stays In Progress; no production deploy or automatic Telegram action.
+
+## 2026-10-13 operator UI and server validation
+
+Added `review-console/composer-studio.html/js` as a separate responsive approved-question composer. Questions are retrieved from `GET /api/v1/bank/questions`, selected in a user-defined order, and exported only after `POST /api/v1/bank/exams/compose` re-verifies every independently approved D1 source revision. The result is explicitly `publishable:false`. The interface offers HTML, JSONL, and an operator-triggered browser print route with "Save as PDF." Browser printing is **not** a native PDF download generator. `qa/composer-studio.spec.mjs` covers order, exact revision pins and stale-version denial. HTML generation escapes unsafe text and preserves RTL. Production is unchanged, and no external publishing or autonomous PDF/Telegram action takes place. Layout tests with real Persian scientific pages and genuine downloadable PDF export remain open.
