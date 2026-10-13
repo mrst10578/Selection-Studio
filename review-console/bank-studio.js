@@ -1,6 +1,7 @@
 import {findDuplicateCandidates,compareModelDrafts,suggestTaxonomy} from '../studio/question-intelligence.js';
+import {saveOfflineDraft,listOfflineDrafts,readOfflineDraft,deleteOfflineDraft} from '../studio/offline-encrypted-vault.js';
 const $=id=>document.getElementById(id);
-const state={projects:[],questions:[],projectId:'',current:null,dirty:false,authenticated:false};
+const state={projects:[],questions:[],projectId:'',current:null,dirty:false,authenticated:false,actorEmail:''};
 const apiRoot='/api/v1/projects';
 const fields=['questionText','answerText','taxonomyId','sourceLabel'];
 const catalog=[
@@ -25,7 +26,7 @@ function enableSession(){
 }
 function enableContext(){
  const hasProject=!!state.projectId,hasQuestion=!!state.current;
- for(const id of ['newQuestion','questionText','answerText','taxonomyId','sourceLabel','saveDraft','findDuplicates','suggestCategories','compareDrafts','sourcePdf','answerPdf','figureImage','refreshAssets','sourceDigest','operatorConfirmed','reviewerEmail','assignReviewer'])$(id).disabled=!state.authenticated||!hasProject;
+ for(const id of ['newQuestion','questionText','answerText','taxonomyId','sourceLabel','saveDraft','findDuplicates','suggestCategories','compareDrafts','sourcePdf','answerPdf','figureImage','refreshAssets','sourceDigest','operatorConfirmed','reviewerEmail','assignReviewer','saveOfflineEncrypted','listOfflineEncrypted'])$(id).disabled=!state.authenticated||!hasProject;
  $('deleteDraft').disabled=!hasQuestion;
  $('showHistory').disabled=!hasQuestion;
  $('revision').textContent='نسخه: '+(hasQuestion?state.current.revision:'جدید');
@@ -94,6 +95,48 @@ async function uploadAsset(file,role){
  notice('فایل خصوصی ثبت شد؛ OCR و انتشار اجرا نشده‌اند. '+result.digest.slice(0,12));
  await loadAssets();
 }
+
+async function refreshOfflineVault(){
+ const host=$('offlineEncryptedList');host.replaceChildren();
+ const entries=await listOfflineDrafts(state.actorEmail);
+ if(!entries.length){host.append(elem('p','نسخه آفلاینی وجود ندارد.','bank-help'));return}
+ for(const entry of entries){
+  const box=elem('div',undefined,'bank-result');
+  box.append(elem('span','نسخه رمزدار · '+new Date(entry.createdAt).toLocaleString('fa-IR')));
+  const actions=elem('div',undefined,'bank-actions');
+  const restore=elem('button','بازیابی');restore.type='button';
+  restore.addEventListener('click',()=>void safely(async()=>{
+   const pass=window.prompt('گذرواژه رمزگذاری این نسخه را وارد کن:');if(pass===null)return;
+   const content=await readOfflineDraft(state.actorEmail,pass,entry.id);
+   if(content.projectId!==state.projectId){notice('این نسخه متعلق به پروژه دیگری است. برای جلوگیری از ترکیب داده‌ها، ابتدا همان پروژه را انتخاب کن.',true);return}
+   const source=state.questions.find(q=>q.id===content.questionId);
+   const conflict=!!content.questionId&&(!source||source.revision!==content.baseRevision||source.content?.sourceDigest!==content.sourceFingerprint);
+   if(conflict&&!window.confirm('نسخه اصلی تغییر کرده است. فقط به‌عنوان پیش‌نویس جدید و بدون جایگزینی نسخه سرور بازیابی شود؟'))return;
+   loadEditor(conflict?null:source||null);
+   $('questionText').value=content.questionText;$('answerText').value=content.answerText;
+   $('taxonomyId').value=content.taxonomyId||'';
+   if(!conflict&&content.sourceFingerprint&&[...$('sourceDigest').options].some(o=>o.value===content.sourceFingerprint))$('sourceDigest').value=content.sourceFingerprint;
+   $('operatorConfirmed').checked=false;state.dirty=true;renderQuestions();
+   notice(conflict?'تداخل تشخیص داده شد؛ متن فقط به‌صورت پیش‌نویس جدید و ذخیره‌نشده بازیابی شد.':'متن محلی بازیابی شد؛ هنوز روی D1 ثبت نشده و دوباره به تأیید نیاز دارد.');
+  }));
+  const remove=elem('button','حذف نسخه');remove.type='button';
+  remove.addEventListener('click',()=>void safely(async()=>{
+   if(!window.confirm('این نسخه رمزدار محلی پاک شود؟'))return;
+   await deleteOfflineDraft(state.actorEmail,entry.id);await refreshOfflineVault();notice('نسخه رمزدار محلی حذف شد.');
+  }));
+  actions.append(restore,remove);box.append(actions);host.append(box);
+ }
+}
+async function saveCurrentOffline(){
+ if(!state.projectId||!$('questionText').value.trim())throw Error('پروژه و متن سؤال الزامی‌اند');
+ const pass=window.prompt('یک گذرواژه حداقل ۱۲ کاراکتری برای رمزگذاری محلی وارد کن. بدون آن بازیابی ممکن نیست:');
+ if(pass===null)return;
+ const item={projectId:state.projectId,questionId:state.current?.id||null,baseRevision:state.current?.revision||0,
+  sourceFingerprint:$('sourceDigest').value,questionText:$('questionText').value,
+  answerText:$('answerText').value,taxonomyId:$('taxonomyId').value};
+ await saveOfflineDraft(state.actorEmail,pass,item);notice('نسخه رمزدار فقط روی همین دستگاه ذخیره شد؛ هیچ اطلاعاتی به سرور ارسال نشد.');
+ await refreshOfflineVault();
+}
 async function createProject(){
  const name=$('projectName').value.trim();if(!name){notice('نام پروژه را وارد کن',true);return}
  const created=await api('',json('POST',{name}));$('projectName').value='';await loadProjects(created.id);notice('پروژه جدید ایجاد شد');
@@ -152,6 +195,8 @@ $('projectSelect').addEventListener('change',e=>void safely(async()=>{
  state.projectId=e.target.value;await loadQuestions();enableContext();
 }));
 $('createProject').addEventListener('click',()=>void safely(createProject));
+$('saveOfflineEncrypted').addEventListener('click',()=>void safely(saveCurrentOffline));
+$('listOfflineEncrypted').addEventListener('click',()=>void safely(refreshOfflineVault));
 $('assignReviewer').addEventListener('click',()=>void safely(async()=>{
  const reviewerEmail=$('reviewerEmail').value.trim();if(!reviewerEmail||!state.projectId)throw Error('ایمیل بازبین و پروژه الزامی است');
  await api('/api/v1/reviews/assignments',json('POST',{projectId:state.projectId,reviewerEmail}));
@@ -174,5 +219,5 @@ for(const [id,role] of [['sourcePdf','question_pdf'],['answerPdf','answer_pdf'],
 void safely(async()=>{
  const session=await api('/api/session');
  if(!session.authenticated||session.role!=='operator')throw Error('دسترسی اپراتور تأیید نشد');
- state.authenticated=true;enableSession();await loadProjects();notice('اتصال امن برقرار است. سؤال‌های ذخیره‌شده همچنان پیش‌نویس هستند.');
+ state.authenticated=true;state.actorEmail=String(session.email||'').toLowerCase();enableSession();await loadProjects();notice('اتصال امن برقرار است. سؤال‌های ذخیره‌شده همچنان پیش‌نویس هستند.');
 });
