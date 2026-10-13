@@ -56,3 +56,10 @@ The review/export consumers should be inspected before release to ensure they pr
 `studio/region-detector.js` analyzes a downsampled canvas copy (maximum 700×1000 px) locally, finding dark text bands separated by whitespace and returning normalized candidate boxes. No image leaves the browser; no Workers AI request or OCR budget is consumed. Suggestions are never written automatically. The operator can inspect an individual suggestion or explicitly add the proposed boxes to the pending crop queue, then correct them with existing crop controls.
 
 This heuristic is designed as a **low-risk first pass, not a validated AI question detector**. It can merge dense questions, split headings incorrectly, and miss two-column arrangements or images. It requires actual Persian workbook/answer key QA before this issue can be marked complete.
+
+
+## ZH-78 | Durable OCR batch queue (development branch only)
+
+The operator UI can stage up to six question/answer crops, submit a specifically authorized OCR batch, inspect durable per-item progress, and pause/resume/retry/cancel. The system uses the same signed Access identity as interactive OCR; D1 holds scoped job and item state, R2 holds temporary private image/prompt payloads, and a dedicated Cloudflare Queue consumer invokes the isolated OCR Worker under server-side quotas and audit. A seven-day scheduled retention sweep is defined for the consumer. Duplicate messages are lease-protected and an idempotency key guards repeated batch submissions. OCR responses remain operator-review candidates and never silently overwrite registered questions.
+
+**Not active in production:** Queue, R2 and consumer bindings are intentionally deferred to the final preview/production approval phase. Detailed API contracts, isolated preview consumer config, migration checklist, retry limitations and explicit release blockers: [docs/zh-78-ocr-batch.md](../docs/zh-78-ocr-batch.md).
