@@ -27,7 +27,6 @@ test.describe('ZH-83 independent reviewer console',()=>{
   await page.locator('#approveReview').click();
   await expect(page.locator('#reviewNotice')).toContainText('تمام بندهای چک‌لیست');
   expect(submitted).toHaveLength(0);
-  await page.locator('[data-review-check]').check();
   for(const row of await page.locator('[data-review-check]').all())await row.check();
   await page.locator('#approveReview').click();
   await expect(page.locator('#reviewNotice')).toContainText('هنوز منتشر نشده');
