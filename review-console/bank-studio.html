@@ -31,6 +31,13 @@
     <button id="refreshAssets" type="button" disabled>بازخوانی فایل‌های خصوصی</button>
     <div id="assetList" class="bank-list"></div>
    </section>
+   <section aria-labelledby="reviewerInviteTitle">
+    <h2 id="reviewerInviteTitle">دعوت بازبین مستقل</h2>
+    <label for="reviewerEmail">ایمیل بازبینِ مجاز در Cloudflare</label>
+    <input type="email" id="reviewerEmail" placeholder="reviewer@example.com" disabled>
+    <button type="button" id="assignReviewer" disabled>اعطای دسترسی بازبینی</button>
+    <p class="bank-help">فقط ایمیل‌های از پیش مجاز پذیرفته می‌شوند. تأیید توسط خود اپراتور ممکن نیست.</p>
+   </section>
    <p class="bank-help">نمایش فهرست فقط به حساب اپراتور واردشده محدود است. تغییر پروژه، متن ذخیره‌نشده را خودکار ارسال نمی‌کند.</p>
   </aside>
   <section class="bank-panel bank-editor" aria-label="ویرایش پیش‌نویس">
@@ -40,6 +47,9 @@
    <textarea id="questionText" rows="11" dir="rtl" maxlength="16000" placeholder="متن بررسی‌شده را دستی وارد یا جای‌گذاری کن." disabled></textarea>
    <label for="answerText">متن پاسخ (اختیاری)</label>
    <textarea id="answerText" rows="5" dir="rtl" maxlength="16000" disabled></textarea>
+   <label for="sourceDigest">PDF منبع سؤال برای بازبینی</label>
+   <select id="sourceDigest" disabled><option value="">ابتدا PDF سؤال را به پروژه اضافه کن</option></select>
+   <label class="bank-confirm"><input id="operatorConfirmed" type="checkbox" disabled><span>متن سؤال، اعداد، نشانه‌ها، فرمول‌ها و گزینه‌ها را با PDF منبع مطابقت داده‌ام. هر ویرایش بعدی این تأیید را باطل می‌کند.</span></label>
    <div class="bank-fields"><label>شناسه موضوع<input id="taxonomyId" maxlength="80" placeholder="مثلاً bio_cell" disabled></label><label>نام منبع<input id="sourceLabel" maxlength="160" placeholder="نام دفترچه / صفحه" disabled></label></div>
    <div class="bank-actions"><button class="bank-primary" id="saveDraft" type="button" disabled>ثبت پیش‌نویس</button><button id="deleteDraft" type="button" disabled>حذف نرم</button><button id="showHistory" type="button" disabled>تاریخچه نسخه‌ها</button></div>
    <section id="historyPanel" aria-label="تاریخچه تغییرات" hidden><h3>تاریخچه نسخه‌ها</h3><div id="historyList"></div></section>
