@@ -7,3 +7,7 @@ The `preparePublicationIntent` helper accepts only a bounded set (max 50) of sep
 `tests/bank-search-publish.test.mjs` has three local Node tests for safe filtering, unapproved/stale rejection, and no unintended outbound publication.
 
 Remaining work: authenticated server-side search index, role-based reviewers and cryptographically authorized publication, destination configuration and operator confirmation UI, source image/private R2 inclusion, idempotent delivery/audit, retry, per-destination permissions, and real publishing E2E. This code does not make ZH-85 Completed, and there is no permission to publish anything.
+
+## 2026-10-13 server integration addendum
+
+`cloudflare/approved-bank-api.js` adds authenticated, **read-only** `GET /api/v1/bank/questions`, actor-project scoping, bounded matching, a SQL-side indexed source-document existence check, and latest-revision independently approved reviewer-event validation. It denies old or rejected revisions. The returned `reviewStatus=approved` is derived server-side from D1; the underlying question stays in draft storage. `POST /api/v1/bank/exams/compose` checks *each* selected question revision again and never dispatches publication. `tests/approved-bank-api.test.mjs` contains actor, review and stale-revision tests. Real external Telegram and LoPRax publishing adapters, destination credentials, dispatch audit/idempotency, rate limiting and final explicit approval remain **not implemented**. The earlier `preparePublicationIntent` remains local-only and non-dispatching.
