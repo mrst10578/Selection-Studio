@@ -5,6 +5,7 @@ const error=(code,status=400)=>respond({error:code},status);
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const sql=(db,query,...args)=>db.prepare(query).bind(...args);
 const safe=v=>typeof v==='string'?v.trim():'';
+const audit=(db,actor,action,detail)=>sql(db,'INSERT INTO security_audit(actor,action,result,detail) VALUES(?,?,?,?)',actor,action,'attempt',detail).run();
 function validateContent(data){
  if(!data||typeof data!=='object'||Array.isArray(data))throw Error('INVALID_CONTENT');
  const fields=['questionText','answerText','latex','taxonomyId','sourceLabel','sourceNumber','operatorConfirmed','scientificPending','sourceDigest'];
@@ -51,6 +52,7 @@ export async function handleQuestionApi(request,env,actor,url){
     const body=await parseJson(request,1024),name=safe(body?.name);
     if(!body||typeof body!=='object'||Array.isArray(body)||Object.keys(body).some(x=>x!=='name')||!name||name.length>120)return error('INVALID_PROJECT');
     const id=crypto.randomUUID();
+    await audit(db,actor,'bank_project_create',id);
     await sql(db,'INSERT INTO bank_projects(id,actor,name) VALUES(?,?,?)',id,actor,name).run();
     return respond(projectView(await project(db,actor,id)),201);
    }
@@ -63,12 +65,14 @@ export async function handleQuestionApi(request,env,actor,url){
    if(method==='PATCH'){
     const body=await parseJson(request,1024),name=safe(body?.name);
     if(!body||typeof body!=='object'||Array.isArray(body)||Object.keys(body).some(x=>!['name','baseRevision'].includes(x))||!name||name.length>120||!Number.isSafeInteger(body.baseRevision)||body.baseRevision<1)return error('INVALID_PROJECT');
+    await audit(db,actor,'bank_project_update',pid);
     const updated=await sql(db,'UPDATE bank_projects SET name=?,revision=revision+1,updated_at=CURRENT_TIMESTAMP WHERE id=? AND actor=? AND revision=? AND deleted_at IS NULL RETURNING *',name,pid,actor,body.baseRevision).first();
     return updated?respond({project:projectView(updated)}):error('REVISION_CONFLICT',409);
    }
    if(method==='DELETE'){
     const body=await parseJson(request,128);
     if(!Number.isSafeInteger(body?.baseRevision)||body.baseRevision<1)return error('REVISION_REQUIRED');
+    await audit(db,actor,'bank_project_delete',pid);
     const updated=await sql(db,'UPDATE bank_projects SET deleted_at=CURRENT_TIMESTAMP,revision=revision+1,updated_at=CURRENT_TIMESTAMP WHERE id=? AND actor=? AND revision=? AND deleted_at IS NULL RETURNING id',pid,actor,body.baseRevision).first();
     return updated?respond({deleted:true}):error('REVISION_CONFLICT',409);
    }
@@ -83,6 +87,7 @@ export async function handleQuestionApi(request,env,actor,url){
     const body=await parseJson(request),content=validateContent(body?.content);
     if(!body||typeof body!=='object'||Array.isArray(body)||Object.keys(body).some(k=>k!=='content'))return error('INVALID_CONTENT');
     const id=crypto.randomUUID();
+    await audit(db,actor,'bank_question_create',id);
     await sql(db,'INSERT INTO bank_questions(id,project_id,actor,content_json) VALUES(?,?,?,?)',id,pid,actor,content).run();
     return respond({question:questionView(await question(db,actor,pid,id))},201);
    }
@@ -100,12 +105,14 @@ export async function handleQuestionApi(request,env,actor,url){
   if(method==='PATCH'){
    const body=await parseJson(request),content=validateContent(body?.content);
    if(!body||typeof body!=='object'||Array.isArray(body)||Object.keys(body).some(k=>!['content','baseRevision'].includes(k))||!Number.isSafeInteger(body.baseRevision)||body.baseRevision<1)return error('INVALID_CONTENT');
+   await audit(db,actor,'bank_question_update',qid);
    const updated=await sql(db,'UPDATE bank_questions SET content_json=?,revision=revision+1,updated_at=CURRENT_TIMESTAMP WHERE id=? AND project_id=? AND actor=? AND revision=? AND deleted_at IS NULL RETURNING *',content,qid,pid,actor,body.baseRevision).first();
    return updated?respond({question:questionView(updated)}):error('REVISION_CONFLICT',409);
   }
   if(method==='DELETE'){
    const body=await parseJson(request,128);
    if(!Number.isSafeInteger(body?.baseRevision)||body.baseRevision<1)return error('REVISION_REQUIRED');
+   await audit(db,actor,'bank_question_delete',qid);
    const updated=await sql(db,'UPDATE bank_questions SET deleted_at=CURRENT_TIMESTAMP,revision=revision+1,updated_at=CURRENT_TIMESTAMP WHERE id=? AND project_id=? AND actor=? AND revision=? AND deleted_at IS NULL RETURNING id',qid,pid,actor,body.baseRevision).first();
    return updated?respond({deleted:true}):error('REVISION_CONFLICT',409);
   }
