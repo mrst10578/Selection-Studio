@@ -20,20 +20,22 @@ async function api(path='',options={}){
 }
 const json=(method,payload)=>({method,headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
 function enableSession(){
- for(const id of ['projectSelect','projectName','createProject','newQuestion',...fields,'secondDraft'])$(id).disabled=false;
+ for(const id of ['projectSelect','projectName','createProject','newQuestion',...fields,'secondDraft','reviewerEmail','operatorConfirmed'])$(id).disabled=false;
  enableContext();
 }
 function enableContext(){
  const hasProject=!!state.projectId,hasQuestion=!!state.current;
- for(const id of ['newQuestion','questionText','answerText','taxonomyId','sourceLabel','saveDraft','findDuplicates','suggestCategories','compareDrafts','sourcePdf','answerPdf','figureImage','refreshAssets'])$(id).disabled=!state.authenticated||!hasProject;
+ for(const id of ['newQuestion','questionText','answerText','taxonomyId','sourceLabel','saveDraft','findDuplicates','suggestCategories','compareDrafts','sourcePdf','answerPdf','figureImage','refreshAssets','sourceDigest','operatorConfirmed','reviewerEmail','assignReviewer'])$(id).disabled=!state.authenticated||!hasProject;
  $('deleteDraft').disabled=!hasQuestion;
  $('showHistory').disabled=!hasQuestion;
  $('revision').textContent='نسخه: '+(hasQuestion?state.current.revision:'جدید');
 }
-function readEditor(){return {questionText:$('questionText').value,answerText:$('answerText').value,taxonomyId:$('taxonomyId').value,sourceLabel:$('sourceLabel').value,latex:Array.isArray(state.current?.content?.latex)?state.current.content.latex:[]}}
+function readEditor(){return {questionText:$('questionText').value,answerText:$('answerText').value,taxonomyId:$('taxonomyId').value,sourceLabel:$('sourceLabel').value,sourceDigest:$('sourceDigest').value,operatorConfirmed:$('operatorConfirmed').checked,scientificPending:state.current?.content?.scientificPending||0,latex:Array.isArray(state.current?.content?.latex)?state.current.content.latex:[]}}
 function loadEditor(row){
  state.current=row||null;
  for(const id of fields)$(id).value=row?.content?.[id]||'';
+ $('sourceDigest').value=row?.content?.sourceDigest||'';
+ $('operatorConfirmed').checked=row?.content?.operatorConfirmed===true;
  state.dirty=false;
  clearResults();enableContext();
 }
@@ -69,6 +71,10 @@ function showAssetsUnavailable(err){
 async function loadAssets(){
  const list=$('assetList');list.replaceChildren();if(!state.projectId)return;
  const result=await api('/'+state.projectId+'/assets');
+ const sourceSelect=$('sourceDigest'),previous=state.current?.content?.sourceDigest||sourceSelect.value;
+ sourceSelect.replaceChildren(new Option('بدون PDF منبع',''));
+ for(const a of result.assets||[])if(a.role==='question_pdf')sourceSelect.add(new Option('PDF · '+a.digest.slice(0,16),a.digest));
+ sourceSelect.value=[...sourceSelect.options].some(o=>o.value===previous)?previous:'';
  if(!result.assets?.length){list.append(elem('p','هنوز فایلی ثبت نشده است.','bank-help'));return}
  for(const asset of result.assets){
   const box=elem('div',undefined,'bank-result');
@@ -138,12 +144,19 @@ function compareDrafts(){
  const r=compareModelDrafts({text:a},{text:b});$('compareResult').replaceChildren(elem('div','شباهت متنی '+(r.textScore*100).toFixed(1)+'٪\n'+(r.differences.join('، ')||'اختلاف آشکار شناسایی نشد')+'\nتأیید انسانی همچنان الزامی است.','bank-result'));
 }
 async function safely(action){try{await action()}catch(e){notice(e.status===401?'ابتدا وارد Cloudflare Access شو':e.message||'خطا در دسترسی امن',true)}}
-for(const id of fields)$(id).addEventListener('input',()=>{state.dirty=true});
+for(const id of fields)$(id).addEventListener('input',()=>{state.dirty=true;$('operatorConfirmed').checked=false});
+$('sourceDigest').addEventListener('change',()=>{state.dirty=true;$('operatorConfirmed').checked=false});
+$('operatorConfirmed').addEventListener('change',()=>{state.dirty=true});
 $('projectSelect').addEventListener('change',e=>void safely(async()=>{
  if(!safeLeave()){e.target.value=state.projectId;return}
  state.projectId=e.target.value;await loadQuestions();enableContext();
 }));
 $('createProject').addEventListener('click',()=>void safely(createProject));
+$('assignReviewer').addEventListener('click',()=>void safely(async()=>{
+ const reviewerEmail=$('reviewerEmail').value.trim();if(!reviewerEmail||!state.projectId)throw Error('ایمیل بازبین و پروژه الزامی است');
+ await api('/api/v1/reviews/assignments',json('POST',{projectId:state.projectId,reviewerEmail}));
+ $('reviewerEmail').value='';notice('دسترسی بازبین مستقل فقط برای این پروژه ثبت شد.');
+}));
 $('newQuestion').addEventListener('click',()=>{if(!safeLeave())return;loadEditor(null);renderQuestions();notice('پیش‌نویس جدید؛ برای ذخیره روی ثبت بزن.')});
 $('saveDraft').addEventListener('click',()=>void safely(saveDraft));
 $('deleteDraft').addEventListener('click',()=>void safely(deleteDraft));
