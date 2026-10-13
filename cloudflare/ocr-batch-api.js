@@ -72,6 +72,8 @@ async function act(env,actor,id,action){
   await enqueue(env,id,await itemsFor(db,id));
  }else if(action==='retry'){
   if(job.status==='cancelled')return error('BATCH_CANCELLED',409);
+  const count=await q(db,"SELECT COUNT(*) AS n FROM ocr_batch_items WHERE job_id=?1 AND status='failed'",id).first();
+  if(!Number(count?.n))return error('BATCH_NOTHING_TO_RETRY',409);
   await q(db,"UPDATE ocr_batch_jobs SET status='running',updated_at=CURRENT_TIMESTAMP WHERE id=?1 AND actor=?2 AND status IN ('paused','completed')",id,actor).run();
   await q(db,"UPDATE ocr_batch_items SET status='staged',attempts=0,error_code=NULL,lease_until=NULL,updated_at=CURRENT_TIMESTAMP WHERE job_id=?1 AND status='failed'",id).run();
   await enqueue(env,id,await itemsFor(db,id));
