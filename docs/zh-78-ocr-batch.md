@@ -1,0 +1,66 @@
+# ZH-78 | Cloudflare Queues OCR batch processing
+
+This is a preview-only implementation, developed in PR #45. It is **not deployed to production**, and the pipeline is fail-closed until its bindings, secrets, schema, queue, and consumer have been configured and validated. This issue stays In Progress until final end-to-end authenticated tests.
+
+## Architecture
+
+1. Browser explicitly captures a selected **question** or **answer** PDF crop (up to 6 items in a batch). It prepares WebP locally and asks the operator to **start** the job. No background automatic OCR requests occur merely by viewing the panel.
+2. The Pages Worker verifies its existing signed **Cloudflare Access JWT** and email allowlist, then handles authenticated **/api/ocr/jobs** via cloudflare/ocr-batch-api.js. Only the resulting pseudonymous actor ID is passed into the handler.
+3. Pages producer writes each image+prompt to a **private R2** bucket, atomically creates the job and item records in its existing D1 SECURITY_DB, and sends Queue messages containing **only jobId and itemId**.
+4. A **separate Worker** consumes the messages, with a D1 claim/lease before each call, shared OCR rate limits and audit, and a server-side bearer secret to the existing isolated OCR Worker. It stores bounded transcription results in D1 and deletes consumed R2 inputs. Failed transient requests are retried with bounded backoff. At-least-once delivery and message reordering cannot overwrite a completed item while its D1 lease/state is valid.
+5. The panel displays total, completed, failed, waiting and in-progress records; operator can pause, resume, retry failures or cancel. Progress survives closing and reopening the browser because D1 is authoritative. For the last 8 batches the operator may view or copy results. Explicit transfer to the OCR editor is allowed only in the same browser session with the same question identity and PDF crop fingerprint, and still requires all the existing manual review gates.
+
+**Important:** Pause prevents the **start of additional** inference but may allow an already-running upstream request to finish; cancel prevents storing any later result, but **cannot refund inference that has already started**.
+
+## API
+
+All paths are authenticated, no-store, same-origin. No public token or direct browser Cloudflare Queue access.
+
+- POST /api/ocr/jobs
+- GET /api/ocr/jobs (last 8 for current Access actor)
+- GET /api/ocr/jobs/:uuid
+- POST /api/ocr/jobs/:uuid/pause
+- POST /api/ocr/jobs/:uuid/resume
+- POST /api/ocr/jobs/:uuid/retry
+- POST /api/ocr/jobs/:uuid/cancel
+
+Example create request (image abbreviated):
+
+    {
+      "requestKey":"valid-random-idempotency-key",
+      "items":[
+        {"clientRef":"valid-random-client-item-id","kind":"question",
+         "image":"data:image/webp;base64,...",
+         "prompt":"Transcribe the question faithfully."}
+      ]
+    }
+
+Responses include counts/progress and **never include the source image or original prompt**. The server rejects malformed references, bad image URLs, excess batch count (max 6), oversized payloads, duplicate clientRefs, foreign job IDs, and missing bindings. Reusing a requestKey with the identical input returns the prior job instead of charging/enqueueing twice; reuse with changed content returns HTTP 409.
+
+### Storage and idempotency
+
+Migration is in cloudflare/schema-security.sql: ocr_batch_jobs and ocr_batch_items. Input bytes are stored **only in** OCR_JOB_ASSETS R2 under private generated keys, deleted after successful processing. Pending/failed job inputs may remain temporarily so they can be retried. The consumer has a daily scheduled **7-day sweep** that cleans up expired job metadata and R2 inputs, including orphaned cancelled batches still described by D1. Do not rely on Cloudflare Queue message retention as the source of truth.
+
+The consumer claims an item through an atomic conditional UPDATE and 180-second lease, with at most **3 attempts**. Automatic retries are for upstream timeout/429/5xx only; permanent failures remain visible for explicit operator retry. Attempts are subject to shared OCR quota including **daily global limit** and per-operator minute/day limits. At-least-once delivery can still duplicate **already-started billable requests** if the Worker dies after inference but before persisting its result; quotas and audit bound this risk, they do not eliminate it.
+
+A failed producer Queue send leaves a visible **staged** item, recoverable through POST /resume (also allowed while running). Explicit cancel prevents new state transitions to a successful OCR result after cancellation. On pause, queued items are staged again; in-flight work may finish.
+
+## Preview deployment checklist (deferred until acceptance)
+
+1. Create a separate preview Cloudflare Queue named selection-studio-ocr-jobs-preview; configure one consumer at a time and a small batch size.
+2. Create the **private** R2 bucket named selection-studio-ocr-input-preview. Do not expose a public bucket domain or put credentials in the browser or GitHub. Use an appropriate lifecycle/retention policy.
+3. Apply updated cloudflare/schema-security.sql to the **preview D1** before accepting any jobs. The current schema uses IF NOT EXISTS and is additive; keep a backup of existing rows before migration.
+4. On the Cloudflare **Pages preview** project bind the same preview D1 as SECURITY_DB, the new R2 bucket as OCR_JOB_ASSETS, and Queue producer as OCR_QUEUE. Production must remain unchanged.
+5. Deploy the **separate consumer Worker** only in the preview environment using cloudflare/ocr-queue-consumer.wrangler.jsonc. Bind the same preview D1 and R2, and set the encrypted OCR_SERVICE_TOKEN secret. The source does **not** contain this token. Ensure the isolated OCR upstream accepts the token.
+6. Verify preview Access JWT, both failure and success identity paths, D1 usage/audit, real Persian PDFs, Workers AI costs, retry idempotency, reload/resume/cancel, mobile UI, age-based cleanup, and daily/global quota. Review the rollback plan.
+7. Deploy/merge the production PR **only with explicit final approval**.
+
+No extra secret is required in the browser; no OCR model response is automatically accepted as canonical question text.
+
+## Known limitations
+
+- UI can hold up to 6 captured images in memory per submission. The server caps the request size and the number of simultaneously active jobs per operator to reduce cost exposure.
+- The saved batch transcript is plain text, equations and notes, not a fully annotated bounding-box representation. Existing ZH-76/77 per-question operator review applies after explicit transfer.
+- Opening a completed older job on another device allows reading/copying its result but does not silently merge it into a different local PDF session.
+- This feature does not guarantee exactly-once paid upstream inference; retries and Worker restarts are at-least-once.
+- Unlike regular OCR, batch mode requires the additional Queue and R2 bindings. If they are missing, the service responds with 503 rather than silently processing synchronously.
