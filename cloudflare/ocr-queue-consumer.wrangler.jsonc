@@ -1,0 +1,30 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "selection-studio-ocr-batch-consumer-preview",
+  "main": "./ocr-queue-consumer.js",
+  "compatibility_date": "2026-10-01",
+  "observability": {"enabled": true},
+  "vars": {"OCR_GLOBAL_DAILY_LIMIT": "30"},
+  "d1_databases": [
+    {
+      "binding": "SECURITY_DB",
+      "database_name": "selection-studio-security-preview",
+      "database_id": "241ef565-d9ea-4d5a-b70e-4c115e0e185d"
+    }
+  ],
+  "r2_buckets": [
+    {"binding": "OCR_JOB_ASSETS", "bucket_name": "selection-studio-ocr-input-preview"}
+  ],
+  "queues": {
+    "consumers": [
+      {
+        "queue": "selection-studio-ocr-jobs-preview",
+        "max_batch_size": 1,
+        "max_batch_timeout": 1,
+        "max_retries": 5,
+        "max_concurrency": 1,
+        "retry_delay": 60
+      }
+    ]
+  }
+}
