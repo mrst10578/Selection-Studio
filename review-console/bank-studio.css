@@ -27,3 +27,12 @@ body.bank-studio{margin:0;background:#0a0e15;color:#edf4fa;font:500 14px/1.8 Tah
 .bank-panel .bank-confirm input[type="checkbox"]{width:21px;height:21px;min-width:21px;margin:4px 0 0;accent-color:#84cdb5}
 .bank-download{display:block;margin-top:7px;color:#bde9d7;font-weight:700}
 .bank-result .bank-download:focus-visible{outline:2px solid #8bdecf;outline-offset:3px}
+
+.composer-selection{display:grid;gap:6px}
+.composer-selection .bank-actions{margin-top:0}
+.bank-preview-dialog{color:#f4f7fa;background:#111c2b;border:1px solid #617c8c;border-radius:14px;width:min(780px,calc(100vw - 20px));max-height:85dvh;overflow:auto;padding:18px}
+.bank-preview-dialog::backdrop{background:rgb(0 0 0 / 75%)}
+.bank-preview-dialog button{float:left;background:#274e52;color:#fff;border:1px solid #779ba3;border-radius:8px;padding:8px 13px;min-height:44px}
+#examPreviewPaper{clear:both;margin-top:32px;padding:20px;background:#fff;color:#111;border-radius:8px;line-height:2}
+#examPreviewPaper section{border-bottom:1px solid #ddd;padding:16px 0;white-space:pre-wrap}
+#examPreviewPaper p{color:#111;white-space:pre-wrap}
