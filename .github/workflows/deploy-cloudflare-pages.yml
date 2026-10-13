@@ -44,7 +44,9 @@ jobs:
           test -f _site/question-review-api.js
           test -f _site/approved-bank-api.js
           mkdir -p _site/engine
-          cp engine/test-composer.js _site/engine/
+          cp engine/test-composer.js engine/answer-matcher.js _site/engine/
+          test -f _site/engine/test-composer.js
+          test -f _site/engine/answer-matcher.js
           ! grep -R -n 'mrst10578.github.io' _site/*.html _site/studio/*.html || exit 1
       - name: Syntax and security regression checks
         run: |
