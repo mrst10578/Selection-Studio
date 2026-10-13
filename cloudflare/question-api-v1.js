@@ -7,17 +7,18 @@ const sql=(db,query,...args)=>db.prepare(query).bind(...args);
 const safe=v=>typeof v==='string'?v.trim():'';
 function validateContent(data){
  if(!data||typeof data!=='object'||Array.isArray(data))throw Error('INVALID_CONTENT');
- const fields=['questionText','answerText','latex','taxonomyId','sourceLabel','operatorConfirmed','scientificPending','sourceDigest'];
+ const fields=['questionText','answerText','latex','taxonomyId','sourceLabel','sourceNumber','operatorConfirmed','scientificPending','sourceDigest'];
  if(Object.keys(data).some(k=>!fields.includes(k)))throw Error('INVALID_CONTENT');
  if(typeof data.questionText!=='string'||data.questionText.trim().length<1||data.questionText.length>16000)throw Error('INVALID_CONTENT');
  if(data.answerText!==undefined&&(typeof data.answerText!=='string'||data.answerText.length>16000))throw Error('INVALID_CONTENT');
  if(data.sourceLabel!==undefined&&(typeof data.sourceLabel!=='string'||data.sourceLabel.length>160))throw Error('INVALID_CONTENT');
  if(data.taxonomyId!==undefined&&(typeof data.taxonomyId!=='string'||!/^([a-z0-9_-]{1,80})$/i.test(data.taxonomyId)))throw Error('INVALID_CONTENT');
  if(data.latex!==undefined&&(!Array.isArray(data.latex)||data.latex.length>18||data.latex.some(s=>typeof s!=='string'||s.length>1200)))throw Error('INVALID_CONTENT');
+ if(data.sourceNumber!==undefined&&(!Number.isSafeInteger(data.sourceNumber)||data.sourceNumber<1||data.sourceNumber>9999))throw Error('INVALID_CONTENT');
  if(data.operatorConfirmed!==undefined&&typeof data.operatorConfirmed!=='boolean')throw Error('INVALID_CONTENT');
  if(data.scientificPending!==undefined&&(!Number.isSafeInteger(data.scientificPending)||data.scientificPending<0||data.scientificPending>100))throw Error('INVALID_CONTENT');
  if(data.sourceDigest!==undefined&&data.sourceDigest!==''&&!/^[a-f0-9]{64}$/i.test(data.sourceDigest))throw Error('INVALID_CONTENT');
- return JSON.stringify({questionText:data.questionText,answerText:data.answerText||'',latex:data.latex||[],taxonomyId:data.taxonomyId||'',sourceLabel:data.sourceLabel||'',operatorConfirmed:data.operatorConfirmed===true,scientificPending:data.scientificPending||0,sourceDigest:data.sourceDigest||''});
+ return JSON.stringify({questionText:data.questionText,answerText:data.answerText||'',latex:data.latex||[],taxonomyId:data.taxonomyId||'',sourceLabel:data.sourceLabel||'',sourceNumber:data.sourceNumber||null,operatorConfirmed:data.operatorConfirmed===true,scientificPending:data.scientificPending||0,sourceDigest:data.sourceDigest||''});
 }
 async function parseJson(request,max=42000){
  if(!request.headers.get('content-type')?.toLowerCase().startsWith('application/json'))throw Error('JSON_REQUIRED');
