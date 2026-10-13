@@ -30,6 +30,7 @@ export function installOperatorAuth(){
    const identity=await response.json();
    if(!identity.authenticated||identity.role!=="operator")throw Error("دسترسی اپراتور معتبر نیست.");
    authenticated=true;
+   document.dispatchEvent(new Event("selectionstudio:operator-authenticated"));
    const operator=document.getElementById("operator");
    if(operator&&!operator.value)operator.value=identity.email?.split("@")[0]||"operator";
    document.body.classList.remove("auth-locked");
