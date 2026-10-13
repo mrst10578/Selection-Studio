@@ -37,7 +37,7 @@ export function manualFigure(box,label='شکل انتخاب‌شده'){
 }
 export function confirmedFigures(figures){
  if(!Array.isArray(figures))return [];
- return normalizeFigureCandidates(figures).filter((_,i)=>figures[i]?.status==='operator_confirmed').map(x=>({
+ return normalizeFigureCandidates(figures.filter(x=>x?.status==='operator_confirmed')).map(x=>({
   bbox_norm:x.bbox_norm,type:x.type,label:x.label,source:x.source,status:'operator_confirmed',
   ...(x.model_confidence===undefined?{}:{model_confidence:x.model_confidence})
  }));
