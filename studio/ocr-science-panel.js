@@ -36,7 +36,7 @@ export function createSciencePanel({
  const thumbDownload=node('a','','دریافت شکل WebP');thumbDownload.download='exam-figure.webp';
  thumb.append(thumbHeading,thumbImage,thumbDownload);
  host.append(heading,status,restore,warnings,figureHeader,figControls,frame,candidates,thumb);
- let current=null,draw=false,pointer=null,previewUrl='',imageSrc='',previewFor='';
+ let current=null,draw=false,pointer=null,previewUrl='',imageSrc='',previewFor='',lastWarningList=null;
  const normalize=(x,y)=>{
   const r=overlay.getBoundingClientRect();
   if(!r.width||!r.height)return null;
@@ -93,6 +93,7 @@ export function createSciencePanel({
   const newImage=s?.imageUrl||'';
   if(newImage!==imageSrc){imageSrc=newImage;cancelDraw();clearPreview();if(newImage)img.src=newImage;else img.removeAttribute('src')}
   if(!s||!s.figures?.some(f=>f.status==='pending_review')&&!s.figures?.length&&previewUrl)clearPreview();
+  const reuseWarnings=current===s&&lastWarningList===s?.scienceWarnings;
   current=s;
   const list=s?.scienceWarnings||[],acks=new Set(s?.acknowledged||[]);
   const unresolved=list.filter(w=>!acks.has(w.id));
@@ -101,9 +102,10 @@ export function createSciencePanel({
    unresolved.length?'بررسی‌نشده: '+unresolved.length+' مورد'+(critical?'، شامل '+critical+' اختلاف حساس':'')+'.':
    'تمام هشدارهای موجود توسط اپراتور بررسی شده‌اند.';
   status.dataset.state=critical?'critical':unresolved.length?'review':'clear';
-  warnings.replaceChildren();
-  for(const item of list){
-   const row=node('label','studio-science-warning');
+  if(!reuseWarnings){
+   warnings.replaceChildren();
+   for(const item of list){
+    const row=node('label','studio-science-warning');
    row.dataset.severity=item.severity;
    const checkbox=node('input');checkbox.type='checkbox';checkbox.checked=acks.has(item.id);
    checkbox.disabled=Boolean(s.busy);checkbox.setAttribute('aria-label','بررسی شد: '+item.message);
@@ -112,8 +114,14 @@ export function createSciencePanel({
    body.append(node('strong','',item.message));
    if(item.detail)body.append(node('small','',item.detail));
    const tag=node('small','studio-science-warning-tag',item.severity==='critical'?'اختلاف حساس':'بررسی پیشنهادی');
-   row.append(checkbox,body,tag);warnings.append(row);
+    row.append(checkbox,body,tag);warnings.append(row);
+   }
+   lastWarningList=s?.scienceWarnings;
   }
+  warnings.querySelectorAll('input').forEach((checkbox,index)=>{
+   checkbox.checked=acks.has(list[index].id);
+   checkbox.disabled=Boolean(s?.busy);
+  });
   restore.hidden=!s?.baseline;
   restore.disabled=Boolean(s?.busy);
   mark.disabled=!s?.imageBlob||Boolean(s?.busy);
