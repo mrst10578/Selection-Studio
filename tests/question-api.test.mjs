@@ -4,9 +4,10 @@ import {DatabaseSync} from 'node:sqlite';
 import {readFile} from 'node:fs/promises';
 import {handleQuestionApi} from '../cloudflare/question-api-v1.js';
 const schema=await readFile(new URL('../cloudflare/schema-question-bank-v1.sql',import.meta.url),'utf8');
+const security=await readFile(new URL('../cloudflare/schema-security.sql',import.meta.url),'utf8');
 const actorA='a'.repeat(32),actorB='b'.repeat(32);
 function fixture(){
- const local=new DatabaseSync(':memory:');local.exec('PRAGMA foreign_keys=ON;');local.exec(schema);
+ const local=new DatabaseSync(':memory:');local.exec('PRAGMA foreign_keys=ON;');local.exec(security);local.exec(schema);
  const db={prepare(query){return {bind(...args){const s=local.prepare(query);return {
   async first(){return s.get(...args)??null},async all(){return {results:s.all(...args)}},async run(){return s.run(...args)}
  }}}}};
