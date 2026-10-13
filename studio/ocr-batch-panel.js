@@ -163,6 +163,9 @@ export function createBatchOcrPanel({capture,getFingerprint,getIdentity,onNotice
  clear.addEventListener('click',()=>{if(busy)return;pending.splice(0);pendingKey=null;draw()});
  reload.addEventListener('click',()=>{void refresh();beginPolling()});
  draw();
- // No background queue polling until a user explicitly requests or submits work.
+ const restore=async()=>{if(!isOperatorAuthenticated())return;await refresh();if(jobs.some(j=>j.status==='running'||j.status==='paused'))beginPolling()};
+ document.addEventListener('selectionstudio:operator-authenticated',()=>void restore());
+ if(isOperatorAuthenticated())void restore();
+ // Results are rehydrated from the server after verified login. Poll only active work.
  return {host,refresh,resetPending:()=>{pending.splice(0);pendingKey=null;draw()},sync:draw};
 }
