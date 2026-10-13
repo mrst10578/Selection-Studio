@@ -30,10 +30,11 @@ test('only actor-owned and independently reviewed current records are searchable
 });
 test('operator can only compose version-pinned approved questions as unpublishable manifest',async()=>{
  const x=f();
- const result=await x.call('/exams/compose','POST',{title:'زیست',questionIds:[qid],includeAnswers:true});
+ const result=await x.call('/exams/compose','POST',{title:'زیست',questionIds:[qid],sourceRevisions:[1],includeAnswers:true});
  assert.equal(result.status,200);assert.equal(result.data.manifest.publishable,false);
  assert.equal(result.data.manifest.items[0].answer,'گزینه ۲');
- assert.equal((await x.call('/exams/compose','POST',{title:'آزمون',questionIds:[qid,qid],includeAnswers:false})).status,400);
+ assert.equal((await x.call('/exams/compose','POST',{title:'آزمون',questionIds:[qid],sourceRevisions:[2],includeAnswers:false})).status,409);
+ assert.equal((await x.call('/exams/compose','POST',{title:'آزمون',questionIds:[qid,qid],sourceRevisions:[1,1],includeAnswers:false})).status,400);
  x.d.close();
 });
 test('a changed revision or later rejection invalidates former approval',async()=>{
