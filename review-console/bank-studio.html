@@ -22,6 +22,15 @@
    <h2>سؤال‌های پروژه</h2>
    <button id="newQuestion" type="button" disabled>+ پیش‌نویس جدید</button>
    <div id="questionList" class="bank-list" role="list" aria-label="فهرست پیش‌نویس‌ها"></div>
+   <section aria-labelledby="assetTitle" class="bank-asset-section">
+    <h2 id="assetTitle">فایل‌های مرجع خصوصی</h2>
+    <p class="bank-help">فقط در پروژه فعال ذخیره می‌شوند. سقف هر فایل ۸ مگابایت است؛ در نبود R2 هیچ فایلی بارگذاری نمی‌شود.</p>
+    <label for="sourcePdf">PDF دفترچه سؤال</label><input id="sourcePdf" type="file" accept="application/pdf,.pdf" disabled>
+    <label for="answerPdf">PDF پاسخنامه</label><input id="answerPdf" type="file" accept="application/pdf,.pdf" disabled>
+    <label for="figureImage">شکل استخراج‌شده</label><input id="figureImage" type="file" accept="image/png,image/jpeg,image/webp" disabled>
+    <button id="refreshAssets" type="button" disabled>بازخوانی فایل‌های خصوصی</button>
+    <div id="assetList" class="bank-list" role="list" aria-label="فایل‌های متصل به پروژه"></div>
+   </section>
    <p class="bank-help">نمایش فهرست فقط به حساب اپراتور واردشده محدود است. تغییر پروژه، متن ذخیره‌نشده را خودکار ارسال نمی‌کند.</p>
   </aside>
   <section class="bank-panel bank-editor" aria-label="ویرایش پیش‌نویس">
