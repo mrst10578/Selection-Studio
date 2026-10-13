@@ -12,7 +12,7 @@
 
 ## Scope and open work
 
-The deterministic proposal engine is implemented and unit tested. ZH-79 remains **In Progress**: connect it to an accessible operator UI, persist reviewed decisions with ZH-80 revisioned D1 API and role enforcement, test end-to-end against a real bank, and design a cost-limited opt-in second-model service if a second inference provider is required. Do not mark task complete on an engine-only commit.
+The deterministic engine has a **separate operator preview UI** at `review-console/bank-studio.html` (deployed path `/admin/bank-studio.html`), implemented on the feature branch after initial engine tests. It suggests duplicates from the last 50 actor-scoped draft records loaded by the authenticated D1 API, offers a fixed-topic vocabulary and compares a manually supplied second OCR transcription. These analyses never alter or approve text automatically. `qa/bank-studio.spec.mjs` adds mock-API desktop/mobile browser tests. ZH-79 remains **In Progress**: persist reviewed decisions with ZH-80 revisioned D1 API and role enforcement, verify on deployed preview against a real bank, and add opt-in bounded dual-model inference only if necessary. The page exists in branch artifacts only; no production deployment has occurred.
 
 All outputs are advisory and require source-PDF comparison. Numeric warnings are not calibrated probabilities. There are no automatic database writes or publication side effects.
 
