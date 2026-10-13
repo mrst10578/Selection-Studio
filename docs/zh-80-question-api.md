@@ -22,3 +22,7 @@ All responses carry `Cache-Control: no-store`; unknown actor and cross-actor pro
 ## Outstanding requirements
 
 ZH-80 is **In Progress**: `review-console/bank-studio.html` and `bank-studio.js` now provide a separate draft-only operator UI with project create/list, question create/update/soft-delete, revision history, local suggestions and explicit conflict alerts. `qa/bank-studio.spec.mjs` adds mocked-API desktop/mobile browser regression tests. The additive schema is on preview D1 only; the application route is **not deployed to preview or production**. User-role/team entities and reviewer privileges, full RBAC, secure audit for every mutation, preview authenticated browser E2E, complete export/recovery and team sharing remain open. The stored draft content does not prove that OCR text was operator-approved; later ZH-83 must verify that before any transition out of draft. Do not use this API for production publishing.
+
+## 2026-10-13 source and operator review extensions
+
+Question content validation additionally supports `sourceNumber` (1..9999), `sourceDigest` (SHA-256 PDF), `operatorConfirmed` (explicit checkbox), and `scientificPending` (bounded integer). The draft bank UI invalidates operator confirmation when source/text changes. Separately authorized reviewer decisions are stored in an independent review-event table and do not mutate question draft state. Private asset storage metadata has been added to preview D1, but R2 and distinct reviewer E2E remain unavailable pending infrastructure.
