@@ -8,14 +8,12 @@ const dbq=(db,stmt,...args)=>db.prepare(stmt).bind(...args);
 const normalize=s=>String(s||'').normalize('NFKC').replace(/[۰-۹]/g,c=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(c))).replace(/[يى]/g,'ی').replace(/ك/g,'ک').trim().toLowerCase();
 async function validApproved(db,actor,scope){
  const where=scope?' AND q.project_id=?':'';
- const query="SELECT q.id,q.revision,q.actor,q.project_id,q.content_json,r.reviewer_actor FROM bank_questions q JOIN bank_projects p ON p.id=q.project_id JOIN bank_review_events r ON r.question_id=q.id AND r.source_revision=q.revision AND r.rowid=(SELECT max(re.rowid) FROM bank_review_events re WHERE re.question_id=q.id AND re.source_revision=q.revision) WHERE p.actor=? AND p.deleted_at IS NULL AND q.deleted_at IS NULL AND r.decision='approve' AND r.reviewer_actor!=q.actor"+where+" ORDER BY q.updated_at DESC,q.id DESC LIMIT 300";
+ const query="SELECT q.id,q.revision,q.actor,q.project_id,q.content_json,r.reviewer_actor FROM bank_questions q JOIN bank_projects p ON p.id=q.project_id JOIN bank_review_events r ON r.question_id=q.id AND r.source_revision=q.revision AND r.rowid=(SELECT max(re.rowid) FROM bank_review_events re WHERE re.question_id=q.id AND re.source_revision=q.revision) WHERE p.actor=? AND p.deleted_at IS NULL AND q.deleted_at IS NULL AND r.decision='approve' AND r.reviewer_actor!=q.actor AND EXISTS (SELECT 1 FROM bank_assets a WHERE a.project_id=q.project_id AND a.actor=q.actor AND a.digest=json_extract(q.content_json,'$.sourceDigest') AND a.role='question_pdf' AND a.deleted_at IS NULL)"+where+" ORDER BY q.updated_at DESC,q.id DESC LIMIT 300";
  const rows=await dbq(db,query,...(scope?[actor,scope]:[actor])).all();
  const result=[];
  for(const row of rows.results||[]){
   const content=JSON.parse(row.content_json);
   if(content.operatorConfirmed!==true||Number(content.scientificPending||0)>0||!/^[a-f0-9]{64}$/i.test(content.sourceDigest||''))continue;
-  const source=await dbq(db,"SELECT digest FROM bank_assets WHERE project_id=? AND actor=? AND digest=? AND role='question_pdf' AND deleted_at IS NULL",row.project_id,actor,content.sourceDigest).first();
-  if(!source)continue;
   result.push({id:row.id,projectId:row.project_id,revision:row.revision,state:'reviewed',reviewStatus:'approved',scientificPending:0,softDeleted:false,
    questionText:String(content.questionText||'').slice(0,16000),answerText:String(content.answerText||'').slice(0,16000),
    subject:String(content.taxonomyId||''),sourceNumber:content.sourceNumber||null,sourceDigest:content.sourceDigest,
