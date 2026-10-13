@@ -130,9 +130,16 @@ export async function requestOcr({image,prompt,signal,fetcher=fetch}){
 }
 export function safeOcrReview(review){
  if(!review||typeof review!=='object')return null;
- const text=cap(review.text,12000).trim();
+ const rawText=cap(review.text,12000);
+ const text=rawText.trim();
  const latex=Array.isArray(review.latex)?review.latex.map(x=>cap(x,1200).trim()).filter(Boolean).slice(0,18):[];
  if(!text&&!latex.length)return null;
+ // Normalizing outer whitespace must move accepted OCR text offsets too.
+ const leading=rawText.length-rawText.trimStart().length;
+ const links=Array.isArray(review.links)?review.links.map(x=>({...x,start:Number(x.start)-leading,end:Number(x.end)-leading})):[];
+ const events=Array.isArray(review.events)?review.events.map(x=>({...x,link_start:Number(x.link_start)-leading})):[];
+ const imageMap=safeOcrMap({text,links,regions:review.imageRegions,events});
+ const figures=confirmedFigures(review.figures);
  return {
   text,latex,
   notes:cap(review.notes,700),
@@ -141,10 +148,10 @@ export function safeOcrReview(review){
   status:'operator_confirmed',
   confirmed_at:new Date().toISOString(),
   scientific_review:safeScientificReview(review.scienceWarnings,review.acknowledged,review.modelConfidence),
-  ...(confirmedFigures(review.figures).length?{figures:{
-   coordinate_space:'ocr_composite_image',items:confirmedFigures(review.figures)
+  ...(figures.length?{figures:{
+   coordinate_space:'ocr_composite_image',items:figures
   }}:{}),
-  ...(safeOcrMap({text,links:review.links,regions:review.imageRegions,events:review.events})?{image_map:safeOcrMap({text,links:review.links,regions:review.imageRegions,events:review.events})}:{})
+  ...(imageMap?{image_map:imageMap}:{})
  };
 }
 export function formatOcrError(error){
