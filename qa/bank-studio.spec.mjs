@@ -59,3 +59,32 @@ test.describe('ZH-79 / ZH-80 operator draft bank',()=>{
   await expect(page.locator('#duplicateList')).toContainText('تضمین نبودن تکرار نیست');
  });
 });
+
+
+test('revoking a reviewer works before invitations and never registers duplicate listeners',async({page})=>{
+ await mockData(page);
+ const verbs=[];
+ await page.route('**/api/v1/reviews/assignments',async route=>{
+  const method=route.request().method();
+  verbs.push({method,payload:route.request().postDataJSON()});
+  await route.fulfill({status:method==='POST'?201:200,contentType:'application/json',
+   body:JSON.stringify(method==='POST'?{assigned:true}:{revoked:true,previousApprovalsInvalidated:true})});
+ });
+ page.on('dialog',dialog=>dialog.accept());
+ await page.goto('/review-console/bank-studio.html');
+ await expect(page.locator('#revokeReviewer')).toBeEnabled();
+ await page.locator('#reviewerEmail').fill('reviewer@example.test');
+ await page.locator('#revokeReviewer').click();
+ await expect(page.locator('#notice')).toContainText('لغو شد');
+ expect(verbs.map(x=>x.method)).toEqual(['DELETE']);
+ await page.locator('#assignReviewer').click();
+ await expect(page.locator('#notice')).toContainText('دسترسی بازبین مستقل');
+ await page.locator('#reviewerEmail').fill('reviewer@example.test');
+ await page.locator('#assignReviewer').click();
+ await expect(page.locator('#notice')).toContainText('دسترسی بازبین مستقل');
+ await page.locator('#reviewerEmail').fill('reviewer@example.test');
+ await page.locator('#revokeReviewer').click();
+ await expect(page.locator('#notice')).toContainText('لغو شد');
+ expect(verbs.map(x=>x.method)).toEqual(['DELETE','POST','POST','DELETE']);
+ expect(verbs.every(x=>x.payload.projectId===P&&x.payload.reviewerEmail==='reviewer@example.test')).toBe(true);
+});
