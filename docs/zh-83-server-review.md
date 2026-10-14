@@ -22,3 +22,7 @@ On 2026-10-13, `cloudflare/schema-review-v1.sql` was applied to **selection-stud
 ## Remaining final gates
 
 The project has no configured real, distinct reviewer account yet. Before any production release, add approved reviewer identity and separate Cloudflare Access policy plus `REVIEWER_EMAILS` in preview, activate private R2 (currently unavailable), test actual PDF links, and perform role/permission/accessibility E2E and final science-review checks. Review results are not currently consumed by a server-only publication/composer API. **Do not mark completed and do not merge PR #45 until the user approves final release.**
+
+## 2026-10-14 reviewer revocation
+
+The project owner can now revoke an approved reviewer via `DELETE /api/v1/reviews/assignments` using a project UUID and the same allowlisted reviewer email. The reviewer’s normalized-email digest is deleted from the project grants table only after a successful security-audit write. The access decision is re-evaluated on each reviewer request. The server-side approved bank now requires an active project grant that was recorded by the owning operator, a matching PDF digest, and all six true review checks. Thus revocation removes historic signoffs from all subsequent search/export responses without mutating old immutable review events. The operator console exposes a confirmation-gated revoke action; the new automated tests cover authorization and invalidated bank results. R2 and a real separate reviewer account remain deployment blockers.
