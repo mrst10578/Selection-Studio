@@ -60,7 +60,9 @@ async function manifest(){
   questionIds:state.selected.map(x=>x.id),sourceRevisions:state.selected.map(x=>x.revision)
  })});
  if(data.status!=='draft_export_only'||data.manifest?.publishable!==false)throw Error('سرور خروجی امن برنگرداند');
- return data.manifest;
+ if(data.manifestHash!==undefined&&!/^[a-f0-9]{64}$/i.test(data.manifestHash))throw Error('شناسه نسخه خروجی نامعتبر است');
+ $('examFingerprint').textContent=data.manifestHash?'اثر انگشت نسخه ثبت‌شده: '+data.manifestHash:'خروجی آزمایشی فاقد شناسه سرور';
+ return data.manifestHash?{...data.manifest,fingerprint:data.manifestHash}:data.manifest;
 }
 function download(text,name,type){
  const url=URL.createObjectURL(new Blob([text],{type})),a=document.createElement('a');
