@@ -128,3 +128,31 @@ test('a security audit outage denies file uploads before storing any bytes',asyn
  assert.equal(f.stored.size,0);
  f.local.close();
 });
+
+
+test('atomic tombstone guard closes the revision-insertion race',async()=>{
+ const f=fixture(),headers={'Content-Type':'application/pdf','X-Asset-Role':'question_pdf'};
+ const asset=await(await f.call(actorA,'','POST',pdf,headers)).json();
+ const originalPrepare=f.env.SECURITY_DB.prepare;
+ let injected=false;
+ f.env.SECURITY_DB.prepare=function(sql){
+  const statement=originalPrepare(sql);
+  if(!sql.includes('UPDATE bank_assets SET deleted_at'))return statement;
+  return {bind(...args){const bound=statement.bind(...args);return {
+   ...bound,async first(){
+    if(!injected){
+     injected=true;
+     f.local.prepare('INSERT INTO bank_questions(id,project_id,actor,content_json) VALUES(?,?,?,?)')
+      .run('77777777-1111-2222-3333-555555555555',pid,actorA,JSON.stringify({questionText:'ثبت در حین حذف',sourceDigest:asset.digest}));
+    }
+    return bound.first();
+   }
+  }}};
+ };
+ const response=await f.call(actorA,'/'+asset.digest+'?role=question_pdf','DELETE');
+ assert.equal(injected,true);
+ assert.equal(response.status,409);
+ assert.equal((await response.json()).error,'SOURCE_PDF_REFERENCED_BY_QUESTION');
+ assert.equal((await(await f.call(actorA)).json()).assets.length,1);
+ f.local.close();
+});
