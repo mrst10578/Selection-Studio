@@ -88,3 +88,59 @@ test('revoking a reviewer works before invitations and never registers duplicate
  expect(verbs.map(x=>x.method)).toEqual(['DELETE','POST','POST','DELETE']);
  expect(verbs.every(x=>x.payload.projectId===P&&x.payload.reviewerEmail==='reviewer@example.test')).toBe(true);
 });
+
+
+test('stale project fetch cannot replace the active project editor or question list',async({page})=>{
+ const other='99999999-1111-2222-3333-444444444444';
+ let releaseOld,oldStarted;
+ const oldArrived=new Promise(resolve=>{oldStarted=resolve});
+ await page.route('**/api/v1/projects**',async route=>{
+  const url=new URL(route.request().url()),path=url.pathname;
+  let body,status=200;
+  if(path==='/api/v1/projects')body={projects:[{id:P,name:'پروژه یک',revision:1},{id:other,name:'پروژه دو',revision:1}]};
+  else if(path==='/api/v1/projects/'+P+'/questions'){
+   oldStarted();await new Promise(resolve=>{releaseOld=resolve});
+   body={questions:[{id:Q,projectId:P,revision:1,content:{questionText:'سؤال پروژه قدیمی'}}]};
+  }else if(path==='/api/v1/projects/'+other+'/questions')
+   body={questions:[{id:'aaaaaaaa-1111-2222-3333-444444444444',projectId:other,revision:1,content:{questionText:'سؤال پروژه فعال'}}]};
+  else if(path==='/api/v1/projects/'+other+'/assets')body={assets:[]};
+  else if(path==='/api/v1/projects/'+P+'/assets')body={assets:[]};
+  else{status=404;body={error:'NOT_FOUND'}}
+  await route.fulfill({status,contentType:'application/json',body:JSON.stringify(body)});
+ });
+ await page.goto('/review-console/bank-studio.html');
+ await oldArrived;
+ await page.locator('#projectSelect').selectOption(other);
+ await expect(page.locator('#questionList')).toContainText('سؤال پروژه فعال');
+ releaseOld();
+ await expect(page.locator('#questionList')).not.toContainText('سؤال پروژه قدیمی');
+ await expect(page.locator('#projectSelect')).toHaveValue(other);
+ await expect(page.locator('#revision')).toContainText('جدید');
+});
+test('late private-file responses never leak the previous project into the new project',async({page})=>{
+ const other='99999999-1111-2222-3333-444444444444';
+ let releaseOld,oldStarted;
+ const oldArrived=new Promise(resolve=>{oldStarted=resolve});
+ await page.route('**/api/v1/projects**',async route=>{
+  const path=new URL(route.request().url()).pathname;
+  let body,status=200;
+  if(path==='/api/v1/projects')body={projects:[{id:P,name:'پروژه یک',revision:1},{id:other,name:'پروژه دو',revision:1}]};
+  else if(path.endsWith('/questions'))body={questions:[]};
+  else if(path==='/api/v1/projects/'+P+'/assets'){
+   oldStarted();await new Promise(resolve=>{releaseOld=resolve});
+   body={assets:[{digest:'a'.repeat(64),role:'question_pdf',mime:'application/pdf',size:250}]};
+  }else if(path==='/api/v1/projects/'+other+'/assets')
+   body={assets:[{digest:'b'.repeat(64),role:'question_pdf',mime:'application/pdf',size:128}]};
+  else{status=404;body={error:'NOT_FOUND'}}
+  await route.fulfill({status,contentType:'application/json',body:JSON.stringify(body)});
+ });
+ await page.goto('/review-console/bank-studio.html');
+ await oldArrived;
+ await page.locator('#projectSelect').selectOption(other);
+ await expect(page.locator('#assetList')).toContainText('دفترچه سؤال');
+ await expect(page.locator('#assetList a').first()).toHaveAttribute('href',new RegExp(other));
+ releaseOld();
+ await expect(page.locator('#sourceDigest option')).toHaveCount(2);
+ await expect(page.locator('#sourceDigest option').last()).toHaveAttribute('value','b'.repeat(64));
+ await expect(page.locator('#assetList a').first()).toHaveAttribute('href',new RegExp(other));
+});
