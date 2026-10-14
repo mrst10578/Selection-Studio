@@ -31,3 +31,14 @@ Question content validation additionally supports `sourceNumber` (1..9999), `sou
 ## 2026-10-15 atomic source-evidence guard
 
 An operator may still save unverified OCR text as a draft, but `operatorConfirmed:true` now requires a **currently active**, project-owned `question_pdf` attachment with MIME `application/pdf` and the exact declared SHA-256 `sourceDigest`. The server validates this explicitly, then re-evaluates attachment existence *inside the same SQLite INSERT/UPDATE* to prevent concurrent file removal from racing source attestation. Missing, tombstoned, foreign-project or answer-only attachments return HTTP 422 `SOURCE_PDF_NOT_REGISTERED`, never an operator-verified record. Changing the source still requires a new question revision and independent reviewer decision. Unit tests cover create/update, source role, tombstone and the preflight-to-write race. All changes are on PR #45, not Production.
+
+
+## Source object integrity / preview acceptance gate (2026-10-15)
+
+An operator attestation requires more than a D1 attachment row. The API now performs a private R2 `HEAD` for the registered `question_pdf` object key **before** accepting `operatorConfirmed:true`. The same D1 INSERT/UPDATE still atomically checks active metadata to prevent racing tombstones.
+
+- No registered source: HTTP 422 `SOURCE_PDF_NOT_REGISTERED`.
+- Active metadata exists but the R2 binding is absent: HTTP 503 `SOURCE_STORAGE_NOT_CONFIGURED`.
+- Active metadata exists but the private blob is missing: HTTP 503 `SOURCE_PDF_MISSING_IN_STORAGE`.
+- The unconfirmed draft workflow still works offline/without R2. No public URL, raw file bytes, identity or token is returned.
+- Cloudflare R2 must be enabled by the account owner before authenticated Preview acceptance; do not consider a D1-only fixture equivalent to live source provenance.
