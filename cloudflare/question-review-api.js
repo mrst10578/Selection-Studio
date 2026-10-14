@@ -40,7 +40,7 @@ export async function handleReviewApi(request,env,identity,actor,url){
    return new Response(file.object.body,{status:200,headers:{'Content-Type':'application/pdf','Content-Disposition':'attachment; filename="review-source-'+digestId.slice(0,12)+'.pdf"','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'none'; sandbox"}});
   }
  try{
-  if(path==='/api/v1/reviews/assignments'&&method==='POST'){
+  if(path==='/api/v1/reviews/assignments'&&(method==='POST'||method==='DELETE')){
    if(!ownerRole)return json({error:'OPERATOR_REQUIRED'},403);
    if(!env.REVIEWER_EMAILS)return json({error:'REVIEWERS_NOT_CONFIGURED'},503);
    const data=await input(request,512),reviewer=email(data?.reviewerEmail);
@@ -48,7 +48,15 @@ export async function handleReviewApi(request,env,identity,actor,url){
    if(reviewer===mail)return json({error:'SELF_REVIEW_FORBIDDEN'},409);
    const own=await sql(db,'SELECT id FROM bank_projects WHERE id=? AND actor=? AND deleted_at IS NULL',data.projectId,actor).first();
    if(!own)return json({error:'PROJECT_NOT_FOUND'},404);
-   await sql(db,'INSERT OR IGNORE INTO bank_project_reviewers(project_id,reviewer_email_hash,assigned_by) VALUES(?,?,?)',data.projectId,await digest(reviewer),actor).run();
+   const reviewerDigest=await digest(reviewer);
+   // Audit precedes permission changes. Missing audit storage denies both grant and revoke.
+   await sql(db,'INSERT INTO security_audit(actor,action,result,detail) VALUES(?,?,?,?)',
+    actor,method==='POST'?'reviewer_assign':'reviewer_revoke','attempt',data.projectId).run();
+   if(method==='DELETE'){
+    const removed=await sql(db,'DELETE FROM bank_project_reviewers WHERE project_id=? AND reviewer_email_hash=? AND assigned_by=? RETURNING project_id',data.projectId,reviewerDigest,actor).first();
+    return json({revoked:!!removed,projectId:data.projectId,previousApprovalsInvalidated:!!removed});
+   }
+   await sql(db,'INSERT OR IGNORE INTO bank_project_reviewers(project_id,reviewer_email_hash,assigned_by) VALUES(?,?,?)',data.projectId,reviewerDigest,actor).run();
    return json({assigned:true,projectId:data.projectId},201);
   }
   if(path==='/api/v1/reviews/assigned'&&method==='GET'){
