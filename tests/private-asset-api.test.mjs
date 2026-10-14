@@ -176,3 +176,28 @@ test('verified duplicate upload stays idempotent when project hits its file cap'
  assert.equal((await missing.json()).error,'ASSET_MISSING_IN_STORAGE');
  f.local.close();
 });
+
+test('tombstoned R2 blobs still occupy the actor physical-object quota',async()=>{
+ const f=fixture(),insert=f.local.prepare('INSERT INTO bank_assets(project_id,actor,digest,mime,role,object_key,byte_size,deleted_at) VALUES(?,?,?,?,?,?,?,CURRENT_TIMESTAMP)');
+ for(let i=1;i<=96;i++){
+  const d=i.toString(16).padStart(64,'0');
+  insert.run(pid,actorA,d,'application/pdf','question_pdf','private-assets/'+actorA+'/'+d+'.pdf',100);
+ }
+ assert.equal(f.local.prepare('SELECT COUNT(*) AS n FROM bank_assets WHERE deleted_at IS NULL').get().n,0);
+ const result=await f.call(actorA,'','POST',pdf,{'Content-Type':'application/pdf','X-Asset-Role':'question_pdf'});
+ assert.equal(result.status,429);
+ assert.equal((await result.json()).error,'ASSET_QUOTA_EXCEEDED');
+ assert.equal(f.stored.size,0);
+ f.local.close();
+});
+test('tombstoned R2 blobs still occupy the actor physical-byte quota',async()=>{
+ const f=fixture(),insert=f.local.prepare('INSERT INTO bank_assets(project_id,actor,digest,mime,role,object_key,byte_size,deleted_at) VALUES(?,?,?,?,?,?,?,CURRENT_TIMESTAMP)');
+ for(let i=1;i<=32;i++){
+  const d=(i+100).toString(16).padStart(64,'0');
+  insert.run(pid,actorA,d,'application/pdf','question_pdf','private-assets/'+actorA+'/'+d+'.pdf',8*1024*1024);
+ }
+ const response=await f.call(actorA,'','POST',pdf,{'Content-Type':'application/pdf','X-Asset-Role':'question_pdf'});
+ assert.equal(response.status,429);
+ assert.equal(f.stored.size,0);
+ f.local.close();
+});
