@@ -59,3 +59,20 @@ test('reviewers cannot approve their own projects, unassigned projects or stale 
  assert.equal((await f.run({path,method:'POST',data:{baseRevision:2,decision:'reject',checks:{}}})).status,201);
  f.db0.close();
 });
+
+test('revoking a reviewer blocks reads and fresh approvals and is audited',async()=>{
+ const f=fixture();
+ const grant={actor:operator,email:'owner@example.test',path:'/assignments',method:'POST',data:{projectId,reviewerEmail:'reviewer@example.test'}};
+ assert.equal((await f.run(grant)).status,201);
+ assert.deepEqual((await f.run()).body.projects.map(p=>p.id),[projectId]);
+ const revoked=await f.run({...grant,method:'DELETE'});
+ assert.equal(revoked.status,200);
+ assert.equal(revoked.body.revoked,true);
+ assert.equal(revoked.body.previousApprovalsInvalidated,true);
+ assert.deepEqual((await f.run()).body.projects,[]);
+ const path='/projects/'+projectId+'/questions/'+questionId;
+ assert.equal((await f.run({path,method:'POST',data:{baseRevision:1,decision:'approve',checks:checklist}})).status,404);
+ const events=f.db0.prepare("SELECT action FROM security_audit WHERE action='reviewer_revoke'").all();
+ assert.equal(events.length,1);
+ f.db0.close();
+});
