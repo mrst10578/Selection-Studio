@@ -79,8 +79,10 @@ test('revoking a reviewer works before invitations and never registers duplicate
  expect(verbs.map(x=>x.method)).toEqual(['DELETE']);
  await page.locator('#assignReviewer').click();
  await expect(page.locator('#notice')).toContainText('دسترسی بازبین مستقل');
+ await expect(page.locator('#reviewerEmail')).toHaveValue('');
  await page.locator('#reviewerEmail').fill('reviewer@example.test');
  await page.locator('#assignReviewer').click();
+ await expect.poll(()=>verbs.filter(v=>v.method==='POST').length).toBe(2);
  await expect(page.locator('#notice')).toContainText('دسترسی بازبین مستقل');
  await page.locator('#reviewerEmail').fill('reviewer@example.test');
  await page.locator('#revokeReviewer').click();
