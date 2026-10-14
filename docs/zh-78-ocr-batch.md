@@ -64,3 +64,10 @@ No extra secret is required in the browser; no OCR model response is automatical
 - Opening a completed older job on another device allows reading/copying its result but does not silently merge it into a different local PDF session.
 - This feature does not guarantee exactly-once paid upstream inference; retries and Worker restarts are at-least-once.
 - Unlike regular OCR, batch mode requires the additional Queue and R2 bindings. If they are missing, the service responds with 503 rather than silently processing synchronously.
+
+## Preview infrastructure provisioning (2026-10-15)
+
+- **Provisioned:** Cloudflare Queue `selection-studio-ocr-jobs-preview` on account Zh2, queue ID `c8c0553e357343a4ad534b9e02126272`. Creation was confined to Preview. This Queue has no configured consumer or producer and no OCR messages were sent.
+- **Not yet provisioned:** private R2 bucket or any R2/Queue binding. The account's R2 API responds with `10042: Please enable R2 through the Cloudflare Dashboard`. The R2 subscription must be activated by the account owner, with acknowledgement of potential usage-based billing. Do not substitute public buckets, D1 payload storage, or a direct browser OCR proxy.
+- **Deployment gate:** GitHub Actions now contains `deploy-preview`, but the configured GitHub repository has empty `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` secrets. The workflow safely skips deployment and leaves Production untouched. Protect the branch Preview with the existing Cloudflare Access wildcard application before any live testing.
+- The Queue remains inert until the R2-backed producer and isolated consumer are configured. Never send real OCR messages before R2, Access JWT, audit, cost limits and manual consent are verified.
