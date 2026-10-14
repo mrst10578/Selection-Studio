@@ -31,3 +31,10 @@ The private asset API adds conservative, explicit usage caps, independent of R2 
 **Remaining infrastructure work:** R2 is not enabled on the Zh2 Cloudflare account. A scheduled private-R2 orphan/tombstone cleanup with a concurrency-safe grace period, storage reconciliation, durable upload reservation under repeated concurrency, and live billing/limit observation must be added before production. The local Node tests are not a substitute for authenticated preview E2E. No production deployment or merge is authorized.
 
 Security-audit hardening: authenticated upload, private download, and attachment tombstone now require a successful D1 `security_audit` insertion **before** moving private bytes or changing attachment state. Audit records contain only hashed actor, action, result and project/role; they do not include PDF data, prompts, JWTs, file hashes or email. If audit storage is missing, operations fail closed with 503. Node tests verify all three events and fail-closed uploads.
+
+
+## 2026-10-15 atomic deletion and idempotent re-upload
+
+The source-PDF tombstone now checks historical question revisions **inside the UPDATE statement itself**, not only as an earlier read; this closes the race in which a question revision is saved between the check and deletion. A deterministic test injects a new source-referencing revision at precisely this boundary and verifies HTTP 409 and intact metadata.
+
+Re-uploading a byte-identical, already active project attachment verifies the private R2 object by HEAD and returns a no-op `existing:true` even when the project quota is full. It does not consume a new slot. If the D1 registry exists but the private object has disappeared, the API returns HTTP 503 `ASSET_MISSING_IN_STORAGE` instead of falsely claiming success. A re-upload of a previously **tombstoned** attachment remains subject to quota. This logic is covered by Node regression tests. Physical R2 garbage collection remains intentionally unimplemented and must be designed to respect cross-project deduplication before enabling R2.
