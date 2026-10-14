@@ -30,7 +30,7 @@ export async function handleReviewApi(request,env,identity,actor,url){
    if(method!=='GET'||!reviewerRole||!uuid.test(assetRoute[1]))return json({error:'NOT_FOUND'},404);
    const [_,pid,digestId]=assetRoute,project=await sql(db,'SELECT id,actor FROM bank_projects WHERE id=? AND deleted_at IS NULL',pid).first();
    if(!project||project.actor===actor)return json({error:'NOT_FOUND'},404);
-   const member=await sql(db,'SELECT project_id FROM bank_project_reviewers WHERE project_id=? AND reviewer_email_hash=?',pid,await digest(mail)).first();
+   const member=await sql(db,'SELECT project_id FROM bank_project_reviewers WHERE project_id=? AND reviewer_email_hash=? AND grant_id!='\'\'',pid,await digest(mail)).first();
    if(!member)return json({error:'NOT_FOUND'},404);
    const asset=await sql(db,"SELECT mime,role FROM bank_assets WHERE project_id=? AND actor=? AND digest=? AND role IN ('question_pdf','answer_pdf') AND deleted_at IS NULL",pid,project.actor,digestId).first();
    if(!asset)return json({error:'ASSET_NOT_FOUND'},404);
@@ -56,12 +56,12 @@ export async function handleReviewApi(request,env,identity,actor,url){
     const removed=await sql(db,'DELETE FROM bank_project_reviewers WHERE project_id=? AND reviewer_email_hash=? AND assigned_by=? RETURNING project_id',data.projectId,reviewerDigest,actor).first();
     return json({revoked:!!removed,projectId:data.projectId,previousApprovalsInvalidated:!!removed});
    }
-   await sql(db,'INSERT OR IGNORE INTO bank_project_reviewers(project_id,reviewer_email_hash,assigned_by) VALUES(?,?,?)',data.projectId,reviewerDigest,actor).run();
+   await sql(db,"INSERT INTO bank_project_reviewers(project_id,reviewer_email_hash,assigned_by,grant_id) VALUES(?,?,?,?) ON CONFLICT(project_id,reviewer_email_hash) DO UPDATE SET grant_id=excluded.grant_id WHERE bank_project_reviewers.grant_id=''",data.projectId,reviewerDigest,actor,crypto.randomUUID()).run();
    return json({assigned:true,projectId:data.projectId},201);
   }
   if(path==='/api/v1/reviews/assigned'&&method==='GET'){
    if(!reviewerRole)return json({error:'REVIEWER_REQUIRED'},403);
-   const rows=await sql(db,'SELECT p.id,p.name FROM bank_project_reviewers r JOIN bank_projects p ON p.id=r.project_id WHERE r.reviewer_email_hash=? AND p.deleted_at IS NULL AND p.actor!=? ORDER BY p.updated_at DESC LIMIT 50',await digest(mail),actor).all();
+   const rows=await sql(db,"SELECT p.id,p.name FROM bank_project_reviewers r JOIN bank_projects p ON p.id=r.project_id WHERE r.reviewer_email_hash=? AND r.grant_id!='' AND p.deleted_at IS NULL AND p.actor!=? ORDER BY p.updated_at DESC LIMIT 50",await digest(mail),actor).all();
    return json({projects:(rows.results||[]).map(p=>({id:p.id,name:p.name}))});
   }
   const route=/^\/api\/v1\/reviews\/projects\/([^/]+)\/questions(?:\/([^/]+))?$/.exec(path);
@@ -71,7 +71,8 @@ export async function handleReviewApi(request,env,identity,actor,url){
   if(!project)return json({error:'PROJECT_NOT_FOUND'},404);
   const own=ownerRole&&project.actor===actor;
   const reviewerHash=await digest(mail);
-  const assigned=reviewerRole&&project.actor!==actor&&!!(await sql(db,'SELECT project_id FROM bank_project_reviewers WHERE project_id=? AND reviewer_email_hash=?',pid,reviewerHash).first());
+  const grant=reviewerRole&&project.actor!==actor?await sql(db,'SELECT grant_id FROM bank_project_reviewers WHERE project_id=? AND reviewer_email_hash=?',pid,reviewerHash).first():null;
+  const assigned=!!grant&&uuid.test(grant.grant_id||'');
   if(!own&&!assigned)return json({error:'PROJECT_NOT_FOUND'},404);
   if(!qid&&method==='GET'){
    const rows=await sql(db,'SELECT id,revision,state,content_json,updated_at FROM bank_questions WHERE project_id=? AND deleted_at IS NULL ORDER BY updated_at DESC LIMIT 50',pid).all();
@@ -101,8 +102,8 @@ export async function handleReviewApi(request,env,identity,actor,url){
   // Audit before mutation: any audit outage prevents new approval decisions.
   await sql(db,'INSERT INTO security_audit(actor,action,result,detail) VALUES(?,?,?,?)',actor,'question_review_attempt',data.decision,qid).run();
   const eventId=crypto.randomUUID();
-  const query='INSERT INTO bank_review_events(id,project_id,question_id,source_revision,reviewer_actor,reviewer_email_hash,decision,checklist_json,source_digest) SELECT ?,?,?,?,?,?,?,?,? FROM bank_questions WHERE id=? AND project_id=? AND revision=? AND deleted_at IS NULL RETURNING id';
-  const row=await sql(db,query,eventId,pid,qid,question.revision,actor,reviewerHash,data.decision,JSON.stringify(checks),sourceDigest,qid,pid,question.revision).first();
+  const query='INSERT INTO bank_review_events(id,project_id,question_id,source_revision,reviewer_actor,reviewer_email_hash,grant_id,decision,checklist_json,source_digest) SELECT ?,?,?,?,?,?,?,?,?,? FROM bank_questions WHERE id=? AND project_id=? AND revision=? AND deleted_at IS NULL RETURNING id';
+  const row=await sql(db,query,eventId,pid,qid,question.revision,actor,reviewerHash,grant.grant_id,data.decision,JSON.stringify(checks),sourceDigest,qid,pid,question.revision).first();
   if(!row)return json({error:'REVISION_CONFLICT'},409);
   return json({reviewed:true,decision:data.decision,questionId:qid,sourceRevision:question.revision,autoPublish:false},201);
  }catch(e){
