@@ -125,7 +125,13 @@ jobs:
         run: |
           python engine/validate_bank.py
           python engine/build_catalog.py --output /tmp/catalog.json
-          cmp /tmp/catalog.json runtime/catalog.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          candidate=json.loads(Path('/tmp/catalog.json').read_text(encoding='utf-8'))
+          published=json.loads(Path('runtime/catalog.json').read_text(encoding='utf-8'))
+          assert candidate == published, 'runtime catalog differs from canonical content'
+          PY
 
   deploy:
     needs: [validate, release-qa]
