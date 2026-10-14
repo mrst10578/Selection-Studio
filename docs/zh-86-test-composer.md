@@ -15,3 +15,7 @@ Added `review-console/composer-studio.html/js` as a separate responsive approved
 ## 2026-10-14 print layout
 
 The exported print-ready HTML now explicitly requests A4 pages, preserves right-to-left Persian layout, keeps question sections together when possible and prints the answer key on a **separate page** when answers are included. Output remains escaped, source-order deterministic, local to the operator's browser and unpublishable. Regression tests cover print break, separated answers, order and escaping. The output is HTML/print-to-PDF, not native server-side PDF bytes or a public document.
+
+## 2026-10-14 revision-pinned export provenance
+
+Each accepted `POST /api/v1/bank/exams/compose` request now computes a stable SHA-256 hash over the server-verified draft exam manifest. The API includes `manifestHash` with the draft response. An audit record containing the operator's hashed actor identifier, abbreviated manifest hash and number of selected questions is written **before** returning the manifest; if audit storage fails, export is denied. Repeated requests over unchanged revision-pinned contents give the same fingerprint but distinct audit records. A hash is an integrity reference, **not** a cryptographic authorization signature and does not authorize publishing. `tests/approved-bank-api.test.mjs` covers this behavior.
