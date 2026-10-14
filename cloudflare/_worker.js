@@ -109,7 +109,7 @@ export default {
  async fetch(request,env){
   const url=new URL(request.url);
   if(url.pathname==="/health")return json({ok:true,service:"selection-studio",hosting:"Cloudflare Pages",assets:"native"});
-  if(url.pathname==="/api/session"||url.pathname==="/api/ocr"||url.pathname==="/api/draft"||url.pathname==="/api/ocr/jobs"||url.pathname.startsWith("/api/ocr/jobs/")||url.pathname==="/api/v1/projects"||url.pathname.startsWith("/api/v1/projects/")||url.pathname.startsWith("/api/v1/reviews/")||url.pathname.startsWith("/api/v1/bank/")){
+  if(url.pathname==="/api/readiness"||url.pathname==="/api/session"||url.pathname==="/api/ocr"||url.pathname==="/api/draft"||url.pathname==="/api/ocr/jobs"||url.pathname.startsWith("/api/ocr/jobs/")||url.pathname==="/api/v1/projects"||url.pathname.startsWith("/api/v1/projects/")||url.pathname.startsWith("/api/v1/reviews/")||url.pathname.startsWith("/api/v1/bank/")){
    const isOcr=url.pathname==="/api/ocr";
    const isBatch=url.pathname==="/api/ocr/jobs"||url.pathname.startsWith("/api/ocr/jobs/");
    const isDraft=url.pathname==="/api/draft";
@@ -126,6 +126,23 @@ export default {
    if(!operator&&!reviewer)return json({error:"Forbidden"},403);
    if(isReview)return handleReviewApi(request,env,identity,await actorId(identity),url);
    if(!operator&&url.pathname!=="/api/session")return json({error:"Operator role required"},403);
+   if(url.pathname==="/api/readiness"){
+    if(request.method!=="GET")return json({error:"Method not allowed"},405,{"Allow":"GET"});
+    // These are binding-presence indicators, not proof of a deployed consumer
+    // or a successful paid inference. Never return token contents or identities.
+    const dependencies={
+     securityDb:!!env.SECURITY_DB?.prepare,
+     privateAssetR2:!!env.QUESTION_ASSETS?.get&&!!env.QUESTION_ASSETS?.put&&!!env.QUESTION_ASSETS?.head,
+     ocrPayloadR2:!!env.OCR_JOB_ASSETS?.get&&!!env.OCR_JOB_ASSETS?.put,
+     ocrQueueProducer:!!env.OCR_QUEUE?.send,
+     ocrUpstreamToken:!!env.OCR_SERVICE_TOKEN,
+     reviewerAllowlist:!!String(env.REVIEWER_EMAILS||"").trim()
+    };
+    return json({readyForLiveOcr:dependencies.securityDb&&dependencies.ocrUpstreamToken,
+     readyForBatchProducer:dependencies.securityDb&&dependencies.ocrPayloadR2&&dependencies.ocrQueueProducer,
+     readyForQuestionEvidence:dependencies.securityDb&&dependencies.privateAssetR2,
+     dependencies,warning:"Binding checks only. Consumer, Access, budgets and end-to-end OCR still require separate acceptance."});
+   }
    if(isBank)return handleApprovedBankApi(request,env,await actorId(identity),url);
    if(isAssets)return handleAssetApi(request,env,await actorId(identity),url);
    if(isQuestions)return handleQuestionApi(request,env,await actorId(identity),url);
