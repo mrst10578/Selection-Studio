@@ -53,7 +53,14 @@ export async function handleApprovedBankApi(request,env,actor,url){
    const manifest={title:data.title.trim(),answersIncluded:data.includeAnswers,publishable:false,
     items:selected.map((q,i)=>({index:i+1,id:q.id,revision:q.revision,question:q.questionText,
      ...(data.includeAnswers?{answer:q.answerText}:{})}))};
-   return j({manifest,status:'draft_export_only',finalOperatorApprovalRequired:true});
+   // A deterministic provenance marker is not an approval signature. Fail closed
+   // if the audit insert fails; never export an unaudited set of source revisions.
+   const checksum=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(manifest)));
+   const manifestHash=Array.from(new Uint8Array(checksum),x=>x.toString(16).padStart(2,'0')).join('');
+   await dbq(env.SECURITY_DB,
+    'INSERT INTO security_audit(actor,action,result,detail) VALUES(?,?,?,?)',
+    actor,'exam_draft_compose','created',manifestHash.slice(0,24)+':'+manifest.items.length).run();
+   return j({manifest,manifestHash,status:'draft_export_only',finalOperatorApprovalRequired:true});
   }
   return j({error:'METHOD_NOT_ALLOWED'},405);
  }catch(e){
