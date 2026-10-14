@@ -103,14 +103,20 @@ export async function handleAssetApi(request,env,actor,url){
     if(!await env.QUESTION_ASSETS.head(key))return json({error:'ASSET_MISSING_IN_STORAGE'},503);
     return json({digest:inputDigest,mime,role,size,existing:true},200);
    }
+   const inputKey=privateAssetKey(actor,inputDigest,mime);
+   // Count *all* actor-owned blobs, including tombstones. Soft deletion only
+   // hides metadata and does not release R2 storage; unique keys are deduped.
    const quota=await query(db,`SELECT
     (SELECT COUNT(*) FROM bank_assets WHERE project_id=? AND actor=? AND deleted_at IS NULL) AS project_count,
     (SELECT COALESCE(SUM(byte_size),0) FROM bank_assets WHERE project_id=? AND actor=? AND deleted_at IS NULL) AS project_bytes,
-    (SELECT COUNT(*) FROM bank_assets WHERE actor=? AND deleted_at IS NULL) AS actor_count,
-    (SELECT COALESCE(SUM(byte_size),0) FROM bank_assets WHERE actor=? AND deleted_at IS NULL) AS actor_bytes`,
-    projectId,actor,projectId,actor,actor,actor).first();
+    (SELECT COUNT(DISTINCT object_key) FROM bank_assets WHERE actor=?) AS actor_count,
+    (SELECT COALESCE(SUM(item_bytes),0) FROM
+      (SELECT MAX(byte_size) AS item_bytes FROM bank_assets WHERE actor=? GROUP BY object_key)) AS actor_bytes,
+    (SELECT COUNT(*) FROM bank_assets WHERE actor=? AND object_key=?) AS already_stored`,
+    projectId,actor,projectId,actor,actor,actor,actor,inputKey).first();
+   const newPhysical=quota.already_stored?0:1;
    if(quota.project_count>=PROJECT_MAX_FILES||quota.project_bytes+size>PROJECT_MAX_BYTES||
-      quota.actor_count>=ACTOR_MAX_FILES||quota.actor_bytes+size>ACTOR_MAX_BYTES)
+      quota.actor_count+newPhysical>ACTOR_MAX_FILES||quota.actor_bytes+(newPhysical?size:0)>ACTOR_MAX_BYTES)
     return json({error:'ASSET_QUOTA_EXCEEDED',maxProjectFiles:PROJECT_MAX_FILES,maxProjectBytes:PROJECT_MAX_BYTES},429);
    const asset=await putPrivateAsset(env,actor,bytes,{mime});
    // Recheck quota in the same SQLite statement as the insert so simultaneous
@@ -119,14 +125,18 @@ export async function handleAssetApi(request,env,actor,url){
     SELECT ?,?,?,?,?,?,?
     WHERE (SELECT COUNT(*) FROM bank_assets WHERE project_id=? AND actor=? AND deleted_at IS NULL) < ?
       AND (SELECT COALESCE(SUM(byte_size),0) FROM bank_assets WHERE project_id=? AND actor=? AND deleted_at IS NULL)+? <= ?
-      AND (SELECT COUNT(*) FROM bank_assets WHERE actor=? AND deleted_at IS NULL) < ?
-      AND (SELECT COALESCE(SUM(byte_size),0) FROM bank_assets WHERE actor=? AND deleted_at IS NULL)+? <= ?
+      AND (SELECT COUNT(DISTINCT object_key) FROM bank_assets WHERE actor=?)
+        + CASE WHEN EXISTS(SELECT 1 FROM bank_assets WHERE actor=? AND object_key=?) THEN 0 ELSE 1 END <= ?
+      AND (SELECT COALESCE(SUM(item_bytes),0) FROM
+        (SELECT MAX(byte_size) AS item_bytes FROM bank_assets WHERE actor=? GROUP BY object_key))
+        + CASE WHEN EXISTS(SELECT 1 FROM bank_assets WHERE actor=? AND object_key=?) THEN 0 ELSE ? END <= ?
     ON CONFLICT(project_id,digest,role) DO UPDATE SET deleted_at=NULL
       WHERE bank_assets.actor=excluded.actor AND bank_assets.object_key=excluded.object_key
     RETURNING digest`,
     projectId,actor,asset.digest,mime,role,asset.key,asset.bytes,
     projectId,actor,PROJECT_MAX_FILES,projectId,actor,asset.bytes,PROJECT_MAX_BYTES,
-    actor,ACTOR_MAX_FILES,actor,asset.bytes,ACTOR_MAX_BYTES).first();
+    actor,actor,asset.key,ACTOR_MAX_FILES,
+    actor,actor,asset.key,asset.bytes,ACTOR_MAX_BYTES).first();
    if(!inserted)return json({error:'ASSET_QUOTA_EXCEEDED'},429);
    return json({digest:asset.digest,mime,role,size:asset.bytes,existing:asset.existing},201);
   }
