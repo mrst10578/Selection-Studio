@@ -28,6 +28,8 @@ export async function handleAssetApi(request,env,actor,url){
    if(!roleSet.has(role))return json({error:'INVALID_ASSET_ROLE'},400);
    const row=await query(db,'SELECT digest,mime,role FROM bank_assets WHERE project_id=? AND actor=? AND digest=? AND role=? AND deleted_at IS NULL',projectId,actor,digest,role).first();
    if(!row)return json({error:'ASSET_NOT_FOUND'},404);
+   // Download is a private data access; log only project/role, never file bytes.
+   await query(db,'INSERT INTO security_audit(actor,action,result,detail) VALUES(?,?,?,?)',actor,'bank_asset_download','attempt',projectId+':'+role).run();
    const result=await readPrivateAsset(env,actor,{digest:row.digest,mime:row.mime});
    if(!result)return json({error:'ASSET_MISSING_IN_STORAGE'},503);
    const ext={'application/pdf':'pdf','image/png':'png','image/jpeg':'jpg','image/webp':'webp','application/json':'json'}[row.mime];
@@ -47,6 +49,7 @@ export async function handleAssetApi(request,env,actor,url){
     const linked=await query(db,"SELECT 1 AS used FROM bank_question_revisions r JOIN bank_questions q ON q.id=r.question_id WHERE q.project_id=? AND q.actor=? AND json_extract(r.content_json,'$.sourceDigest')=? LIMIT 1",projectId,actor,digest).first();
     if(linked)return json({error:'SOURCE_PDF_REFERENCED_BY_QUESTION'},409);
    }
+   await query(db,'INSERT INTO security_audit(actor,action,result,detail) VALUES(?,?,?,?)',actor,'bank_asset_tombstone','attempt',projectId+':'+role).run();
    const deleted=await query(db,'UPDATE bank_assets SET deleted_at=CURRENT_TIMESTAMP WHERE project_id=? AND actor=? AND digest=? AND role=? AND deleted_at IS NULL RETURNING digest',projectId,actor,digest,role).first();
    // R2 object is deliberately not deleted synchronously: dedup shares actor-scoped
    // blobs across projects, and concurrent uploads may still reference this key.
@@ -60,6 +63,8 @@ export async function handleAssetApi(request,env,actor,url){
    if(role==='figure'&&!mime.startsWith('image/'))return json({error:'IMAGE_REQUIRED'},400);
    const declared=request.headers.get('content-length');
    if(declared!==null&&(!/^\d+$/.test(declared)||Number(declared)>maxBytes))return json({error:'ASSET_TOO_LARGE'},413);
+   // Fail closed before buffering private bytes if durable security audit is unavailable.
+   await query(db,'INSERT INTO security_audit(actor,action,result,detail) VALUES(?,?,?,?)',actor,'bank_asset_upload','attempt',projectId+':'+role).run();
    let size=0;const chunks=[];
    if(!request.body)return json({error:'EMPTY_ASSET'},400);
    const reader=request.body.getReader();
