@@ -61,3 +61,50 @@ test('missing R2 binding fails closed without exposing metadata',async()=>{
  assert.equal((await response.json()).error,'ASSET_STORAGE_NOT_CONFIGURED');
  f.local.close();
 });
+
+
+test('quota blocks a 25th private project asset before R2 write',async()=>{
+ const f=fixture();
+ const insert=f.local.prepare('INSERT INTO bank_assets(project_id,actor,digest,mime,role,object_key,byte_size) VALUES(?,?,?,?,?,?,?)');
+ for(let i=1;i<=24;i++){
+  const d=i.toString(16).padStart(64,'0');
+  insert.run(pid,actorA,d,'application/pdf','question_pdf','private-assets/'+actorA+'/'+d+'.pdf',60);
+ }
+ const response=await f.call(actorA,'','POST',pdf,{'Content-Type':'application/pdf','X-Asset-Role':'question_pdf'});
+ assert.equal(response.status,429);
+ assert.equal((await response.json()).error,'ASSET_QUOTA_EXCEEDED');
+ assert.equal(f.stored.size,0);
+ f.local.close();
+});
+test('unreferenced private asset can be tombstoned without accidentally deleting deduplicated R2 data',async()=>{
+ const f=fixture(),headers={'Content-Type':'application/pdf','X-Asset-Role':'question_pdf'};
+ const created=await(await f.call(actorA,'','POST',pdf,headers)).json();
+ const path='/'+created.digest+'?role=question_pdf';
+ assert.equal((await f.call(actorB,path,'DELETE')).status,404);
+ const removed=await f.call(actorA,path,'DELETE');assert.equal(removed.status,200);
+ const result=await removed.json();
+ assert.equal(result.deleted,true);assert.equal(result.physicalCleanupPending,true);
+ assert.equal((await(await f.call(actorA)).json()).assets.length,0);
+ assert.equal((await f.call(actorA,path)).status,404);
+ assert.equal(f.stored.size,1,'R2 is not physically deleted during a metadata tombstone');
+ const repeated=await(await f.call(actorA,'','POST',pdf,headers)).json();
+ assert.equal(repeated.existing,true);
+ assert.equal((await(await f.call(actorA)).json()).assets.length,1);
+ f.local.close();
+});
+test('a question PDF referenced by any saved revision cannot be deleted',async()=>{
+ const f=fixture(),headers={'Content-Type':'application/pdf','X-Asset-Role':'question_pdf'};
+ const result=await(await f.call(actorA,'','POST',pdf,headers)).json();
+ const question='77777777-2222-3333-4444-555555555555';
+ f.local.prepare('INSERT INTO bank_questions(id,project_id,actor,content_json) VALUES(?,?,?,?)')
+  .run(question,pid,actorA,JSON.stringify({questionText:'متن',sourceDigest:result.digest}));
+ const path='/'+result.digest+'?role=question_pdf';
+ assert.equal((await f.call(actorA,path,'DELETE')).status,409);
+ // Rewriting or deleting the current question does not erase historical source proof.
+ f.local.prepare('UPDATE bank_questions SET revision=revision+1,content_json=?,deleted_at=CURRENT_TIMESTAMP WHERE id=?')
+  .run(JSON.stringify({questionText:'نسخه جدید',sourceDigest:''}),question);
+ const response=await f.call(actorA,path,'DELETE');
+ assert.equal(response.status,409);
+ assert.equal((await response.json()).error,'SOURCE_PDF_REFERENCED_BY_QUESTION');
+ f.local.close();
+});
