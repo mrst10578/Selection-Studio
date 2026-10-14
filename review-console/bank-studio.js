@@ -26,7 +26,7 @@ function enableSession(){
 }
 function enableContext(){
  const hasProject=!!state.projectId,hasQuestion=!!state.current;
- for(const id of ['newQuestion','questionText','answerText','taxonomyId','sourceLabel','saveDraft','findDuplicates','suggestCategories','compareDrafts','sourcePdf','answerPdf','figureImage','refreshAssets','sourceDigest','operatorConfirmed','reviewerEmail','assignReviewer','saveOfflineEncrypted','listOfflineEncrypted'])$(id).disabled=!state.authenticated||!hasProject;
+ for(const id of ['newQuestion','questionText','answerText','taxonomyId','sourceLabel','saveDraft','findDuplicates','suggestCategories','compareDrafts','sourcePdf','answerPdf','figureImage','refreshAssets','sourceDigest','operatorConfirmed','reviewerEmail','assignReviewer','revokeReviewer','saveOfflineEncrypted','listOfflineEncrypted'])$(id).disabled=!state.authenticated||!hasProject;
  $('deleteDraft').disabled=!hasQuestion;
  $('showHistory').disabled=!hasQuestion;
  $('revision').textContent='نسخه: '+(hasQuestion?state.current.revision:'جدید');
@@ -208,6 +208,14 @@ $('listOfflineEncrypted').addEventListener('click',()=>void safely(refreshOfflin
 $('assignReviewer').addEventListener('click',()=>void safely(async()=>{
  const reviewerEmail=$('reviewerEmail').value.trim();if(!reviewerEmail||!state.projectId)throw Error('ایمیل بازبین و پروژه الزامی است');
  await api('/api/v1/reviews/assignments',json('POST',{projectId:state.projectId,reviewerEmail}));
+$('revokeReviewer').addEventListener('click',()=>void safely(async()=>{
+ const reviewerEmail=$('reviewerEmail').value.trim();
+ if(!reviewerEmail||!state.projectId)throw Error('ایمیل بازبین و پروژه الزامی است');
+ if(!window.confirm('دسترسی این بازبین لغو شود؟ همه تأییدهای قبلی او در بانک این پروژه تا دعوت دوباره قابل استفاده نخواهند بود.'))return;
+ const result=await api('/api/v1/reviews/assignments',json('DELETE',{projectId:state.projectId,reviewerEmail}));
+ notice(result.revoked?'دسترسی بازبین لغو شد؛ سؤال‌های متأثر از بانک خروجی حذف می‌شوند.':'این بازبین از قبل دسترسی فعال نداشت.');
+}));
+
  $('reviewerEmail').value='';notice('دسترسی بازبین مستقل فقط برای این پروژه ثبت شد.');
 }));
 $('newQuestion').addEventListener('click',()=>{if(!safeLeave())return;loadEditor(null);renderQuestions();notice('پیش‌نویس جدید؛ برای ذخیره روی ثبت بزن.')});
