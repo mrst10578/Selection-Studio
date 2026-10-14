@@ -206,17 +206,20 @@ $('createProject').addEventListener('click',()=>void safely(createProject));
 $('saveOfflineEncrypted').addEventListener('click',()=>void safely(saveCurrentOffline));
 $('listOfflineEncrypted').addEventListener('click',()=>void safely(refreshOfflineVault));
 $('assignReviewer').addEventListener('click',()=>void safely(async()=>{
- const reviewerEmail=$('reviewerEmail').value.trim();if(!reviewerEmail||!state.projectId)throw Error('ایمیل بازبین و پروژه الزامی است');
- await api('/api/v1/reviews/assignments',json('POST',{projectId:state.projectId,reviewerEmail}));
+ const reviewerEmail=$('reviewerEmail').value.trim();
+ const projectId=state.projectId;
+ if(!reviewerEmail||!projectId)throw Error('ایمیل بازبین و پروژه الزامی است');
+ await api('/api/v1/reviews/assignments',json('POST',{projectId,reviewerEmail}));
+ $('reviewerEmail').value='';
+ notice('دسترسی بازبین مستقل فقط برای این پروژه ثبت شد.');
+}));
 $('revokeReviewer').addEventListener('click',()=>void safely(async()=>{
  const reviewerEmail=$('reviewerEmail').value.trim();
- if(!reviewerEmail||!state.projectId)throw Error('ایمیل بازبین و پروژه الزامی است');
- if(!window.confirm('دسترسی این بازبین لغو شود؟ همه تأییدهای قبلی او در بانک این پروژه تا دعوت دوباره قابل استفاده نخواهند بود.'))return;
- const result=await api('/api/v1/reviews/assignments',json('DELETE',{projectId:state.projectId,reviewerEmail}));
- notice(result.revoked?'دسترسی بازبین لغو شد؛ سؤال‌های متأثر از بانک خروجی حذف می‌شوند.':'این بازبین از قبل دسترسی فعال نداشت.');
-}));
-
- $('reviewerEmail').value='';notice('دسترسی بازبین مستقل فقط برای این پروژه ثبت شد.');
+ const projectId=state.projectId;
+ if(!reviewerEmail||!projectId)throw Error('ایمیل بازبین و پروژه الزامی است');
+ if(!window.confirm('دسترسی این بازبین لغو شود؟ تأییدهای قبلی او حتی پس از دعوت مجدد معتبر نخواهند بود.'))return;
+ const result=await api('/api/v1/reviews/assignments',json('DELETE',{projectId,reviewerEmail}));
+ notice(result.revoked?'دسترسی بازبین لغو شد؛ تأییدهای قبلی او دیگر معتبر نیستند.':'این بازبین دسترسی فعالی نداشت.');
 }));
 $('newQuestion').addEventListener('click',()=>{if(!safeLeave())return;loadEditor(null);renderQuestions();notice('پیش‌نویس جدید؛ برای ذخیره روی ثبت بزن.')});
 $('saveDraft').addEventListener('click',()=>void safely(saveDraft));
