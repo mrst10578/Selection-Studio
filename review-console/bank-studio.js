@@ -99,7 +99,7 @@ async function loadAssets(){
    if(!window.confirm('این فایل از فهرست پروژه برداشته شود؟ فایل‌های مرجع سؤال‌های ثبت‌شده قابل حذف نیستند و پاک‌سازی فیزیکی جداگانه انجام می‌شود.'))return;
    const result=await api('/'+projectId+'/assets/'+asset.digest+'?role='+encodeURIComponent(asset.role),{method:'DELETE'});
    if(state.projectId!==projectId)return;
-   notice(result.deleted?'پیوست از فهرست برداشته شد. پاک‌سازی فیزیکی فضای ذخیره‌سازی بعداً انجام می‌شود.':'این فایل قبلاً از فهرست حذف شده است.');
+   notice(result.deleted?'پیوست از فهرست برداشته شد. ظرفیت فضای خصوصی تا پاک‌سازی فیزیکی آزاد نمی‌شود.':'این فایل قبلاً از فهرست حذف شده است.');
    await loadAssets();
   }));
   box.append(remove);list.append(box);
