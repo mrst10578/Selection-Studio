@@ -79,3 +79,36 @@ test('attesting a question requires a registered active owner-scoped source PDF'
  assert.equal((await f.request(actorA,endpoint+'/'+qid,'PATCH',{baseRevision:1,content:{...content,operatorConfirmed:false}})).status,200);
  f.local.close();
 });
+
+
+test('atomic operator attestation cannot race a private source tombstone',async()=>{
+ const f=fixture(),pid=(await f.request(actorA,'','POST',{name:'race check'})).body.id;
+ const digest='e'.repeat(64);
+ f.local.prepare('INSERT INTO bank_assets(project_id,actor,digest,mime,role,object_key,byte_size) VALUES(?,?,?,?,?,?,?)')
+  .run(pid,actorA,digest,'application/pdf','question_pdf','private/'+digest,80);
+ const saved=f.local.prepare('SELECT COUNT(*) AS n FROM bank_questions WHERE project_id=?');
+ const original=f.local.prepare.bind(f.local);
+ // Intercept the exact atomic INSERT, after preflight sees a valid source PDF.
+ const db={prepare(sql){
+  const statement=original(sql);
+  return {bind(...args){return{
+   async first(){
+    if(sql.includes('INSERT INTO bank_questions(id,project_id,actor,content_json)')){
+     f.local.prepare('UPDATE bank_assets SET deleted_at=CURRENT_TIMESTAMP WHERE project_id=? AND digest=?').run(pid,digest);
+    }
+    return statement.get(...args)??null;
+   },
+   async all(){return {results:statement.all(...args)}},
+   async run(){return statement.run(...args)}
+  }}};
+ }};
+ const endpoint='/api/v1/projects/'+pid+'/questions';
+ const url=new URL('https://preview.example'+endpoint);
+ // Install a DB wrapper without changing any user data or Cloudflare resources.
+ const response=await handleQuestionApi(new Request(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+  content:{questionText:'متن کنترل شده',sourceDigest:digest,operatorConfirmed:true}
+ })}),{SECURITY_DB:db},actorA,url);
+ assert.equal(response.status,422);
+ assert.equal(saved.get(pid).n,0);
+ f.local.close();
+});
