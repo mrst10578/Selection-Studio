@@ -220,6 +220,8 @@ async function safely(action){try{await action()}catch(e){
  const message=e.status===401?'ابتدا وارد Cloudflare Access شو':
   e.message==='SOURCE_PDF_REFERENCED_BY_QUESTION'?'این PDF در تاریخچه سؤال‌ها استفاده شده و برای حفظ مدرک علمی قابل حذف نیست.':
   e.message==='SOURCE_PDF_NOT_REGISTERED'?'برای تأیید متن، ابتدا PDF مرجعِ فعال را در همین پروژه بارگذاری و انتخاب کن.':
+  e.message==='SOURCE_PDF_MISSING_IN_STORAGE'?'نسخه خصوصی PDF مرجع در فضای ذخیره‌سازی موجود نیست. این سؤال قابل تأیید نیست.':
+  e.message==='SOURCE_STORAGE_NOT_CONFIGURED'?'فضای خصوصی R2 فعال نیست؛ تأیید سؤال با PDF ممکن نیست.':
   e.message==='ASSET_MISSING_IN_STORAGE'?'فایل در فهرست ثبت شده، اما نسخه خصوصی آن در ذخیره‌سازی پیدا نشد. از این فایل استفاده نکن.':
   e.message==='ASSET_QUOTA_EXCEEDED'?'سقف تعداد یا حجم فایل‌های خصوصی این حساب/پروژه تکمیل شده است.':
   e.message||'خطا در دسترسی امن';
