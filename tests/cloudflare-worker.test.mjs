@@ -111,3 +111,30 @@ test("authenticated OCR enforces D1 quota and records audit before inference",as
   assert.equal(upstreamCalls,1);
  }finally{globalThis.fetch=prior}
 });
+
+test("operator-only readiness reports preview dependency bindings without revealing credentials",async()=>{
+ const prior=globalThis.fetch;
+ globalThis.fetch=async()=>new Response(JSON.stringify({keys:[jwk]}),{status:200});
+ try{
+  const req=(mail="operator@example.com",method="GET")=>request("/api/readiness",method,{"Cf-Access-Jwt-Assertion":jwt(mail)});
+  const unauth=await worker.fetch(request("/api/readiness"),authEnv);
+  assert.equal(unauth.status,401);
+  const current=await worker.fetch(req(),authEnv);
+  assert.equal(current.status,200);
+  const body=await current.json();
+  assert.equal(body.readyForBatchProducer,false);
+  assert.equal(body.readyForQuestionEvidence,false);
+  assert.equal(body.dependencies.securityDb,false);
+  assert.equal(body.dependencies.ocrUpstreamToken,false);
+  assert.equal(JSON.stringify(body).includes("server-secret"),false);
+  const seeded={...authEnv,SECURITY_DB:{prepare(){return{}}},QUESTION_ASSETS:{put(){},head(){},get(){}},
+   OCR_JOB_ASSETS:{put(){},get(){}},OCR_QUEUE:{send(){}},OCR_SERVICE_TOKEN:"server-secret"};
+  const ready=await(await worker.fetch(req(),seeded)).json();
+  assert.equal(ready.readyForBatchProducer,true);
+  assert.equal(ready.readyForQuestionEvidence,true);
+  assert.equal(ready.dependencies.ocrUpstreamToken,true);
+  assert.equal(JSON.stringify(ready).includes("server-secret"),false);
+  assert.equal((await worker.fetch(req("reviewer@example.com"),{...seeded,REVIEWER_EMAILS:"reviewer@example.com"})).status,403);
+  assert.equal((await worker.fetch(req("operator@example.com","POST"),seeded)).status,405);
+ }finally{globalThis.fetch=prior}
+});
