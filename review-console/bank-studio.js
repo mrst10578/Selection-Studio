@@ -93,7 +93,16 @@ async function loadAssets(){
   box.append(elem('span',({question_pdf:'دفترچه سؤال',answer_pdf:'پاسخنامه',figure:'شکل',export:'خروجی'}[asset.role]||asset.role)+' · '+Math.ceil(asset.size/1024)+' کیلوبایت'));
   const link=elem('a','دریافت خصوصی');link.className='bank-download';
   link.href='/api/v1/projects/'+encodeURIComponent(state.projectId)+'/assets/'+encodeURIComponent(asset.digest)+'?role='+encodeURIComponent(asset.role);
-  link.rel='nofollow';box.append(link);list.append(box);
+  link.rel='nofollow';box.append(link);
+  const remove=elem('button','برداشتن پیوست');remove.type='button';
+  remove.addEventListener('click',()=>void safely(async()=>{
+   if(!window.confirm('این فایل از فهرست پروژه برداشته شود؟ فایل‌های مرجع سؤال‌های ثبت‌شده قابل حذف نیستند و پاک‌سازی فیزیکی جداگانه انجام می‌شود.'))return;
+   const result=await api('/'+projectId+'/assets/'+asset.digest+'?role='+encodeURIComponent(asset.role),{method:'DELETE'});
+   if(state.projectId!==projectId)return;
+   notice(result.deleted?'پیوست از فهرست برداشته شد. پاک‌سازی فیزیکی فضای ذخیره‌سازی بعداً انجام می‌شود.':'این فایل قبلاً از فهرست حذف شده است.');
+   await loadAssets();
+  }));
+  box.append(remove);list.append(box);
  }
 }
 async function uploadAsset(file,role){
@@ -207,7 +216,13 @@ function compareDrafts(){
  const a=$('questionText').value,b=$('secondDraft').value;if(!a.trim()||!b.trim()){notice('برای مقایسه، هر دو متن را وارد کن',true);return}
  const r=compareModelDrafts({text:a},{text:b});$('compareResult').replaceChildren(elem('div','شباهت متنی '+(r.textScore*100).toFixed(1)+'٪\n'+(r.differences.join('، ')||'اختلاف آشکار شناسایی نشد')+'\nتأیید انسانی همچنان الزامی است.','bank-result'));
 }
-async function safely(action){try{await action()}catch(e){notice(e.status===401?'ابتدا وارد Cloudflare Access شو':e.message||'خطا در دسترسی امن',true)}}
+async function safely(action){try{await action()}catch(e){
+ const message=e.status===401?'ابتدا وارد Cloudflare Access شو':
+  e.message==='SOURCE_PDF_REFERENCED_BY_QUESTION'?'این PDF در تاریخچه سؤال‌ها استفاده شده و برای حفظ مدرک علمی قابل حذف نیست.':
+  e.message==='ASSET_QUOTA_EXCEEDED'?'سقف تعداد یا حجم فایل‌های خصوصی این حساب/پروژه تکمیل شده است.':
+  e.message||'خطا در دسترسی امن';
+ notice(message,true);
+}}
 for(const id of fields)$(id).addEventListener('input',()=>{state.dirty=true;$('operatorConfirmed').checked=false});
 $('sourceDigest').addEventListener('change',()=>{state.dirty=true;$('operatorConfirmed').checked=false});
 $('operatorConfirmed').addEventListener('change',()=>{state.dirty=true});
