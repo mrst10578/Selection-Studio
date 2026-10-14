@@ -34,6 +34,9 @@ test('operator can only compose version-pinned approved questions as unpublishab
  const x=f();
  const result=await x.call('/exams/compose','POST',{title:'زیست',questionIds:[qid],sourceRevisions:[1],includeAnswers:true});
  assert.equal(result.status,200);assert.equal(result.data.manifest.publishable,false);
+ assert.match(result.data.manifestHash,/^[a-f0-9]{64}$/);
+ const event=x.d.prepare("SELECT result,detail FROM security_audit WHERE action='exam_draft_compose'").get();
+ assert.equal(event.result,'created');assert.ok(event.detail.startsWith(result.data.manifestHash.slice(0,24)));
  assert.equal(result.data.manifest.items[0].answer,'گزینه ۲');
  assert.equal((await x.call('/exams/compose','POST',{title:'آزمون',questionIds:[qid],sourceRevisions:[2],includeAnswers:false})).status,409);
  assert.equal((await x.call('/exams/compose','POST',{title:'آزمون',questionIds:[qid,qid],sourceRevisions:[1,1],includeAnswers:false})).status,400);
@@ -65,5 +68,14 @@ test('tampered reviewer source digest or unconfirmed source cannot be exported',
  x.d.prepare("UPDATE bank_review_events SET source_digest=? WHERE id=?").run(digest,'11111111-1111-1111-1111-111111111111');
  x.d.prepare('UPDATE bank_questions SET content_json=json_set(content_json, ?, false) WHERE id=?').run('$.operatorConfirmed',qid);
  assert.equal((await x.call('/questions')).data.questions.length,0);
+ x.d.close();
+});
+
+test('draft exam manifest hash is deterministic and each request leaves an audit trail',async()=>{
+ const x=f(),body={title:'زیست',questionIds:[qid],sourceRevisions:[1],includeAnswers:false};
+ const first=await x.call('/exams/compose','POST',body),second=await x.call('/exams/compose','POST',body);
+ assert.equal(first.status,200);assert.equal(second.status,200);
+ assert.equal(first.data.manifestHash,second.data.manifestHash);
+ assert.equal(x.d.prepare("SELECT count(*) AS n FROM security_audit WHERE action='exam_draft_compose'").get().n,2);
  x.d.close();
 });
