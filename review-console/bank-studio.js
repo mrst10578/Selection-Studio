@@ -1,7 +1,7 @@
 import {findDuplicateCandidates,compareModelDrafts,suggestTaxonomy} from '../studio/question-intelligence.js';
 import {saveOfflineDraft,listOfflineDrafts,readOfflineDraft,deleteOfflineDraft} from '../studio/offline-encrypted-vault.js';
 const $=id=>document.getElementById(id);
-const state={projects:[],questions:[],projectId:'',current:null,dirty:false,authenticated:false,actorEmail:''};
+const state={projects:[],questions:[],projectId:'',current:null,dirty:false,authenticated:false,actorEmail:'',questionLoadSeq:0,assetLoadSeq:0};
 const apiRoot='/api/v1/projects';
 const fields=['questionText','answerText','taxonomyId','sourceLabel'];
 const catalog=[
@@ -61,18 +61,29 @@ async function loadProjects(selectId){
  enableContext();
 }
 async function loadQuestions(){
- if(!state.projectId)return;
- const result=await api('/'+state.projectId+'/questions');
- state.questions=result.questions||[];loadEditor(null);renderQuestions();void loadAssets().catch(showAssetsUnavailable);
+ const projectId=state.projectId,seq=++state.questionLoadSeq;
+ if(!projectId)return;
+ const result=await api('/'+projectId+'/questions');
+ if(projectId!==state.projectId||seq!==state.questionLoadSeq)return;
+ state.questions=result.questions||[];
+ if(!state.dirty)loadEditor(null);
+ renderQuestions();
+ void loadAssets().catch(showAssetsUnavailable);
 }
 
 function showAssetsUnavailable(err){
  $('assetList').replaceChildren(elem('p',err?.message==='ASSET_STORAGE_NOT_CONFIGURED'?'فضای R2 هنوز فعال نیست؛ فایلی ارسال نشد.':'فایل‌های این پروژه فعلاً در دسترس نیستند.','bank-help'));
 }
 async function loadAssets(){
- const list=$('assetList');list.replaceChildren();if(!state.projectId)return;
- const result=await api('/'+state.projectId+'/assets');
- const sourceSelect=$('sourceDigest'),previous=state.current?.content?.sourceDigest||sourceSelect.value;
+ const projectId=state.projectId,seq=++state.assetLoadSeq;
+ const list=$('assetList');list.replaceChildren();if(!projectId)return;
+ const result=await api('/'+projectId+'/assets').catch(e=>{
+  if(projectId!==state.projectId||seq!==state.assetLoadSeq)return null;
+  throw e;
+ });
+ if(!result||projectId!==state.projectId||seq!==state.assetLoadSeq)return;
+ const sourceSelect=$('sourceDigest');
+ const previous=state.dirty?sourceSelect.value:state.current?.content?.sourceDigest||sourceSelect.value;
  sourceSelect.replaceChildren(new Option('بدون PDF منبع',''));
  for(const a of result.assets||[])if(a.role==='question_pdf')sourceSelect.add(new Option('PDF · '+a.digest.slice(0,16),a.digest));
  sourceSelect.value=[...sourceSelect.options].some(o=>o.value===previous)?previous:'';
@@ -91,7 +102,9 @@ async function uploadAsset(file,role){
  const mime=file.type||({'question_pdf':'application/pdf','answer_pdf':'application/pdf'}[role]||'');
  if(!['application/pdf','image/png','image/jpeg','image/webp'].includes(mime))throw Error('نوع فایل پشتیبانی نمی‌شود');
  notice('در حال بارگذاری خصوصی فایل…');
- const result=await api('/'+state.projectId+'/assets',{method:'POST',headers:{'Content-Type':mime,'X-Asset-Role':role},body:file});
+ const projectId=state.projectId;
+ const result=await api('/'+projectId+'/assets',{method:'POST',headers:{'Content-Type':mime,'X-Asset-Role':role},body:file});
+ if(projectId!==state.projectId)return;
  notice('فایل خصوصی ثبت شد؛ OCR و انتشار اجرا نشده‌اند. '+result.digest.slice(0,12));
  await loadAssets();
 }
@@ -200,7 +213,12 @@ $('sourceDigest').addEventListener('change',()=>{state.dirty=true;$('operatorCon
 $('operatorConfirmed').addEventListener('change',()=>{state.dirty=true});
 $('projectSelect').addEventListener('change',e=>void safely(async()=>{
  if(!safeLeave()){e.target.value=state.projectId;return}
- state.projectId=e.target.value;await loadQuestions();enableContext();
+ state.projectId=e.target.value;
+ ++state.questionLoadSeq;++state.assetLoadSeq;
+ state.questions=[];loadEditor(null);renderQuestions();
+ $('assetList').replaceChildren();
+ $('sourceDigest').replaceChildren(new Option('بدون PDF منبع',''));
+ await loadQuestions();enableContext();
 }));
 $('createProject').addEventListener('click',()=>void safely(createProject));
 $('saveOfflineEncrypted').addEventListener('click',()=>void safely(saveCurrentOffline));
