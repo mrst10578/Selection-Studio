@@ -1,5 +1,5 @@
 /* ZH-81 | Authenticated, fail-closed project asset proxy. No public bucket URLs. */
-import {putPrivateAsset,readPrivateAsset} from './private-assets.js';
+import {putPrivateAsset,readPrivateAsset,sha256Hex,privateAssetKey} from './private-assets.js';
 const id=/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
 const actorPattern=/^[a-f0-9]{32}$/i;
 const mimeSet=new Set(['application/pdf','image/png','image/jpeg','image/webp','application/json']);
@@ -93,6 +93,16 @@ export async function handleAssetApi(request,env,actor,url){
    if(size<16)return json({error:'EMPTY_ASSET'},400);
    const bytes=new Uint8Array(size);let offset=0;
    for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength}
+   // Reposting an unchanged active attachment is a no-op even at quota.
+   // Verify the private R2 object still exists: never claim success from D1 alone.
+   const inputDigest=await sha256Hex(bytes);
+   const registered=await query(db,'SELECT mime,byte_size FROM bank_assets WHERE project_id=? AND actor=? AND digest=? AND role=? AND deleted_at IS NULL',projectId,actor,inputDigest,role).first();
+   if(registered){
+    if(registered.mime!==mime||registered.byte_size!==size)return json({error:'ASSET_METADATA_CONFLICT'},409);
+    const key=privateAssetKey(actor,inputDigest,mime);
+    if(!await env.QUESTION_ASSETS.head(key))return json({error:'ASSET_MISSING_IN_STORAGE'},503);
+    return json({digest:inputDigest,mime,role,size,existing:true},200);
+   }
    const quota=await query(db,`SELECT
     (SELECT COUNT(*) FROM bank_assets WHERE project_id=? AND actor=? AND deleted_at IS NULL) AS project_count,
     (SELECT COALESCE(SUM(byte_size),0) FROM bank_assets WHERE project_id=? AND actor=? AND deleted_at IS NULL) AS project_bytes,
