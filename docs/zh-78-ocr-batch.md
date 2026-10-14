@@ -71,3 +71,15 @@ No extra secret is required in the browser; no OCR model response is automatical
 - **Not yet provisioned:** private R2 bucket or any R2/Queue binding. The account's R2 API responds with `10042: Please enable R2 through the Cloudflare Dashboard`. The R2 subscription must be activated by the account owner, with acknowledgement of potential usage-based billing. Do not substitute public buckets, D1 payload storage, or a direct browser OCR proxy.
 - **Deployment gate:** GitHub Actions now contains `deploy-preview`, but the configured GitHub repository has empty `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` secrets. The workflow safely skips deployment and leaves Production untouched. Protect the branch Preview with the existing Cloudflare Access wildcard application before any live testing.
 - The Queue remains inert until the R2-backed producer and isolated consumer are configured. Never send real OCR messages before R2, Access JWT, audit, cost limits and manual consent are verified.
+
+
+### 2026-10-15: Preview D1 queue schema applied
+
+The preview D1 `selection-studio-security-preview` initially lacked the OCR batch tables, despite those tables being in `cloudflare/schema-security.sql`. Only that Preview D1 was updated, adding:
+
+- `ocr_batch_jobs` and its `ocr_batch_jobs_actor` index.
+- `ocr_batch_items` and its `ocr_batch_items_pending` index.
+
+All four DDL statements succeeded and were verified through `sqlite_master`. Existing review/bank tables were left in place. D1 pre-migration Time Travel bookmark: `00000009-00000002-00005104-ed266fc8de0485a889f6cc71cca516e4`. **No Production D1 change.**
+
+The preview Queue `selection-studio-ocr-jobs-preview` is now explicitly `delivery_paused:true` with zero producers and consumers. The queue must remain paused until a private R2 subscription/bucket exists, both bindings are configured, the isolated Worker is deployed with private secrets, and authenticated cost-controlled acceptance has been approved. Note that paused delivery does not replace disabling new job creation until the full pipeline is configured.
