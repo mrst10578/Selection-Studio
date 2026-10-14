@@ -18,3 +18,17 @@ test('print-ready right-to-left HTML escapes malicious transcription content',()
  assert.ok(html.includes('dir="rtl"'));assert.ok(html.includes('&lt;img'));
  assert.ok(!html.includes('<img src=x'));
 });
+
+test('A4 export keeps questions first and prints answer key on its own page',()=>{
+ const exam=composeApprovedExam([approved('q2','سؤال دوم'),approved('q1','سؤال اول')],{title:'آزمون < امن',includeAnswers:true});
+ const html=exportExamHTML(exam);
+ assert.ok(html.includes('@page{size:A4'));
+ assert.ok(html.includes('class="answer-key"'));
+ assert.ok(html.includes('break-before:page'));
+ assert.ok(html.indexOf('سؤال 2')<html.indexOf('پاسخ 1'));
+ assert.ok(html.indexOf('پاسخ 1')<html.indexOf('پاسخ 2'));
+ assert.ok(html.includes('آزمون &lt; امن'));
+ assert.equal(html.match(/class="answer"/g).length,2);
+ const noAnswers=exportExamHTML(composeApprovedExam([approved('q1')],{includeAnswers:false}));
+ assert.ok(!noAnswers.includes('class="answer-key"'));
+});
