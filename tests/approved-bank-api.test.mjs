@@ -11,7 +11,9 @@ function f(){
  const data={questionText:'سؤال تأیید شده ۲؟',answerText:'گزینه ۲',sourceDigest:digest,operatorConfirmed:true,scientificPending:0,sourceNumber:2,taxonomyId:'bio'};
  d.prepare('INSERT INTO bank_questions(id,project_id,actor,content_json) VALUES(?,?,?,?)').run(qid,pid,actor,JSON.stringify(data));
  d.prepare("INSERT INTO bank_assets(project_id,actor,digest,mime,role,object_key,byte_size) VALUES(?,?,?,?,?,?,?)").run(pid,actor,digest,'application/pdf','question_pdf','private-assets/'+actor+'/'+digest+'.pdf',60);
- d.prepare('INSERT INTO bank_review_events(id,project_id,question_id,source_revision,reviewer_actor,reviewer_email_hash,decision,checklist_json,source_digest) VALUES(?,?,?,?,?,?,?,?,?)').run('11111111-1111-1111-1111-111111111111',pid,qid,1,reviewer,'d'.repeat(64),'approve','{}',digest);
+ d.prepare('INSERT INTO bank_project_reviewers(project_id,reviewer_email_hash,assigned_by) VALUES(?,?,?)').run(pid,'d'.repeat(64),actor);
+ const evidence=JSON.stringify({sourceVerified:true,transcriptionVerified:true,answerVerified:true,taxonomyVerified:true,figuresVerified:true,warningsResolved:true});
+ d.prepare('INSERT INTO bank_review_events(id,project_id,question_id,source_revision,reviewer_actor,reviewer_email_hash,decision,checklist_json,source_digest) VALUES(?,?,?,?,?,?,?,?,?)').run('11111111-1111-1111-1111-111111111111',pid,qid,1,reviewer,'d'.repeat(64),'approve',evidence,digest);
  const env={SECURITY_DB:{prepare(s){return{bind(...args){const st=d.prepare(s);return{async all(){return {results:st.all(...args)}},async first(){return st.get(...args)??null},async run(){return st.run(...args)}}}}}}};
  const call=async(path,method='GET',body,as=actor)=>{
   const u=new URL('https://preview.example/api/v1/bank'+path);
@@ -42,6 +44,26 @@ test('a changed revision or later rejection invalidates former approval',async()
  x.d.prepare("INSERT INTO bank_review_events(id,project_id,question_id,source_revision,reviewer_actor,reviewer_email_hash,decision,checklist_json,source_digest) VALUES(?,?,?,?,?,?,?,?,?)").run('22222222-2222-2222-2222-222222222222',pid,qid,1,reviewer,'d'.repeat(64),'reject','{}',digest);
  assert.equal((await x.call('/questions')).data.questions.length,0);
  x.d.prepare('UPDATE bank_questions SET revision=2 WHERE id=?').run(qid);
+ assert.equal((await x.call('/questions')).data.questions.length,0);
+ x.d.close();
+});
+
+test('unassigned review and incomplete checklist never qualify for exam export',async()=>{
+ const x=f();
+ x.d.prepare("DELETE FROM bank_project_reviewers WHERE project_id=?").run(pid);
+ assert.equal((await x.call('/questions')).data.questions.length,0);
+ assert.equal((await x.call('/exams/compose','POST',{title:'باید مسدود شود',questionIds:[qid],sourceRevisions:[1],includeAnswers:false})).status,409);
+ x.d.prepare('INSERT INTO bank_project_reviewers(project_id,reviewer_email_hash,assigned_by) VALUES(?,?,?)').run(pid,'d'.repeat(64),actor);
+ x.d.prepare("UPDATE bank_review_events SET checklist_json=? WHERE id=?").run(JSON.stringify({sourceVerified:true}), '11111111-1111-1111-1111-111111111111');
+ assert.equal((await x.call('/questions')).data.questions.length,0);
+ x.d.close();
+});
+test('tampered reviewer source digest or unconfirmed source cannot be exported',async()=>{
+ const x=f();
+ x.d.prepare("UPDATE bank_review_events SET source_digest=? WHERE id=?").run('e'.repeat(64),'11111111-1111-1111-1111-111111111111');
+ assert.equal((await x.call('/questions')).data.questions.length,0);
+ x.d.prepare("UPDATE bank_review_events SET source_digest=? WHERE id=?").run(digest,'11111111-1111-1111-1111-111111111111');
+ x.d.prepare('UPDATE bank_questions SET content_json=json_set(content_json, ?, false) WHERE id=?').run('$.operatorConfirmed',qid);
  assert.equal((await x.call('/questions')).data.questions.length,0);
  x.d.close();
 });
