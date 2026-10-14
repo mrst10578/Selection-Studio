@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS bank_project_reviewers (
   project_id TEXT NOT NULL REFERENCES bank_projects(id),
   reviewer_email_hash TEXT NOT NULL CHECK(length(reviewer_email_hash)=64),
   assigned_by TEXT NOT NULL,
+  grant_id TEXT NOT NULL DEFAULT '' CHECK(grant_id='' OR length(grant_id)=36),
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY(project_id,reviewer_email_hash)
 );
@@ -14,6 +15,7 @@ CREATE TABLE IF NOT EXISTS bank_review_events (
   source_revision INTEGER NOT NULL CHECK(source_revision>=1),
   reviewer_actor TEXT NOT NULL,
   reviewer_email_hash TEXT NOT NULL CHECK(length(reviewer_email_hash)=64),
+  grant_id TEXT NOT NULL DEFAULT '' CHECK(grant_id='' OR length(grant_id)=36),
   decision TEXT NOT NULL CHECK(decision IN ('approve','reject')),
   checklist_json TEXT NOT NULL,
   source_digest TEXT NOT NULL CHECK(length(source_digest)=64),
