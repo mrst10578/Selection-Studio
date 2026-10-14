@@ -63,3 +63,12 @@ This heuristic is designed as a **low-risk first pass, not a validated AI questi
 The operator UI can stage up to six question/answer crops, submit a specifically authorized OCR batch, inspect durable per-item progress, and pause/resume/retry/cancel. The system uses the same signed Access identity as interactive OCR; D1 holds scoped job and item state, R2 holds temporary private image/prompt payloads, and a dedicated Cloudflare Queue consumer invokes the isolated OCR Worker under server-side quotas and audit. A seven-day scheduled retention sweep is defined for the consumer. Duplicate messages are lease-protected and an idempotency key guards repeated batch submissions. OCR responses remain operator-review candidates and never silently overwrite registered questions.
 
 **Not active in production:** Queue, R2 and consumer bindings are intentionally deferred to the final preview/production approval phase. Detailed API contracts, isolated preview consumer config, migration checklist, retry limitations and explicit release blockers: [docs/zh-78-ocr-batch.md](../docs/zh-78-ocr-batch.md).
+
+
+## Operator-only preview readiness (2026-10-15)
+
+`GET /api/readiness` now returns non-secret dependency-presence indicators **only after signed Cloudflare Access verification and operator authorization**. It distinguishes the D1 binding, private question-asset R2 binding, OCR-input R2 binding, Queue **producer** binding, OCR upstream secret presence and reviewer allowlist presence. It never returns the values of any tokens, secrets, emails or object URLs.
+
+The result is a **preflight only**, not proof that the Queue consumer is deployed, the R2 bucket is valid, or that paid model inference works. An unconfigured binding is false; it does not silently permit uploading raw crops to D1 or another public service. Regression tests enforce no unauthorized access and no secret-value disclosure.
+
+As of 2026-10-15, the free-plan, zero-consumer preview Queue `selection-studio-ocr-jobs-preview` is provisioned (id `c8c0553e357343a4ad534b9e02126272`). R2 activation still needs the account owner's billing/checkout decision; GitHub Actions' Cloudflare credential secrets are still absent so the new `deploy-preview` job skips the deployment rather than targeting Production.
