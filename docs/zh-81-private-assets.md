@@ -38,3 +38,10 @@ Security-audit hardening: authenticated upload, private download, and attachment
 The source-PDF tombstone now checks historical question revisions **inside the UPDATE statement itself**, not only as an earlier read; this closes the race in which a question revision is saved between the check and deletion. A deterministic test injects a new source-referencing revision at precisely this boundary and verifies HTTP 409 and intact metadata.
 
 Re-uploading a byte-identical, already active project attachment verifies the private R2 object by HEAD and returns a no-op `existing:true` even when the project quota is full. It does not consume a new slot. If the D1 registry exists but the private object has disappeared, the API returns HTTP 503 `ASSET_MISSING_IN_STORAGE` instead of falsely claiming success. A re-upload of a previously **tombstoned** attachment remains subject to quota. This logic is covered by Node regression tests. Physical R2 garbage collection remains intentionally unimplemented and must be designed to respect cross-project deduplication before enabling R2.
+
+
+## 2026-10-15 physical-storage quota hardening
+
+Logical project quotas count *active* attachments. Unlike project metadata quotas, the actor-wide 96-object / 256 MiB ceilings now count **all distinct actor-scoped R2 object keys ever registered**, including soft-deleted/tombstoned rows, because hiding a file from the project does not delete its R2 bytes. A duplicate blob shared across projects/roles counts just once in the actor-wide ledger. D1 checks this both before uploading and atomically in the registration INSERT to close concurrent uploads.
+
+This prevents repeated upload → tombstone cycles from evading actor storage budgets. **A soft delete does not reclaim actual storage or capacity** until an independently validated and concurrency-safe R2 garbage-collection process is implemented. Do not tell operators that merely removing an attachment frees their R2 quota. The conservative behavior deliberately favors bounded costs and historical evidence over automatic physical deletion. Unit tests cover deleted object count and deleted byte limits.
