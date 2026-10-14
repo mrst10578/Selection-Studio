@@ -30,7 +30,7 @@ export async function handleReviewApi(request,env,identity,actor,url){
    if(method!=='GET'||!reviewerRole||!uuid.test(assetRoute[1]))return json({error:'NOT_FOUND'},404);
    const [_,pid,digestId]=assetRoute,project=await sql(db,'SELECT id,actor FROM bank_projects WHERE id=? AND deleted_at IS NULL',pid).first();
    if(!project||project.actor===actor)return json({error:'NOT_FOUND'},404);
-   const member=await sql(db,'SELECT project_id FROM bank_project_reviewers WHERE project_id=? AND reviewer_email_hash=? AND grant_id!='\'\'',pid,await digest(mail)).first();
+   const member=await sql(db,"SELECT project_id FROM bank_project_reviewers WHERE project_id=? AND reviewer_email_hash=? AND grant_id!=''",pid,await digest(mail)).first();
    if(!member)return json({error:'NOT_FOUND'},404);
    const asset=await sql(db,"SELECT mime,role FROM bank_assets WHERE project_id=? AND actor=? AND digest=? AND role IN ('question_pdf','answer_pdf') AND deleted_at IS NULL",pid,project.actor,digestId).first();
    if(!asset)return json({error:'ASSET_NOT_FOUND'},404);
