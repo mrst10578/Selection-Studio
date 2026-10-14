@@ -22,8 +22,16 @@ export function exportExamJSONL(exam){
 }
 export function exportExamHTML(exam){
  if(!exam?.items?.length)throw Error('EMPTY_EXAM');
- let parts=['<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(exam.title)+'</title>',
-  '<style>body{font-family:system-ui,sans-serif;max-width:800px;margin:auto;padding:25px;line-height:2;color:#171717}h1{text-align:center}section{break-inside:avoid;margin-block:24px;border-bottom:1px solid #ddd;padding-bottom:18px;white-space:pre-wrap}aside{background:#f2f2f2;padding:12px;margin-top:15px}@media print{body{padding:0}section{break-inside:avoid}}</style></head><body><h1>'+esc(exam.title)+'</h1>'];
- for(const item of exam.items){parts.push('<section><strong>سؤال '+item.index+'</strong><div>'+esc(item.question)+'</div>');if('answer'in item)parts.push('<aside><strong>پاسخ '+item.index+'</strong><div>'+esc(item.answer)+'</div></aside>');parts.push('</section>')}
- parts.push('</body></html>');return parts.join('');
+ const head='<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(exam.title)+'</title>';
+ const css='<style>@page{size:A4;margin:18mm 17mm}body{font-family:Tahoma,Arial,sans-serif;margin:auto;max-width:180mm;color:#171717;line-height:1.9}h1{text-align:center;font-size:22px;margin:0 0 25px}h2{font-size:18px}.question{break-inside:avoid;page-break-inside:avoid;border-bottom:1px solid #ddd;padding:0 0 17px;margin:0 0 24px;white-space:pre-wrap}.question strong{display:block;margin-bottom:10px}.answer-key{break-before:page;page-break-before:always;display:block;border-top:1px solid #aaa;padding-top:15px}.answer{break-inside:avoid;page-break-inside:avoid;margin:16px 0;border-bottom:1px dashed #bbb;padding-bottom:12px;white-space:pre-wrap}.review-note{font-size:11px;color:#555;border-top:1px solid #ddd;margin-top:28px;padding-top:8px}@media print{body{max-width:none}.question{break-inside:avoid}.answer-key{break-before:page}}</style>';
+ const parts=[head,css,'</head><body><main><h1>'+esc(exam.title)+'</h1>'];
+ const answers=[];
+ for(const item of exam.items){
+  if(!Number.isSafeInteger(item.index)||item.index<1||typeof item.question!=='string')throw Error('INVALID_EXAM_ITEM');
+  parts.push('<section class="question"><strong>سؤال '+item.index+'</strong><div>'+esc(item.question)+'</div></section>');
+  if('answer'in item)answers.push('<section class="answer"><strong>پاسخ '+item.index+'</strong><div>'+esc(item.answer)+'</div></section>');
+ }
+ if(answers.length)parts.push('<section class="answer-key"><h2>پاسخنامه · '+esc(exam.title)+'</h2>',...answers,'</section>');
+ parts.push('<footer class="review-note">نسخه چاپی خصوصی برای بازبینی اپراتور؛ انتشار عمومی انجام نشده است.</footer></main></body></html>');
+ return parts.join('');
 }
