@@ -72,3 +72,15 @@ The operator UI can stage up to six question/answer crops, submit a specifically
 The result is a **preflight only**, not proof that the Queue consumer is deployed, the R2 bucket is valid, or that paid model inference works. An unconfigured binding is false; it does not silently permit uploading raw crops to D1 or another public service. Regression tests enforce no unauthorized access and no secret-value disclosure.
 
 As of 2026-10-15, the free-plan, zero-consumer preview Queue `selection-studio-ocr-jobs-preview` is provisioned (id `c8c0553e357343a4ad534b9e02126272`). R2 activation still needs the account owner's billing/checkout decision; GitHub Actions' Cloudflare credential secrets are still absent so the new `deploy-preview` job skips the deployment rather than targeting Production.
+
+
+## Production release safety gate (2026-10-15)
+
+`.github/workflows/deploy-cloudflare-pages.yml` deliberately no longer deploys Production on a push to `main`. A Production deployment now requires all the following **together**:
+
+1. The workflow is manually dispatched on `main` with the boolean input `release_production=true`.
+2. The usual static build and Node security tests complete.
+3. A dedicated `release-qa` job passes worker tests, Playwright UI checks, HTML/CSS validators, Lighthouse and canonical catalog verification.
+4. The GitHub Actions `production` environment authorizes the deployment, and Cloudflare credentials exist.
+
+Until then the Production deployment job skips, even if a pull request is merged. This is a safeguard, **not** permission to merge PR #45 or deploy without the owner's explicit acceptance. The Preview branch job remains isolated and itself requires GitHub Actions Cloudflare secrets. A new regression test in `tests/release-gates.test.mjs` protects these conditions.
