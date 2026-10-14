@@ -50,10 +50,26 @@ export async function handleAssetApi(request,env,actor,url){
     if(linked)return json({error:'SOURCE_PDF_REFERENCED_BY_QUESTION'},409);
    }
    await query(db,'INSERT INTO security_audit(actor,action,result,detail) VALUES(?,?,?,?)',actor,'bank_asset_tombstone','attempt',projectId+':'+role).run();
-   const deleted=await query(db,'UPDATE bank_assets SET deleted_at=CURRENT_TIMESTAMP WHERE project_id=? AND actor=? AND digest=? AND role=? AND deleted_at IS NULL RETURNING digest',projectId,actor,digest,role).first();
-   // R2 object is deliberately not deleted synchronously: dedup shares actor-scoped
-   // blobs across projects, and concurrent uploads may still reference this key.
-   return json({deleted:!!deleted,metadataTombstoned:true,physicalCleanupPending:true});
+   // Check source references *in the same SQLite write* so a simultaneous
+   // question save cannot race between the first check and this tombstone.
+   const deleted=await query(db,`UPDATE bank_assets SET deleted_at=CURRENT_TIMESTAMP
+    WHERE project_id=? AND actor=? AND digest=? AND role=? AND deleted_at IS NULL
+      AND (?!='question_pdf' OR NOT EXISTS(
+        SELECT 1 FROM bank_question_revisions r
+        JOIN bank_questions q ON q.id=r.question_id
+        WHERE q.project_id=? AND q.actor=? AND json_extract(r.content_json,'$.sourceDigest')=?
+      )) RETURNING digest`,
+    projectId,actor,digest,role,role,projectId,actor,digest).first();
+   if(!deleted){
+    if(role==='question_pdf'){
+     const linkedNow=await query(db,"SELECT 1 AS used FROM bank_question_revisions r JOIN bank_questions q ON q.id=r.question_id WHERE q.project_id=? AND q.actor=? AND json_extract(r.content_json,'$.sourceDigest')=? LIMIT 1",projectId,actor,digest).first();
+     if(linkedNow)return json({error:'SOURCE_PDF_REFERENCED_BY_QUESTION'},409);
+    }
+    return json({error:'ASSET_NOT_FOUND'},404);
+   }
+   // Never physically delete R2 bytes during a metadata tombstone: other
+   // projects and simultaneous uploads may share the actor-owned object.
+   return json({deleted:true,metadataTombstoned:true,physicalCleanupPending:true});
   }
   if(request.method==='POST'&&!digest){
    const mime=request.headers.get('content-type')?.split(';')[0].trim().toLowerCase();
