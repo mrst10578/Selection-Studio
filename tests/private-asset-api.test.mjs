@@ -156,3 +156,23 @@ test('atomic tombstone guard closes the revision-insertion race',async()=>{
  assert.equal((await(await f.call(actorA)).json()).assets.length,1);
  f.local.close();
 });
+
+test('verified duplicate upload stays idempotent when project hits its file cap',async()=>{
+ const f=fixture(),headers={'Content-Type':'application/pdf','X-Asset-Role':'question_pdf'};
+ const original=await(await f.call(actorA,'','POST',pdf,headers)).json();
+ const insert=f.local.prepare('INSERT INTO bank_assets(project_id,actor,digest,mime,role,object_key,byte_size) VALUES(?,?,?,?,?,?,?)');
+ for(let i=1;i<24;i++){
+  const d=i.toString(16).padStart(64,'0');
+  insert.run(pid,actorA,d,'application/pdf','figure','private-assets/'+actorA+'/'+d+'.pdf',60);
+ }
+ const repeat=await f.call(actorA,'','POST',pdf,headers);
+ assert.equal(repeat.status,200);
+ assert.equal((await repeat.json()).digest,original.digest);
+ assert.equal(f.local.prepare('SELECT COUNT(*) AS n FROM bank_assets WHERE project_id=? AND deleted_at IS NULL').get(pid).n,24);
+ assert.equal(f.stored.size,1);
+ f.stored.clear();
+ const missing=await f.call(actorA,'','POST',pdf,headers);
+ assert.equal(missing.status,503);
+ assert.equal((await missing.json()).error,'ASSET_MISSING_IN_STORAGE');
+ f.local.close();
+});
