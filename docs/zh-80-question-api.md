@@ -26,3 +26,8 @@ ZH-80 is **In Progress**: `review-console/bank-studio.html` and `bank-studio.js`
 ## 2026-10-13 source and operator review extensions
 
 Question content validation additionally supports `sourceNumber` (1..9999), `sourceDigest` (SHA-256 PDF), `operatorConfirmed` (explicit checkbox), and `scientificPending` (bounded integer). The draft bank UI invalidates operator confirmation when source/text changes. Separately authorized reviewer decisions are stored in an independent review-event table and do not mutate question draft state. Private asset storage metadata has been added to preview D1, but R2 and distinct reviewer E2E remain unavailable pending infrastructure.
+
+
+## 2026-10-15 atomic source-evidence guard
+
+An operator may still save unverified OCR text as a draft, but `operatorConfirmed:true` now requires a **currently active**, project-owned `question_pdf` attachment with MIME `application/pdf` and the exact declared SHA-256 `sourceDigest`. The server validates this explicitly, then re-evaluates attachment existence *inside the same SQLite INSERT/UPDATE* to prevent concurrent file removal from racing source attestation. Missing, tombstoned, foreign-project or answer-only attachments return HTTP 422 `SOURCE_PDF_NOT_REGISTERED`, never an operator-verified record. Changing the source still requires a new question revision and independent reviewer decision. Unit tests cover create/update, source role, tombstone and the preflight-to-write race. All changes are on PR #45, not Production.
