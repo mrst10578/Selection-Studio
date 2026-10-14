@@ -6,6 +6,12 @@ on:
     branches: [main]
     paths: ["studio/**", "review-console/**", "cloudflare/**", "tests/**", ".github/workflows/deploy-cloudflare-pages.yml"]
   workflow_dispatch:
+    inputs:
+      release_production:
+        description: 'Explicitly approve production release after acceptance testing'
+        type: boolean
+        required: true
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -89,9 +95,43 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy _site --project-name=selection-studio --branch="${{ github.head_ref }}"
-  deploy:
+  release-qa:
     needs: validate
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.release_production == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify Python and worker tests
+        run: |
+          python -m compileall engine
+          node --test worker/test/*.test.mjs
+      - name: Install UI validation dependencies
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Validate HTML, CSS, Playwright and Lighthouse
+        run: |
+          npm run qa:html
+          npm run qa:css
+          npm run qa:ui
+          npm run qa:lighthouse
+      - name: Verify canonical question catalog
+        run: |
+          python engine/validate_bank.py
+          python engine/build_catalog.py --output /tmp/catalog.json
+          cmp /tmp/catalog.json runtime/catalog.json
+
+  deploy:
+    needs: [validate, release-qa]
+    # Never deploy on a push or PR. An explicitly approved workflow_dispatch
+    # on main must pass all release QA before any production deploy.
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.release_production == true
     runs-on: ubuntu-latest
     environment: production
     steps:
