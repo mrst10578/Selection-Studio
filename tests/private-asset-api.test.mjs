@@ -5,10 +5,11 @@ import {readFile} from 'node:fs/promises';
 import {handleAssetApi} from '../cloudflare/private-asset-api.js';
 const bank=await readFile(new URL('../cloudflare/schema-question-bank-v1.sql',import.meta.url),'utf8');
 const assets=await readFile(new URL('../cloudflare/schema-private-assets-v1.sql',import.meta.url),'utf8');
+const security=await readFile(new URL('../cloudflare/schema-security.sql',import.meta.url),'utf8');
 const actorA='a'.repeat(32),actorB='b'.repeat(32),pid='12345678-1234-1234-1234-123456789012';
 const pdf=new TextEncoder().encode('%PDF-1.7\n'+('exam booklet '.repeat(8)));
 function fixture(){
- const local=new DatabaseSync(':memory:');local.exec('PRAGMA foreign_keys=ON;'+bank+assets);
+ const local=new DatabaseSync(':memory:');local.exec('PRAGMA foreign_keys=ON;'+security+bank+assets);
  local.prepare('INSERT INTO bank_projects (id,actor,name) VALUES(?,?,?)').run(pid,actorA,'fixture');
  const stored=new Map(),env={SECURITY_DB:{
   prepare(sql){return{bind(...args){const q=local.prepare(sql);return{
@@ -106,5 +107,24 @@ test('a question PDF referenced by any saved revision cannot be deleted',async()
  const response=await f.call(actorA,path,'DELETE');
  assert.equal(response.status,409);
  assert.equal((await response.json()).error,'SOURCE_PDF_REFERENCED_BY_QUESTION');
+ f.local.close();
+});
+
+test('private file operations produce pseudonymous audit records without source content',async()=>{
+ const f=fixture(),headers={'Content-Type':'application/pdf','X-Asset-Role':'answer_pdf'};
+ const uploaded=await(await f.call(actorA,'','POST',pdf,headers)).json();
+ assert.equal((await f.call(actorA,'/'+uploaded.digest+'?role=answer_pdf')).status,200);
+ assert.equal((await f.call(actorA,'/'+uploaded.digest+'?role=answer_pdf','DELETE')).status,200);
+ const events=f.local.prepare("SELECT actor,action,detail FROM security_audit WHERE action LIKE 'bank_asset_%' ORDER BY id").all();
+ assert.deepEqual(events.map(e=>e.action),['bank_asset_upload','bank_asset_download','bank_asset_tombstone']);
+ assert.ok(events.every(e=>e.actor===actorA&&e.detail===pid+':answer_pdf'));
+ assert.ok(events.every(e=>!JSON.stringify(e).includes('%PDF-')));
+ f.local.close();
+});
+test('a security audit outage denies file uploads before storing any bytes',async()=>{
+ const f=fixture();f.local.exec('DROP TABLE security_audit');
+ const response=await f.call(actorA,'','POST',pdf,{'Content-Type':'application/pdf','X-Asset-Role':'question_pdf'});
+ assert.equal(response.status,503);
+ assert.equal(f.stored.size,0);
  f.local.close();
 });
