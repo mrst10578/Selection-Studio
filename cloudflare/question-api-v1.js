@@ -29,6 +29,12 @@ async function parseJson(request,max=42000){
  try{return JSON.parse(raw)}catch{throw Error('INVALID_JSON')}
 }
 async function project(db,actor,id){return sql(db,'SELECT * FROM bank_projects WHERE id=? AND actor=? AND deleted_at IS NULL',id,actor).first()}
+async function registeredSource(db,actor,pid,content){
+ const data=JSON.parse(content);
+ if(!data.operatorConfirmed)return true;
+ if(!/^[a-f0-9]{64}$/i.test(data.sourceDigest||''))return false;
+ return !!(await sql(db,"SELECT 1 AS ok FROM bank_assets WHERE project_id=? AND actor=? AND digest=? AND role='question_pdf' AND mime='application/pdf' AND deleted_at IS NULL",pid,actor,data.sourceDigest).first());
+}
 async function question(db,actor,pid,id){return sql(db,'SELECT q.* FROM bank_questions q JOIN bank_projects p ON p.id=q.project_id WHERE q.id=? AND q.project_id=? AND q.actor=? AND p.actor=? AND p.deleted_at IS NULL AND q.deleted_at IS NULL',id,pid,actor,actor).first()}
 const projectView=row=>({id:row.id,name:row.name,revision:row.revision,createdAt:row.created_at,updatedAt:row.updated_at});
 const questionView=row=>({id:row.id,projectId:row.project_id,revision:row.revision,state:row.state,content:JSON.parse(row.content_json),updatedAt:row.updated_at});
@@ -87,8 +93,17 @@ export async function handleQuestionApi(request,env,actor,url){
     const body=await parseJson(request),content=validateContent(body?.content);
     if(!body||typeof body!=='object'||Array.isArray(body)||Object.keys(body).some(k=>k!=='content'))return error('INVALID_CONTENT');
     const id=crypto.randomUUID();
+    if(!(await registeredSource(db,actor,pid,content)))return error('SOURCE_PDF_NOT_REGISTERED',422);
     await audit(db,actor,'bank_question_create',id);
-    await sql(db,'INSERT INTO bank_questions(id,project_id,actor,content_json) VALUES(?,?,?,?)',id,pid,actor,content).run();
+    // Compare the attachment's active state in the exact D1 write. A concurrent
+    // tombstone cannot slip between validation and insertion.
+    const inserted=await sql(db,`INSERT INTO bank_questions(id,project_id,actor,content_json)
+     SELECT ?,?,?,? WHERE json_extract(?,'$.operatorConfirmed')=0
+       OR EXISTS(SELECT 1 FROM bank_assets WHERE project_id=? AND actor=?
+         AND digest=json_extract(?,'$.sourceDigest') AND role='question_pdf'
+         AND mime='application/pdf' AND deleted_at IS NULL) RETURNING id`,
+     id,pid,actor,content,content,pid,actor,content).first();
+    if(!inserted)return error('SOURCE_PDF_NOT_REGISTERED',422);
     return respond({question:questionView(await question(db,actor,pid,id))},201);
    }
    return error('METHOD_NOT_ALLOWED',405);
@@ -105,8 +120,15 @@ export async function handleQuestionApi(request,env,actor,url){
   if(method==='PATCH'){
    const body=await parseJson(request),content=validateContent(body?.content);
    if(!body||typeof body!=='object'||Array.isArray(body)||Object.keys(body).some(k=>!['content','baseRevision'].includes(k))||!Number.isSafeInteger(body.baseRevision)||body.baseRevision<1)return error('INVALID_CONTENT');
+   if(!(await registeredSource(db,actor,pid,content)))return error('SOURCE_PDF_NOT_REGISTERED',422);
    await audit(db,actor,'bank_question_update',qid);
-   const updated=await sql(db,'UPDATE bank_questions SET content_json=?,revision=revision+1,updated_at=CURRENT_TIMESTAMP WHERE id=? AND project_id=? AND actor=? AND revision=? AND deleted_at IS NULL RETURNING *',content,qid,pid,actor,body.baseRevision).first();
+   const updated=await sql(db,`UPDATE bank_questions SET content_json=?,revision=revision+1,updated_at=CURRENT_TIMESTAMP
+    WHERE id=? AND project_id=? AND actor=? AND revision=? AND deleted_at IS NULL
+      AND (json_extract(?,'$.operatorConfirmed')=0 OR EXISTS(
+       SELECT 1 FROM bank_assets WHERE project_id=? AND actor=? AND digest=json_extract(?,'$.sourceDigest')
+         AND role='question_pdf' AND mime='application/pdf' AND deleted_at IS NULL))
+    RETURNING *`,content,qid,pid,actor,body.baseRevision,content,pid,actor,content).first();
+   if(!updated&&!(await registeredSource(db,actor,pid,content)))return error('SOURCE_PDF_NOT_REGISTERED',422);
    return updated?respond({question:questionView(updated)}):error('REVISION_CONFLICT',409);
   }
   if(method==='DELETE'){
