@@ -76,3 +76,20 @@ test('revoking a reviewer blocks reads and fresh approvals and is audited',async
  assert.equal(events.length,1);
  f.db0.close();
 });
+
+test('a reviewer re-grant gets a new immutable generation; decisions cannot reuse the old grant',async()=>{
+ const f=fixture();
+ const args={actor:operator,email:'owner@example.test',path:'/assignments',method:'POST',data:{projectId,reviewerEmail:'reviewer@example.test'}};
+ assert.equal((await f.run(args)).status,201);
+ const first=f.db0.prepare('SELECT grant_id FROM bank_project_reviewers WHERE project_id=?').get(projectId)?.grant_id;
+ assert.match(first,/^[a-f0-9-]{36}$/i);
+ assert.equal((await f.run({...args,method:'DELETE'})).status,200);
+ assert.equal((await f.run(args)).status,201);
+ const second=f.db0.prepare('SELECT grant_id FROM bank_project_reviewers WHERE project_id=?').get(projectId)?.grant_id;
+ assert.match(second,/^[a-f0-9-]{36}$/i);
+ assert.notEqual(first,second);
+ const reviewed=await f.run({path:'/projects/'+projectId+'/questions/'+questionId,method:'POST',data:{baseRevision:1,decision:'reject',checks:{}}});
+ assert.equal(reviewed.status,201);
+ assert.equal(f.db0.prepare('SELECT grant_id FROM bank_review_events WHERE question_id=?').get(questionId).grant_id,second);
+ f.db0.close();
+});
