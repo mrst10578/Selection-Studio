@@ -12,13 +12,14 @@ function fixture(){
  const db={prepare(query){return {bind(...args){const s=local.prepare(query);return {
   async first(){return s.get(...args)??null},async all(){return {results:s.all(...args)}},async run(){return s.run(...args)}
  }}}}};
- const env={SECURITY_DB:db};
+ const assetKeys=new Set();
+ const env={SECURITY_DB:db,QUESTION_ASSETS:{async head(key){return assetKeys.has(key)?{key}:null}}};
  const request=async(actor,path,method='GET',body)=>{
   const url=new URL('https://preview.example/api/v1/projects'+path);
   const req=new Request(url,{method,headers:body?{'Content-Type':'application/json'}:{},...(body?{body:JSON.stringify(body)}:{})});
   const res=await handleQuestionApi(req,env,actor,url);return {status:res.status,body:await res.json()};
  };
- return {local,request};
+ return {local,request,assetKeys};
 }
 test('versioned API fails closed when D1 or authenticated actor is missing',async()=>{
  const r=new Request('https://example.com/api/v1/projects');
@@ -68,6 +69,9 @@ test('attesting a question requires a registered active owner-scoped source PDF'
  entry.run(pid,actorA,digest,'application/pdf','answer_pdf','private/'+digest,40);
  assert.equal((await f.request(actorA,endpoint,'POST',{content})).status,422);
  f.local.prepare('UPDATE bank_assets SET role=? WHERE project_id=? AND digest=?').run('question_pdf',pid,digest);
+ const noBlob=await f.request(actorA,endpoint,'POST',{content});
+ assert.equal(noBlob.status,503);assert.equal(noBlob.body.error,'SOURCE_PDF_MISSING_IN_STORAGE');
+ f.assetKeys.add('private/'+digest);
  const created=await f.request(actorA,endpoint,'POST',{content});
  assert.equal(created.status,201);
  assert.equal(created.body.question.content.operatorConfirmed,true);
@@ -86,6 +90,7 @@ test('atomic operator attestation cannot race a private source tombstone',async(
  const digest='e'.repeat(64);
  f.local.prepare('INSERT INTO bank_assets(project_id,actor,digest,mime,role,object_key,byte_size) VALUES(?,?,?,?,?,?,?)')
   .run(pid,actorA,digest,'application/pdf','question_pdf','private/'+digest,80);
+ f.assetKeys.add('private/'+digest);
  const saved=f.local.prepare('SELECT COUNT(*) AS n FROM bank_questions WHERE project_id=?');
  const original=f.local.prepare.bind(f.local);
  // Intercept the exact atomic INSERT, after preflight sees a valid source PDF.
@@ -107,8 +112,25 @@ test('atomic operator attestation cannot race a private source tombstone',async(
  // Install a DB wrapper without changing any user data or Cloudflare resources.
  const response=await handleQuestionApi(new Request(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
   content:{questionText:'متن کنترل شده',sourceDigest:digest,operatorConfirmed:true}
- })}),{SECURITY_DB:db},actorA,url);
+ })}),{SECURITY_DB:db,QUESTION_ASSETS:{head:async key=>f.assetKeys.has(key)?{key}:null}},actorA,url);
  assert.equal(response.status,422);
  assert.equal(saved.get(pid).n,0);
+ f.local.close();
+});
+
+test('operator verification fails closed when private R2 binding is absent',async()=>{
+ const f=fixture(),pid=(await f.request(actorA,'','POST',{name:'proof storage'})).body.id;
+ const digest='d'.repeat(64);
+ f.local.prepare('INSERT INTO bank_assets(project_id,actor,digest,mime,role,object_key,byte_size) VALUES(?,?,?,?,?,?,?)')
+  .run(pid,actorA,digest,'application/pdf','question_pdf','private/'+digest,48);
+ const requestUrl=new URL('https://preview.example/api/v1/projects/'+pid+'/questions');
+ const db={prepare(sql){return{bind(...args){const stmt=f.local.prepare(sql);return{
+   first:async()=>stmt.get(...args)||null,all:async()=>({results:stmt.all(...args)}),run:async()=>stmt.run(...args)
+ }}}}};
+ const response=await handleQuestionApi(new Request(requestUrl,{method:'POST',headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({content:{questionText:'نیاز به مرجع',sourceDigest:digest,operatorConfirmed:true}})}),
+  {SECURITY_DB:db},actorA,requestUrl);
+ assert.equal(response.status,503);
+ assert.equal((await response.json()).error,'SOURCE_STORAGE_NOT_CONFIGURED');
  f.local.close();
 });
