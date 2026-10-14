@@ -15,3 +15,8 @@ Remaining work: authenticated server-side search index, role-based reviewers and
 ## 2026-10-14 validated reviewer evidence
 
 `validApproved()` now checks the reviewer event against the owning project's **active** `bank_project_reviewers` grant, the original operator who assigned it, the source PDF SHA-256 link and all six signed scientific checklist fields. A later rejection still invalidates prior approval. Revoking a reviewer also removes affected questions from search and exam composition on the next query. New negative tests cover missing grant, incomplete evidence and mismatched source PDF fingerprint. This is a server-side safety improvement only: no external publishing adapter or dispatch is enabled.
+
+
+## 2026-10-15 approval validity hardening
+
+The approved-bank SQL now requires the latest science review event's `grant_id` to match an **active** reviewer assignment generation. This prevents previously revoked approvals from reappearing when the same reviewer is granted access again. Compose continues to verify the live D1 approval and revision, never trusting client-supplied `approved` flags and never automatically dispatching externally. The `tests/approved-bank-api.test.mjs` suite covers revocation/re-grant resurrection denial. Both approval pathways remain development-only; no production deployment or actual publisher is authorized.
