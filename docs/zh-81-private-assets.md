@@ -10,3 +10,7 @@
 **Not yet operational:** In Cloudflare Zh St #2, account R2 lists return code 10042 (R2 activation required), and private bucket is not provisioned. The helper has not been wired to the authenticated user UI or D1 asset registry; no binding, retention automation, lifecycle, backup, download authorization API or migration has been deployed. Upstream question records remain unchanged. Real PDF and storage billing verification are final acceptance tasks.
 
 This partial source implementation does not justify marking ZH-81 Completed. Production must remain untouched.
+
+## 2026-10-14 infrastructure recheck
+
+The connected Zh2 Cloudflare account still returns API error `10042` (R2 has not been enabled) when listing R2 buckets. The Queues list succeeds but is empty. Pages Preview environment exposes the `SECURITY_DB` binding and the Access/OCR configuration key *names*, but no R2 bucket binding. The private file upload and OCR batch code therefore remain intentionally fail-closed rather than falling back to a public bucket or paid provider. Production bindings and deploy configuration were not changed.
