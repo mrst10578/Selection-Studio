@@ -5,6 +5,8 @@ const error=(code,status=400)=>reply({error:code},status);
 const q=(db,text,...params)=>db.prepare(text).bind(...params);
 const storageKey=(job,item)=>'ocr-batches/'+job+'/'+item+'.json';
 const configured=env=>env.SECURITY_DB?.prepare&&env.OCR_JOB_ASSETS?.put&&env.OCR_QUEUE?.send;
+// Fail-closed until a human explicitly enables the verified Preview consumer.
+const batchEnabled=env=>env.OCR_BATCH_ENABLED==='true';
 async function jobFor(db,actor,id){return q(db,'SELECT * FROM ocr_batch_jobs WHERE actor=?1 AND id=?2',actor,id).first()}
 async function itemsFor(db,id){const result=await q(db,'SELECT * FROM ocr_batch_items WHERE job_id=?1 ORDER BY ordinal',id).all();return result.results||[]}
 async function visible(db,job){return batchSnapshot(job,await itemsFor(db,job.id))}
@@ -21,6 +23,7 @@ async function enqueue(env,id,items){
  return sent;
 }
 async function create(request,env,actor){
+ if(!batchEnabled(env))return error('BATCH_DISABLED',503);
  if(!configured(env))return error('BATCH_NOT_CONFIGURED',503);
  if(!request.headers.get('content-type')?.toLowerCase().startsWith('application/json'))return error('JSON_REQUIRED',415);
  const bytes=Number(request.headers.get('content-length')||0);
@@ -102,7 +105,9 @@ export async function handleBatchApi(request,env,actor,url){
   if(!match||!internalIdPattern.test(match[1]))return error('BATCH_NOT_FOUND',404);
   if(match[2]){
    if(request.method!=='POST')return error('METHOD_NOT_ALLOWED',405);
-   if(!configured(env))return error('BATCH_NOT_CONFIGURED',503);
+   if(['resume','retry'].includes(match[2])&&!batchEnabled(env))return error('BATCH_DISABLED',503);
+   // Pause and cancel remain available even during a controlled shutdown.
+   if(['resume','retry'].includes(match[2])&&!configured(env))return error('BATCH_NOT_CONFIGURED',503);
    return act(env,actor,match[1],match[2]);
   }
   if(request.method!=='GET')return error('METHOD_NOT_ALLOWED',405);
