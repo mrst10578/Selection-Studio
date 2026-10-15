@@ -84,3 +84,10 @@ As of 2026-10-15, the free-plan, zero-consumer preview Queue `selection-studio-o
 4. The GitHub Actions `production` environment authorizes the deployment, and Cloudflare credentials exist.
 
 Until then the Production deployment job skips, even if a pull request is merged. This is a safeguard, **not** permission to merge PR #45 or deploy without the owner's explicit acceptance. The Preview branch job remains isolated and itself requires GitHub Actions Cloudflare secrets. A new regression test in `tests/release-gates.test.mjs` protects these conditions.
+
+
+## 2026-10-15: Preview rollout gate and GitHub configuration
+
+`OCR_BATCH_ENABLED` is a fail-closed, explicit, **two-sided** opt-in on the batch Pages producer and separate consumer. Live Pages Preview has `OCR_BATCH_ENABLED=false` and retains its private R2/Queue/D1 bindings; the source-controlled consumer config defaults to false too. A disabled batch cannot stage private images or send Queue messages, and a disabled consumer never starts inference. The Preview Queue remains delivery-paused.
+
+The non-sensitive `CLOUDFLARE_ACCOUNT_ID` is now stored as a **GitHub Actions repository variable**, verified via GitHub. The Pages workflow reads it from `vars.CLOUDFLARE_ACCOUNT_ID` instead of duplicating it in repository secrets. The sole remaining missing credential for the GitHub-based Preview deploy is the scoped `CLOUDFLARE_API_TOKEN` GitHub Actions repository secret. No account/production API tokens were exposed or written to source control. The Cloudflare app connection does not authorize user token management, so token creation cannot be automated through that connector. Deploy remains safely skipped until the credential is configured.
