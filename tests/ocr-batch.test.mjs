@@ -221,3 +221,22 @@ test('batch shutdown blocks resume and retry but retains read, pause and cancel'
  assert.equal(f.calls.length,2,'no additional Queue sends on shutdown');
  f.local.close();
 });
+
+
+test('consumer refuses billable inference while batch release switch is off',async()=>{
+ const f=fixture();
+ const job=await(await call(f.env,actor,'','POST',example('disabled-consumer-003'))).json();
+ const msg=signedMessage(f.calls[0]);
+ f.env.OCR_BATCH_ENABLED='false';
+ const previous=globalThis.fetch;
+ globalThis.fetch=async()=>{throw Error('inference must remain disabled')};
+ try{
+  await consumeOcrBatch({messages:[msg]},f.env);
+  assert.equal(msg.ackCount,0);
+  assert.deepEqual(msg.retries,[{delaySeconds:3600}]);
+  const state=await(await call(f.env,actor,'/'+job.id)).json();
+  assert.equal(state.counts.queued,2);
+  assert.equal(f.images.size,2);
+  assert.equal(f.local.prepare("SELECT COUNT(*) AS n FROM ocr_usage").get().n,0);
+ }finally{globalThis.fetch=previous;f.local.close()}
+});
