@@ -135,11 +135,12 @@ export default {
      privateAssetR2:!!env.QUESTION_ASSETS?.get&&!!env.QUESTION_ASSETS?.put&&!!env.QUESTION_ASSETS?.head,
      ocrPayloadR2:!!env.OCR_JOB_ASSETS?.get&&!!env.OCR_JOB_ASSETS?.put,
      ocrQueueProducer:!!env.OCR_QUEUE?.send,
+     ocrBatchExplicitlyEnabled:env.OCR_BATCH_ENABLED==='true',
      ocrUpstreamToken:!!env.OCR_SERVICE_TOKEN,
      reviewerAllowlist:!!String(env.REVIEWER_EMAILS||"").trim()
     };
     return json({readyForLiveOcr:dependencies.securityDb&&dependencies.ocrUpstreamToken,
-     readyForBatchProducer:dependencies.securityDb&&dependencies.ocrPayloadR2&&dependencies.ocrQueueProducer,
+     readyForBatchProducer:dependencies.securityDb&&dependencies.ocrPayloadR2&&dependencies.ocrQueueProducer&&dependencies.ocrBatchExplicitlyEnabled,
      readyForQuestionEvidence:dependencies.securityDb&&dependencies.privateAssetR2,
      dependencies,warning:"Binding checks only. Consumer, Access, budgets and end-to-end OCR still require separate acceptance."});
    }
