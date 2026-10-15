@@ -83,3 +83,13 @@ The preview D1 `selection-studio-security-preview` initially lacked the OCR batc
 All four DDL statements succeeded and were verified through `sqlite_master`. Existing review/bank tables were left in place. D1 pre-migration Time Travel bookmark: `00000009-00000002-00005104-ed266fc8de0485a889f6cc71cca516e4`. **No Production D1 change.**
 
 The preview Queue `selection-studio-ocr-jobs-preview` is now explicitly `delivery_paused:true` with zero producers and consumers. The queue must remain paused until a private R2 subscription/bucket exists, both bindings are configured, the isolated Worker is deployed with private secrets, and authenticated cost-controlled acceptance has been approved. Note that paused delivery does not replace disabling new job creation until the full pipeline is configured.
+
+
+### 2026-10-15: private R2 bucket and Preview Pages bindings provisioned
+
+The account owner enabled R2 on Zh2. Created `selection-studio-ocr-input-preview` (Standard, WEUR) and bound the **Preview-only** Cloudflare Pages `OCR_JOB_ASSETS` binding to it, plus `OCR_QUEUE` to `selection-studio-ocr-jobs-preview`. Added `QUESTION_ASSETS` separately for the question source bucket. Verified the existing Preview D1 binding and variable names/types were preserved and **no Production configuration changed**.
+
+- Public `r2.dev` access is explicitly disabled, and zero custom domains are attached.
+- Verified R2 lifecycle rule `Expire OCR input images after 7 days` with prefix `ocr-batches/` and `maxAge:604800` seconds. Incomplete multipart uploads are aborted after 7 days. The question evidence bucket has **no blanket object expiry**.
+- The Queue remains `delivery_paused:true`, with zero producers and zero consumers. Binding configuration is not a live consumer or proof that paid OCR works.
+- The GitHub PR Preview deployment is still gated on GitHub repository secrets. The isolated OCR batch consumer Worker and its private token have **not** been deployed, and no Queue messages/inference were performed. R2's free allowance is a usage allowance, not a spend hard-stop.
