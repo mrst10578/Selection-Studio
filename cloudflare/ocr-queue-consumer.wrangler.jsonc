@@ -4,7 +4,7 @@
   "main": "./ocr-queue-consumer.js",
   "compatibility_date": "2026-10-01",
   "observability": {"enabled": true},
-  "vars": {"OCR_GLOBAL_DAILY_LIMIT": "30"},
+  "vars": {"OCR_GLOBAL_DAILY_LIMIT": "30", "OCR_BATCH_ENABLED": "false"},
   "d1_databases": [
     {
       "binding": "SECURITY_DB",
