@@ -120,6 +120,12 @@ async function consumeOne(msg,env){
  }
 }
 export async function consumeOcrBatch(batch,env){
+ // Defensive second gate: a Queue unpause or consumer deploy alone must
+ // never start billable inference before explicit operator-controlled rollout.
+ if(env.OCR_BATCH_ENABLED!=='true'){
+  for(const message of batch.messages)message.retry({delaySeconds:3600});
+  return;
+ }
  for(const message of batch.messages){
   try{await consumeOne(message,env)}
   catch{message.retry({delaySeconds:120})}
