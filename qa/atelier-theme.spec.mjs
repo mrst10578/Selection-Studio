@@ -19,7 +19,7 @@ test.describe("Ember Atelier premium theme",()=>{
 
  for(const s of scenarios){
   test("renders accessible theme on "+s.path,async({page})=>{
-   await page.goto(s.path);
+   await page.goto(s.path,{waitUntil:'domcontentloaded'});
    await expect(page.locator("body")).toHaveClass(new RegExp(s.body));
    await expect(page.locator(s.selector).first()).toBeVisible();
    const state=await page.evaluate(()=>{

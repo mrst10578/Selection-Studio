@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="fa" dir="rtl" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>آزمون‌ساز | Selection Studio</title>
+<link rel="stylesheet" href="../studio/design-system.css">
+<link rel="stylesheet" href="../studio/atelier-ui.css">
+<link rel="stylesheet" href="./bank-studio.css">
+</head>
+<body class="bank-studio atelier">
+<header class="bank-header">
+<div><span class="bank-eyebrow">EXAMFORGE / TEST COMPOSER</span><h1>آزمون‌ساز بانک تأییدشده</h1><p>فقط سؤال‌هایی که تأیید مستقل معتبر دارند نمایش داده می‌شوند؛ ایجاد خروجی معادل انتشار نیست.</p></div>
+<nav aria-label="ناوبری"><a href="./bank-studio.html">بانک سؤال</a><a href="./exam-importer.html">ورود دفترچه</a></nav>
+</header>
+<main class="bank-layout">
+<aside class="bank-panel bank-sidebar" aria-label="جست‌وجوی سؤال‌های بررسی‌شده">
+ <h2>جست‌وجوی بانک تأییدشده</h2>
+ <label for="composerProject">پروژه</label><select id="composerProject" disabled><option value="">در حال بررسی ورود</option></select>
+ <label for="composerQuery">جست‌وجوی متن</label><input id="composerQuery" placeholder="بخشی از متن سؤال" maxlength="100">
+ <button type="button" id="loadBank" disabled>جست‌وجو و بازخوانی</button>
+ <div id="approvedList" class="bank-list" aria-live="polite"></div>
+</aside>
+<section class="bank-panel bank-editor" aria-label="ترتیب سؤالات و خروجی">
+ <h2>ساخت آزمون</h2>
+ <p id="composerNotice" role="status" aria-live="polite">برای شروع وارد حساب اپراتور شو.</p>
+ <p id="examFingerprint" class="bank-help" aria-live="polite">شناسه نسخه خروجی پس از ساخت نمایش داده می‌شود.</p>
+ <label for="examTitle">عنوان آزمون</label><input id="examTitle" maxlength="140" value="آزمون جدید">
+ <label class="bank-confirm"><input id="includeExamAnswers" type="checkbox"><span>پاسخ‌ها هم در خروجی بیایند</span></label>
+ <h2>ترتیب سؤالات انتخاب‌شده</h2>
+ <div id="selectedList" class="bank-list"></div>
+ <div class="bank-actions">
+  <button id="previewExam" type="button" disabled>پیش‌نمایش</button>
+  <button id="exportJsonl" type="button" disabled>خروجی JSONL</button>
+  <button id="exportHtml" type="button" disabled>خروجی HTML</button>
+  <button id="printExam" type="button" disabled>چاپ یا ذخیره PDF</button>
+ </div>
+ <dialog id="examPreviewDialog" class="bank-preview-dialog" aria-label="پیش‌نمایش آزمون">
+  <button id="closeExamPreview" type="button">بستن</button><div id="examPreviewPaper" dir="rtl"></div>
+ </dialog>
+</section>
+<aside class="bank-panel bank-review" aria-label="قوانین انتشار و کنترل کیفیت">
+ <h2>کنترل نسخه و امنیت</h2>
+ <p>هر بار هنگام ساخت خروجی، سرور مجدداً وضعیت تأیید علمی، نسخه سؤال و PDF منبع را در D1 بررسی می‌کند.</p>
+ <p>اگر یک سؤال از زمان انتخاب تغییر کرده باشد یا تأییدش منقضی شده باشد، کل درخواست خروجی مسدود می‌شود.</p>
+ <p>گزینه PDF از چاپ امن مرورگر استفاده می‌کند. پس از بازشدن پیش‌نمایش، در بخش چاپ «ذخیره به‌صورت PDF» را انتخاب کن.</p>
+</aside>
+</main>
+<script type="module" src="./composer-studio.js"></script>
+</body>
+</html>

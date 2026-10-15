@@ -37,6 +37,13 @@ jobs:
               [ -e "$file" ] && node --check "$file"
             done
           fi
+      - name: Validate native Cloudflare and Phase 2 modules
+        run: |
+          node --check cloudflare/_worker.js
+          node --check studio/crop-queue.js
+          node --check studio/cloud-draft.js
+          node --check studio/atelier-pro.js
+          node --test tests/*.test.mjs
       - name: Test Worker core
         run: node --test worker/test/*.test.mjs
       - name: Install QA dependencies
