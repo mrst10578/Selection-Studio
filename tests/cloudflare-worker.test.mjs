@@ -128,8 +128,12 @@ test("operator-only readiness reports preview dependency bindings without reveal
   assert.equal(body.dependencies.ocrUpstreamToken,false);
   assert.equal(JSON.stringify(body).includes("server-secret"),false);
   const seeded={...authEnv,SECURITY_DB:{prepare(){return{}}},QUESTION_ASSETS:{put(){},head(){},get(){}},
-   OCR_JOB_ASSETS:{put(){},get(){}},OCR_QUEUE:{send(){}},OCR_SERVICE_TOKEN:"server-secret"};
+   OCR_JOB_ASSETS:{put(){},get(){}},OCR_QUEUE:{send(){}},OCR_SERVICE_TOKEN:"server-secret",OCR_BATCH_ENABLED:"true"};
   const ready=await(await worker.fetch(req(),seeded)).json();
+  assert.equal(ready.dependencies.ocrBatchExplicitlyEnabled,true);
+  const disabled=await(await worker.fetch(req(),{...seeded,OCR_BATCH_ENABLED:"false"})).json();
+  assert.equal(disabled.readyForBatchProducer,false);
+  assert.equal(disabled.dependencies.ocrBatchExplicitlyEnabled,false);
   assert.equal(ready.readyForBatchProducer,true);
   assert.equal(ready.readyForQuestionEvidence,true);
   assert.equal(ready.dependencies.ocrUpstreamToken,true);
