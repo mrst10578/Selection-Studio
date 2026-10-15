@@ -93,3 +93,14 @@ The account owner enabled R2 on Zh2. Created `selection-studio-ocr-input-preview
 - Verified R2 lifecycle rule `Expire OCR input images after 7 days` with prefix `ocr-batches/` and `maxAge:604800` seconds. Incomplete multipart uploads are aborted after 7 days. The question evidence bucket has **no blanket object expiry**.
 - The Queue remains `delivery_paused:true`, with zero producers and zero consumers. Binding configuration is not a live consumer or proof that paid OCR works.
 - The GitHub PR Preview deployment is still gated on GitHub repository secrets. The isolated OCR batch consumer Worker and its private token have **not** been deployed, and no Queue messages/inference were performed. R2's free allowance is a usage allowance, not a spend hard-stop.
+
+
+### 2026-10-15: two-sided safety switch (kept OFF for Preview)
+
+Because the Preview D1, private R2 and Queue producer bindings are now configured, mere binding presence must **not** automatically allow users to enqueue jobs while the Queue consumer is missing. Both the Pages producer and the dedicated Queue consumer now enforce the same opt-in guard `OCR_BATCH_ENABLED === 'true'`. It defaults to false when missing. The actual Pages Preview environment variable was explicitly set to `OCR_BATCH_ENABLED=false`, and the checked-in consumer Wrangler config also sets `OCR_BATCH_ENABLED=false`.
+
+- Creating a batch, resuming work or retrying failures responds HTTP 503 `BATCH_DISABLED` **before any new R2 write or Queue send** while the switch is off.
+- Reading prior jobs, pausing and cancelling jobs remain possible during a shutdown.
+- If a Queue consumer were inadvertently deployed/unpaused, it refuses to infer while the switch is off and retries messages after a long delay instead of silently acknowledging them or calling billable OCR.
+- `GET /api/readiness` now reports `ocrBatchExplicitlyEnabled`; its `readyForBatchProducer` indicator is false while this gate is off even if bindings are configured.
+- Enable the switch on **both** Pages and the consumer **only after** authentication, live source/provenance tests, budget limits, consumer secret, paused-queue state and an explicit controlled inference test are approved. Queue delivery must be unpaused deliberately as a separate step.
