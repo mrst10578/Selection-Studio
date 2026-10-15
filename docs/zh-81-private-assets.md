@@ -45,3 +45,14 @@ Re-uploading a byte-identical, already active project attachment verifies the pr
 Logical project quotas count *active* attachments. Unlike project metadata quotas, the actor-wide 96-object / 256 MiB ceilings now count **all distinct actor-scoped R2 object keys ever registered**, including soft-deleted/tombstoned rows, because hiding a file from the project does not delete its R2 bytes. A duplicate blob shared across projects/roles counts just once in the actor-wide ledger. D1 checks this both before uploading and atomically in the registration INSERT to close concurrent uploads.
 
 This prevents repeated upload → tombstone cycles from evading actor storage budgets. **A soft delete does not reclaim actual storage or capacity** until an independently validated and concurrency-safe R2 garbage-collection process is implemented. Do not tell operators that merely removing an attachment frees their R2 quota. The conservative behavior deliberately favors bounded costs and historical evidence over automatic physical deletion. Unit tests cover deleted object count and deleted byte limits.
+
+
+## 2026-10-15: R2 is enabled; private Preview bucket created
+
+The account owner activated R2 on Cloudflare **Zh2**. The R2 bucket list then succeeded. Created and independently verified `selection-studio-question-assets-preview` (Standard, West Europe/WEUR) and connected the **Preview only** Pages environment's `QUESTION_ASSETS` R2 binding. The existing Preview D1 `SECURITY_DB` and identity/OCR environment variable names/types remained in place, and Production's bindings remained unchanged.
+
+- Managed public `r2.dev` access explicitly disabled, verified `enabled:false`. No custom public bucket domain exists.
+- The original evidence bucket retains its default 7-day abort of unfinished multipart uploads, **without an automatic expiry rule for completed PDF evidence**. Referenced question files must not silently disappear.
+- R2 usage is not a hard zero-cost guarantee. Keep the app's actor-wide physical-object cap and no-public-URL policy; review actual account billing/usage before opening wider access.
+- Registration, upload/download authorizations and physical presence checks are implemented on the PR branch but cannot be called live until Preview Pages code is deployed. The R2 bucket itself and its Preview binding **are live**.
+- No changes to Production, no PR merge, and no paid OCR inference or uploaded user source data during this provisioning.
