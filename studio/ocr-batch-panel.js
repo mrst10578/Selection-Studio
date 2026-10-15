@@ -8,6 +8,7 @@ const states={running:'در حال پردازش',paused:'متوقف‌شده',co
  staged:'منتظر ارسال',queued:'در صف',processing:'در حال OCR',done:'آماده بازبینی',failed:'ناموفق'};
 function stateLabel(s){return states[s]||'نامشخص'}
 function apiError(status,body){
+ if(body?.error==='BATCH_DISABLED')return 'OCR گروهی تا پایان تنظیم و تست مصرف‌کننده صف عمداً غیرفعال است؛ فعلاً پردازشی آغاز نمی‌شود.';
  if(status===401||status===403)return 'برای استفاده از صف، ورود اپراتور لازم است.';
  if(status===429)return 'محدودیت تعداد درخواست‌ها یا صف فعال پر شده است.';
  if(status===503)return 'زیرساخت صف هنوز متصل یا آماده نیست.';
