@@ -104,3 +104,16 @@ Because the Preview D1, private R2 and Queue producer bindings are now configure
 - If a Queue consumer were inadvertently deployed/unpaused, it refuses to infer while the switch is off and retries messages after a long delay instead of silently acknowledging them or calling billable OCR.
 - `GET /api/readiness` now reports `ocrBatchExplicitlyEnabled`; its `readyForBatchProducer` indicator is false while this gate is off even if bindings are configured.
 - Enable the switch on **both** Pages and the consumer **only after** authentication, live source/provenance tests, budget limits, consumer secret, paused-queue state and an explicit controlled inference test are approved. Queue delivery must be unpaused deliberately as a separate step.
+
+
+### 2026-10-15: isolated Preview consumer Worker staged in Cloudflare
+
+Deployed the actual isolated module Worker `selection-studio-ocr-batch-consumer-preview` to the Zh2 Cloudflare account (Worker upload acknowledged, then settings fetched back). It is deliberately **non-operational for paid OCR**:
+
+- Module bindings: Preview-only D1 `SECURITY_DB` (`241ef565-d9ea-4d5a-b70e-4c115e0e185d`) and private `OCR_JOB_ASSETS` R2 bucket `selection-studio-ocr-input-preview`.
+- The deployed Worker has `OCR_BATCH_ENABLED=false`, `OCR_GLOBAL_DAILY_LIMIT=30`, and **no `OCR_SERVICE_TOKEN` secret**. Missing the secret is intentionally fail-closed.
+- Public `workers.dev` subdomain and preview URLs are explicitly disabled; there is no public route. The source is also configured as disabled in `cloudflare/ocr-queue-consumer.wrangler.jsonc`.
+- The Queue `selection-studio-ocr-jobs-preview` now has exactly **one Worker consumer**, verified to target the isolated Preview Worker, with batch size 1, max concurrency 1, max 5 Queue retries, 1-second batching window and 60-second retry delay. **Queue delivery remains paused**; no OCR payloads/messages or model calls were submitted.
+- An isolated daily cron `0 3 * * *` UTC was installed and checked via GET. It only invokes `cleanupExpiredBatches` on Preview D1/R2 and does not run OCR inference. This complements the private R2 rule expiring source images under `ocr-batches/` after seven days.
+- The Pages Preview `OCR_BATCH_ENABLED=false` environment switch remains in place. Even if delivery were accidentally unpaused, the consumer refuses inference until its **separate** operator-controlled flag is enabled. Do not turn on either switch or add the OCR secret until a small, approved live test with explicit cost awareness.
+- The full Pages Preview UI/API is **still not deployed** because the GitHub Actions repository lacks a scoped `CLOUDFLARE_API_TOKEN` secret. The Cloudflare linked-app connection cannot create user tokens (permission error 9109). The public GitHub Actions `CLOUDFLARE_ACCOUNT_ID` non-secret variable is now configured.
