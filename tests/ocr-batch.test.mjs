@@ -48,7 +48,7 @@ function fixture(){
  const queue={
   async send(body){calls.push(structuredClone(body))}
  };
- return {local,db,r2,queue,calls,images,env:{SECURITY_DB:db,OCR_JOB_ASSETS:r2,OCR_QUEUE:queue,OCR_SERVICE_TOKEN:'fake-internal-only',OCR_GLOBAL_DAILY_LIMIT:'30'}};
+ return {local,db,r2,queue,calls,images,env:{SECURITY_DB:db,OCR_JOB_ASSETS:r2,OCR_QUEUE:queue,OCR_SERVICE_TOKEN:'fake-internal-only',OCR_GLOBAL_DAILY_LIMIT:'30',OCR_BATCH_ENABLED:'true'}};
 }
 const call=(env,actor,path='',method='GET',payload)=>handleBatchApi(new Request(url+'/api/ocr/jobs'+path,{
  method,
@@ -194,5 +194,30 @@ test('exhausted stale processing lease needs manual retry rather than hidden ext
  assert.equal(snapshot.counts.failed,1);
  assert.equal(snapshot.items[0].error,'OCR_LEASE_EXPIRED');
  assert.equal(f.calls.length,before);
+ f.local.close();
+});
+
+test('batch OCR is disabled by default even when R2 and Queue are bound',async()=>{
+ const f=fixture();delete f.env.OCR_BATCH_ENABLED;
+ const response=await call(f.env,actor,'','POST',example('disabled-batch-001'));
+ assert.equal(response.status,503);
+ assert.equal((await response.json()).error,'BATCH_DISABLED');
+ assert.equal(f.images.size,0);
+ assert.equal(f.calls.length,0);
+ assert.equal(f.local.prepare('SELECT COUNT(*) AS n FROM ocr_batch_jobs').get().n,0);
+ assert.equal((await call(f.env,actor)).status,200);
+ f.local.close();
+});
+test('batch shutdown blocks resume and retry but retains read, pause and cancel',async()=>{
+ const f=fixture(),started=await call(f.env,actor,'','POST',example('disabled-batch-002'));
+ assert.equal(started.status,202);
+ const job=(await started.json()).id;
+ f.env.OCR_BATCH_ENABLED='false';
+ assert.equal((await call(f.env,actor,'/'+job+'/resume','POST')).status,503);
+ assert.equal((await call(f.env,actor,'/'+job+'/retry','POST')).status,503);
+ assert.equal((await call(f.env,actor,'/'+job)).status,200);
+ assert.equal((await call(f.env,actor,'/'+job+'/pause','POST')).status,200);
+ assert.equal((await call(f.env,actor,'/'+job+'/cancel','POST')).status,200);
+ assert.equal(f.calls.length,2,'no additional Queue sends on shutdown');
  f.local.close();
 });
