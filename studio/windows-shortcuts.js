@@ -16,7 +16,12 @@ export function installWindowsMetadataShortcuts({
       return;
     }
     if(d==="1"&&chapterMax>=10){
-      prefix="1"; timer=setTimeout(()=>{clear();commitChapter(1)},560);
+      const startingFocus=document.activeElement;
+      prefix="1"; timer=setTimeout(()=>{
+        const shouldCommit=enabled()&&document.activeElement===startingFocus&&!isTypingTarget(document.activeElement);
+        clear();
+        if(shouldCommit)commitChapter(1);
+      },560);
       toast("فصل ۱ — برای ۱۰/۱۱/۱۲ رقم دوم را بزن","shortcut"); return;
     }
     clear(); commitChapter(Number(d));
