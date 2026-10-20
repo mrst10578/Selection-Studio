@@ -16,8 +16,8 @@ for(const [label,path,method,env,status] of [
  test('private API cache and MIME headers: '+label,async()=>{
   const response=await worker.fetch(new Request(origin+path,{method}),env);
   assert.equal(response.status,status);
-  assert.match(response.headers.get('Cache-Control')||'',/\\bno-store\\b/i);
+  assert.match(response.headers.get('Cache-Control')||'',/\bno-store\b/i);
   assert.equal(response.headers.get('X-Content-Type-Options'),'nosniff');
-  assert.match(response.headers.get('Content-Type')||'',/application\\/json/i);
+  assert.match(response.headers.get('Content-Type')||'',/application\/json/i);
  });
 }
