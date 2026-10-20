@@ -100,9 +100,10 @@ async function loadPdf(){
 }
 async function importPdf(file){
  const mod=await loadPdf(),doc=await mod.getDocument({data:await file.arrayBuffer()}).promise;
- if(doc.numPages>50)throw Error("این نسخه حداکثر ۵۰ صفحه در هر بار ورود می‌پذیرد. PDF را به بخش‌های کوچک‌تر تقسیم کن.");
  let count=0;
  try{
+  // Even a rejected oversized PDF must release its PDF.js document.
+  if(doc.numPages>50)throw Error("این نسخه حداکثر ۵۰ صفحه در هر بار ورود می‌پذیرد. PDF را به بخش‌های کوچک‌تر تقسیم کن.");
   for(let pageNo=1;pageNo<=doc.numPages;pageNo++){
    notice("در حال رندر صفحه "+digits(pageNo)+" از "+digits(doc.numPages));
    const page=await doc.getPage(pageNo),initial=page.getViewport({scale:1}),scale=Math.min(2,2500/Math.max(initial.width,initial.height));
