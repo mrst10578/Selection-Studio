@@ -91,3 +91,13 @@ test('revocation then regrant never resurrects approvals signed under an earlier
  assert.equal((await x.call('/exams/compose','POST',{title:'blocked',questionIds:[qid],sourceRevisions:[1],includeAnswers:false})).status,409);
  x.d.close();
 });
+
+test('bank search accepts Arabic-Indic and Latin digits in Persian questions',async()=>{
+ const x=f();
+ for(const digit of ['٢','2','۲']){
+  const result=await x.call('/questions?projectId='+pid+'&q='+encodeURIComponent(digit));
+  assert.equal(result.status,200);
+  assert.deepEqual(result.data.questions.map(q=>q.id),[qid], 'search digit '+digit);
+ }
+ x.d.close();
+});
