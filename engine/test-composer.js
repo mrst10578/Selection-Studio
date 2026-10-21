@@ -1,6 +1,5 @@
 /* ZH-86 | Pure, print-ready exam generator; NEVER triggers publication. */
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const text=(v,n)=>typeof v==='string'?v.slice(0,n):'';
 export function composeApprovedExam(questions,{title='آزمون',includeAnswers=false}={}){
  if(!Array.isArray(questions)||!questions.length||questions.length>200)throw Error('INVALID_EXAM_COUNT');
  if(typeof title!=='string'||title.trim().length<1||title.length>140)throw Error('INVALID_TITLE');
@@ -9,10 +8,12 @@ export function composeApprovedExam(questions,{title='آزمون',includeAnswers
   if(!q||typeof q.id!=='string'||!q.id||ids.has(q.id))throw Error('DUPLICATE_OR_MISSING_ID');
   if(q.reviewStatus!=='approved'||q.scientificPending>0||q.softDeleted||q.state==='draft'||!Number.isSafeInteger(q.revision)||q.revision<1)throw Error('QUESTION_NOT_APPROVED');
   if(typeof q.questionText!=='string'||!q.questionText.trim())throw Error('EMPTY_QUESTION');
+  if(q.questionText.length>16000)throw Error('QUESTION_TOO_LONG');
   if(includeAnswers&&typeof q.answerText!=='string')throw Error('ANSWER_MISSING');
+  if(includeAnswers&&q.answerText.length>16000)throw Error('ANSWER_TOO_LONG');
   ids.add(q.id);
-  items.push({index:items.length+1,id:q.id,revision:q.revision,question:text(q.questionText,16000),
-   ...(includeAnswers?{answer:text(q.answerText,16000)}:{})});
+  items.push({index:items.length+1,id:q.id,revision:q.revision,question:q.questionText,
+   ...(includeAnswers?{answer:q.answerText}:{})});
  }
  return {title:title.trim(),items,answersIncluded:includeAnswers,publishable:false,reviewRequired:true};
 }
