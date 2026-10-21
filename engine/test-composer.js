@@ -3,6 +3,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 export function composeApprovedExam(questions,{title='آزمون',includeAnswers=false}={}){
  if(!Array.isArray(questions)||!questions.length||questions.length>200)throw Error('INVALID_EXAM_COUNT');
  if(typeof title!=='string'||title.trim().length<1||title.length>140)throw Error('INVALID_TITLE');
+ if(typeof includeAnswers!=='boolean')throw Error('INVALID_ANSWER_FLAG');
  const ids=new Set(),items=[];
  for(const q of questions){
   if(!q||typeof q.id!=='string'||!q.id||ids.has(q.id))throw Error('DUPLICATE_OR_MISSING_ID');
