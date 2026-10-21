@@ -1,6 +1,7 @@
 /* Selection Studio cloud drafts. Stores only whitelisted form metadata; no PDF bytes. */
 export const DRAFT_FIELDS=Object.freeze(['provider','examMonth','examDay','operator','sourceNumber','subject','grade','chapter','unit','difficulty','correctOption']);
-export const sameFields=(left,right)=>JSON.stringify(left||{})===JSON.stringify(right||{});
+const canonicalDraftFields=(fields)=>JSON.stringify(Object.fromEntries(Object.entries(fields||{}).sort(([a],[b])=>a<b?-1:a>b?1:0)));
+export const sameFields=(left,right)=>canonicalDraftFields(left)===canonicalDraftFields(right);
 export function installCloudDraftSync({getFields,applyFields,getLocal,onStatus,onApplied}){
  let remote=null,loaded=false,conflict=false,busy=false,timer=null;
  let message='در حال بررسی اتصال به پیش‌نویس ابری',versions=[],host=null;
