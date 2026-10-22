@@ -7,7 +7,7 @@ export function parseNumberedBlocks(text,{kind='question',max=500}={}){
  if(!['question','answer'].includes(kind))throw Error('INVALID_BLOCK_KIND');
  const lines=safe(text).replace(/\r\n?/g,'\n').split('\n');
  const parts=[],warnings=[];
- const re=/^\s*(?:س[ؤو]ال|پاسخ|Question|Answer|Q)?\s*[#№]?\s*[\(（]?\s*([0-9۰-۹٠-٩]{1,4})\s*[\)）.]\s*[\.:‌-–]?\s*(.*)$/iu;
+ const re=/^\s*(?:س[ؤو]ال|پاسخ|Question|Answer|Q)?\s*[#№]?\s*[\(（]?\s*([0-9۰-۹٠-٩]{1,4})\s*[\)）.:：–-]\s*[\.:‌-–]?\s*(.*)$/iu;
  let current=null;
  const finish=()=>{
   if(!current)return;
