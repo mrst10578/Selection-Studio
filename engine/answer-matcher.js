@@ -53,7 +53,7 @@ export function matchExamAnswers(questions,answers){
   mismatched:matches.filter(x=>x.problems.length>0).length},verified:false,publishable:false};
 }
 export function explicitMatchReview(result,{actor,acceptedNumbers,sourceFingerprint}={}){
- if(!result||!Array.isArray(result.matches)||!Array.isArray(acceptedNumbers))throw Error('INVALID_REVIEW');
+ if(!result||!Array.isArray(result.matches)||!Array.isArray(acceptedNumbers)||acceptedNumbers.length===0)throw Error('INVALID_REVIEW');
  if(typeof actor!=='string'||!actor.trim()||actor.length>128)throw Error('OPERATOR_REQUIRED');
  if(!/^[a-zA-Z0-9_-]{12,128}$/.test(sourceFingerprint||''))throw Error('SOURCE_REQUIRED');
  const numbers=new Set(acceptedNumbers);
