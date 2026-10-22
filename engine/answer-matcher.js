@@ -5,6 +5,7 @@ export const asciiDigits=s=>String(s??'').replace(/[۰-۹٠-٩]/g,c=>String(digi
 const safe=s=>typeof s==='string'?s.slice(0,200000):'';
 export function parseNumberedBlocks(text,{kind='question',max=500}={}){
  if(!['question','answer'].includes(kind))throw Error('INVALID_BLOCK_KIND');
+ if(!Number.isSafeInteger(max)||max<1||max>1000)throw Error('INVALID_BLOCK_LIMIT');
  const lines=safe(text).replace(/\r\n?/g,'\n').split('\n');
  const parts=[],warnings=[];
  const re=/^\s*(?:س[ؤو]ال|پاسخ|Question|Answer|Q)?\s*[#№]?\s*[\(（]?\s*([0-9۰-۹٠-٩]{1,4})\s*[\)）.:：–-]\s*[\.:‌-–]?\s*(.*)$/iu;
