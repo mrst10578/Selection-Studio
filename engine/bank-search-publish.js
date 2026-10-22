@@ -24,7 +24,8 @@ export function preparePublicationIntent(records,{target,actor,confirmation}={})
  for(const r of records){
   if(!r||typeof r.id!=='string'||!r.id||ids.has(r.id))throw Error('INVALID_QUESTION_IDS');
   if(r.reviewStatus!=='approved'||r.state==='draft'||r.deleted||r.softDeleted||r.scientificPending>0||!Number.isSafeInteger(r.revision)||r.revision<1)throw Error('UNAPPROVED_QUESTION');
-  if(!r.reviewEvidence||r.reviewEvidence.reviewer===r.reviewEvidence.operator||r.reviewEvidence.sourceRevision!==r.revision||r.reviewEvidence.decision!=='approve')throw Error('INVALID_REVIEW_EVIDENCE');
+  const evidence=r.reviewEvidence;
+  if(!evidence||typeof evidence.reviewer!=='string'||!evidence.reviewer.trim()||typeof evidence.operator!=='string'||!evidence.operator.trim()||evidence.reviewer.trim()===evidence.operator.trim()||evidence.sourceRevision!==r.revision||evidence.decision!=='approve')throw Error('INVALID_REVIEW_EVIDENCE');
   ids.add(r.id);selections.push({id:r.id,revision:r.revision});
  }
  return {target,actor,items:selections,createdAt:new Date().toISOString(),status:'pending_server_reauthorization_and_final_dispatch_approval',dispatched:false};
