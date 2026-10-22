@@ -32,3 +32,13 @@ test('A4 export keeps questions first and prints answer key on its own page',()=
  const noAnswers=exportExamHTML(composeApprovedExam([approved('q1')],{includeAnswers:false}));
  assert.ok(!noAnswers.includes('class="answer-key"'));
 });
+
+test('A4 HTML wraps long unbroken tokens without changing question, answer or title',()=>{
+ const token='A'.repeat(500);
+ const exam=composeApprovedExam([{...approved('long',token),answerText:token}],{title:token.slice(0,100),includeAnswers:true});
+ const html=exportExamHTML(exam);
+ assert.match(html,/body\{[^}]*overflow-wrap:anywhere/);
+ assert.ok(html.includes('<h1>'+token.slice(0,100)+'</h1>'));
+ assert.ok(html.includes('<div>'+token+'</div>'));
+ assert.equal((html.match(new RegExp(token,'g'))||[]).length,2);
+});
