@@ -6,7 +6,7 @@ export function searchApprovedBank(records,{query='',subject='',projectId='',lim
  const q=normalize(query),s=normalize(subject),cap=Number.isInteger(limit)?Math.max(1,Math.min(limit,100)):40;
  const results=[];
  for(const row of records.slice(0,10000)){
-  if(!row||row.deleted||row.reviewStatus!=='approved'||row.scientificPending>0||row.state==='draft')continue;
+  if(!row||row.deleted||row.softDeleted||row.reviewStatus!=='approved'||row.scientificPending>0||row.state==='draft')continue;
   if(projectId&&row.projectId!==projectId)continue;
   if(s&&normalize(row.subject)!==s)continue;
   if(q&&!normalize(row.questionText).includes(q))continue;
@@ -23,7 +23,7 @@ export function preparePublicationIntent(records,{target,actor,confirmation}={})
  const ids=new Set(),selections=[];
  for(const r of records){
   if(!r||typeof r.id!=='string'||!r.id||ids.has(r.id))throw Error('INVALID_QUESTION_IDS');
-  if(r.reviewStatus!=='approved'||r.state==='draft'||r.deleted||r.scientificPending>0||!Number.isSafeInteger(r.revision)||r.revision<1)throw Error('UNAPPROVED_QUESTION');
+  if(r.reviewStatus!=='approved'||r.state==='draft'||r.deleted||r.softDeleted||r.scientificPending>0||!Number.isSafeInteger(r.revision)||r.revision<1)throw Error('UNAPPROVED_QUESTION');
   if(!r.reviewEvidence||r.reviewEvidence.reviewer===r.reviewEvidence.operator||r.reviewEvidence.sourceRevision!==r.revision||r.reviewEvidence.decision!=='approve')throw Error('INVALID_REVIEW_EVIDENCE');
   ids.add(r.id);selections.push({id:r.id,revision:r.revision});
  }
