@@ -32,8 +32,8 @@ export function parseNumberedBlocks(text,{kind='question',max=500}={}){
 export function matchExamAnswers(questions,answers){
  if(!Array.isArray(questions)||!Array.isArray(answers))throw Error('INVALID_MATCH_INPUT');
  if(questions.length>1000||answers.length>1000)throw Error('TOO_MANY_MATCH_INPUTS');
- const group=arr=>{const map=new Map();for(const item of arr.slice(0,1000)){
-  if(!item||!Number.isSafeInteger(item.number)||item.number<1||item.number>9999||typeof item.text!=='string')continue;
+ const group=arr=>{const map=new Map();for(const item of arr){
+  if(!item||!Number.isSafeInteger(item.number)||item.number<1||item.number>9999||typeof item.text!=='string')throw Error('INVALID_MATCH_RECORD');
   if(!map.has(item.number))map.set(item.number,[]);
   map.get(item.number).push({number:item.number,text:item.text.slice(0,16000)});
  }return map;};
