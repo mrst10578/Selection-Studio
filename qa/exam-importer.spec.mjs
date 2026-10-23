@@ -80,4 +80,35 @@ test.describe('ZH-82 reviewed answer importer',()=>{
   await expect(page.locator('#importNotice')).toContainText('منتقل شد');
   expect(requests).toBe(1);
  });
+ test('locks the import context while saving and restores controls afterward',async({page})=>{
+  await mock(page);
+  let release;
+  const pending=new Promise(resolve=>{release=resolve});
+  let requests=0;
+  await page.route('**/api/v1/projects/'+P+'/questions',async route=>{
+   requests++;
+   await pending;
+   await route.fulfill({status:201,contentType:'application/json',
+    body:JSON.stringify({question:{id:'87654321-1234-1234-1234-123456789012',state:'draft'}})});
+  });
+  await page.goto('/review-console/exam-importer.html');
+  await expect(page.locator('#importProject')).toBeEnabled();
+  await page.locator('#importSource').selectOption(digest);
+  await page.locator('#rawQuestions').fill('۱) سؤال نمونه');
+  await page.locator('#rawAnswers').fill('۱) پاسخ نمونه');
+  await page.locator('#matchNow').click();
+  await page.locator('[data-number="1"]').check();
+  await page.locator('#importDrafts').click();
+  const ids=['importProject','importSource','importLabel','rawQuestions','rawAnswers','matchNow'];
+  try{
+   await expect.poll(()=>requests).toBe(1);
+   for(const id of ids)await expect(page.locator('#'+id)).toBeDisabled();
+  }finally{
+   release();
+  }
+  await expect(page.locator('#importNotice')).toContainText('منتقل شد');
+  for(const id of ids)await expect(page.locator('#'+id)).toBeEnabled();
+  expect(requests).toBe(1);
+ });
+
 });
