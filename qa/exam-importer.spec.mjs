@@ -15,6 +15,27 @@ async function mock(page){
  return posted;
 }
 test.describe('ZH-82 reviewed answer importer',()=>{
+ test('shows the 50-question batch limit before an operator submits',async({page})=>{
+  const posted=await mock(page);
+  await page.goto('/review-console/exam-importer.html');
+  await expect(page.locator('#importProject')).toBeEnabled();
+  await page.locator('#importSource').selectOption(digest);
+  const numbered=Array.from({length:51},(_,i)=>(i+1)+') متن شماره '+(i+1)).join('\n');
+  await page.locator('#rawQuestions').fill(numbered);
+  await page.locator('#rawAnswers').fill(numbered);
+  await page.locator('#matchNow').click();
+  await expect(page.locator('[data-number]')).toHaveCount(51);
+  await page.locator('[data-number]').evaluateAll(inputs=>{
+   for(const input of inputs){input.checked=true;input.dispatchEvent(new Event('change',{bubbles:true}));}
+  });
+  await expect(page.locator('#importSelectionStatus')).toContainText('51 سؤال');
+  await expect(page.locator('#importSelectionStatus')).toContainText('حداکثر ۵۰ سؤال');
+  await expect(page.locator('#importDrafts')).toBeDisabled();
+  await page.locator('[data-number="51"]').uncheck();
+  await expect(page.locator('#importSelectionStatus')).toContainText('50 سؤال');
+  await expect(page.locator('#importDrafts')).toBeEnabled();
+  expect(posted).toHaveLength(0);
+ });
  test('invalid PDF asset entries do not block healthy source selection',async({page})=>{
   const posted=await mock(page);
   await page.route('**/api/v1/projects/'+P+'/assets',route=>route.fulfill({status:200,contentType:'application/json',
