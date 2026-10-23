@@ -11,14 +11,18 @@ async function api(path,opts={}){
 async function safely(fn){try{await fn()}catch(e){note(e?.message==='ASSET_STORAGE_NOT_CONFIGURED'?'اتصال R2 هنوز فعال نیست. ورود پیش‌نویس فعلاً متوقف است.':e.message||'خطا',true)}}
 const path=()=>'/api/v1/projects/'+state.project;
 // Preserve successfully imported keys across re-analysis and project switches during this page session.
-function reset(){state.snapshot=null;state.reviewed.clear();$('matchList').replaceChildren();$('importDrafts').disabled=true}
+function reset(){state.snapshot=null;state.reviewed.clear();$('matchList').replaceChildren();ready()}
 // Import deduplication is scoped to the exact reviewed question and source, not a global number.
 function importKey(number){
  const match=state.snapshot?.matches.find(item=>item.number===number);
  return JSON.stringify([state.project,$('importSource').value,number,match?.question,match?.answer]);
 }
 function ready(){
- $('importDrafts').disabled=state.importing||!state.project||!/^[a-f0-9]{64}$/i.test($('importSource').value)||![...state.reviewed].some(n=>!state.imported.has(importKey(n)));
+ const pending=[...state.reviewed].filter(n=>!state.imported.has(importKey(n))).length;
+ $('importSelectionStatus').textContent=pending>50
+  ? pending+' سؤال تأییدشده انتخاب شده؛ حداکثر ۵۰ سؤال را در هر مرحله انتخاب کن.'
+  : pending+' سؤال تأییدشده آماده انتقال است (حداکثر ۵۰ سؤال در هر مرحله).';
+ $('importDrafts').disabled=state.importing||!state.project||!/^[a-f0-9]{64}$/i.test($('importSource').value)||pending===0||pending>50;
 }
 let sourcesGeneration=0;
 async function sources(){
