@@ -29,7 +29,10 @@ async function sources(){
  try{data=await api('/api/v1/projects/'+project+'/assets')}
  catch(error){if(generation!==sourcesGeneration)return;throw error}
  if(generation!==sourcesGeneration||project!==state.project)return;
- for(const asset of data.assets||[])if(asset.role==='question_pdf')selection.add(new Option('PDF · '+asset.digest.slice(0,16),asset.digest));
+ for(const asset of Array.isArray(data.assets)?data.assets:[]){
+  if(asset?.role!=='question_pdf'||typeof asset.digest!=='string'||!/^[a-f0-9]{64}$/i.test(asset.digest))continue;
+  selection.add(new Option('PDF · '+asset.digest.slice(0,16),asset.digest));
+ }
  selection.disabled=selection.options.length<2;
  if(selection.disabled)note('PDF منبع در این پروژه وجود ندارد. ابتدا فایل را در بانک پیش‌نویس بارگذاری کن.',true);
  ready();
