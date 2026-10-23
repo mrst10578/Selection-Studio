@@ -10,7 +10,8 @@ async function api(path,opts={}){
 }
 async function safely(fn){try{await fn()}catch(e){note(e?.message==='ASSET_STORAGE_NOT_CONFIGURED'?'اتصال R2 هنوز فعال نیست. ورود پیش‌نویس فعلاً متوقف است.':e.message||'خطا',true)}}
 const path=()=>'/api/v1/projects/'+state.project;
-function reset(){state.snapshot=null;state.reviewed.clear();state.imported.clear();$('matchList').replaceChildren();$('importDrafts').disabled=true}
+// Preserve successfully imported keys across re-analysis and project switches during this page session.
+function reset(){state.snapshot=null;state.reviewed.clear();$('matchList').replaceChildren();$('importDrafts').disabled=true}
 // Import deduplication is scoped to the exact reviewed question and source, not a global number.
 function importKey(number){
  const match=state.snapshot?.matches.find(item=>item.number===number);
