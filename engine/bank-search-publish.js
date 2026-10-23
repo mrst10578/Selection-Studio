@@ -9,7 +9,7 @@ export function searchApprovedBank(records,{query='',subject='',projectId='',lim
  const q=normalize(query),s=normalize(subject),cap=Number.isInteger(limit)?Math.max(1,Math.min(limit,100)):40;
  const results=[];
  for(const row of records.slice(0,10000)){
-  if(!row||row.deleted||row.softDeleted||row.reviewStatus!=='approved'||row.scientificPending!==0||row.state==='draft')continue;
+  if(!row||row.deleted||row.softDeleted||row.reviewStatus!=='approved'||row.scientificPending!==0||row.state==='draft'||typeof row.id!=='string'||!row.id.trim()||!Number.isSafeInteger(row.revision)||row.revision<1)continue;
   if(projectId&&row.projectId!==projectId)continue;
   if(s&&normalize(row.subject)!==s)continue;
   if(q&&!normalize(row.questionText).includes(q))continue;
