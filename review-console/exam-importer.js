@@ -14,10 +14,15 @@ function reset(){state.snapshot=null;state.reviewed.clear();state.imported.clear
 function ready(){
  $('importDrafts').disabled=state.importing||!state.project||!/^[a-f0-9]{64}$/i.test($('importSource').value)||![...state.reviewed].some(n=>!state.imported.has(n));
 }
+let sourcesGeneration=0;
 async function sources(){
+ const generation=++sourcesGeneration,project=state.project;
  const selection=$('importSource');selection.replaceChildren(new Option('انتخاب PDF سؤال',''));selection.disabled=true;
- if(!state.project)return;
- const data=await api(path()+'/assets');
+ if(!project)return;
+ let data;
+ try{data=await api('/api/v1/projects/'+project+'/assets')}
+ catch(error){if(generation!==sourcesGeneration)return;throw error}
+ if(generation!==sourcesGeneration||project!==state.project)return;
  for(const asset of data.assets||[])if(asset.role==='question_pdf')selection.add(new Option('PDF · '+asset.digest.slice(0,16),asset.digest));
  selection.disabled=selection.options.length<2;
  if(selection.disabled)note('PDF منبع در این پروژه وجود ندارد. ابتدا فایل را در بانک پیش‌نویس بارگذاری کن.',true);
