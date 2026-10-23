@@ -71,6 +71,7 @@ async function importSelected(){
  state.importing=true;
  for(const [control] of controls)control.disabled=true;
  ready();
+ let completed=0;
  try{
   if(!state.snapshot||!state.project)throw Error('ابتدا شماره‌ها را تطبیق بده');
   const chosen=[...state.reviewed].filter(n=>!state.imported.has(importKey(n))).sort((a,b)=>a-b);
@@ -80,7 +81,6 @@ async function importSelected(){
   if(!/^[a-f0-9]{64}$/i.test(sourceDigest))throw Error('PDF خصوصی منبع را انتخاب کن');
   // This evidence is local only; the server stores every imported question as an UNAPPROVED DRAFT.
   const review=explicitMatchReview(state.snapshot,{actor:state.operator,acceptedNumbers:chosen,sourceFingerprint:sourceDigest});
-  let completed=0;
   for(const number of review.accepted){
    if(state.imported.has(importKey(number)))continue;
    const matched=state.snapshot.matches.find(x=>x.number===number);
@@ -92,6 +92,9 @@ async function importSelected(){
    state.imported.add(importKey(number));completed++;ready();
   }
   note(completed+' سؤال جدید به D1 منتقل شد. هیچ‌کدام تأیید علمی یا منتشر نشده‌اند.');
+ }catch(error){
+  if(!completed)throw error;
+  note(completed+' سؤال ثبت شد، اما انتقال بقیه متوقف شد. پیش از تلاش مجدد، بانک پیش‌نویس‌ها را بررسی کن.',true);
  }finally{
   state.importing=false;
   for(const [control,wasDisabled] of controls)control.disabled=wasDisabled;
