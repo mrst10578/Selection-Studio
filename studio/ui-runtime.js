@@ -1,5 +1,5 @@
 export function isTypingTarget(target){
-  return Boolean(target?.closest?.("input,textarea,select,[contenteditable='true']"));
+  return Boolean(target?.closest?.("input,textarea,select") || target?.isContentEditable);
 }
 export function toast(message,type="info"){
   let host=document.querySelector("#globalToast");
