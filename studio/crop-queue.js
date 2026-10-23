@@ -21,7 +21,7 @@ export function createCropQueue({question,answer,switchPane,onNotice=()=>{},onCh
  const changed=()=>onChange();
  function shift(kind,index,delta){
   const items=queued[kind],next=index+delta;
-  if(next<0||next>=items.length)return false;
+  if(!Number.isInteger(index)||![-1,1].includes(delta)||index<0||index>=items.length||next<0||next>=items.length)return false;
   [items[index],items[next]]=[items[next],items[index]];
   update(kind);changed();return true;
  }
