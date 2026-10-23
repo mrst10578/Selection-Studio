@@ -88,8 +88,12 @@ async function importSelected(){
   if(!/^[a-f0-9]{64}$/i.test(sourceDigest))throw Error('PDF خصوصی منبع را انتخاب کن');
   // This evidence is local only; the server stores every imported question as an UNAPPROVED DRAFT.
   const review=explicitMatchReview(state.snapshot,{actor:state.operator,acceptedNumbers:chosen,sourceFingerprint:sourceDigest});
-  for(const number of review.accepted){
+  // Limit live-region announcements to roughly five updates per batch.
+  const progressEvery=Math.max(1,Math.ceil(review.accepted.length/5));
+  for(const [index,number] of review.accepted.entries()){
    if(state.imported.has(importKey(number)))continue;
+   if(index===0||index%progressEvery===0||index===review.accepted.length-1)
+    note('در حال انتقال پیش‌نویس: سؤال '+(index+1)+' از '+review.accepted.length+'.');
    const matched=state.snapshot.matches.find(x=>x.number===number);
    const content={questionText:matched.question,answerText:matched.answer,latex:[],
      sourceLabel:$('importLabel').value.slice(0,160),sourceDigest,sourceNumber:number,
