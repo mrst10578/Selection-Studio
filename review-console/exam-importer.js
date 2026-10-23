@@ -54,7 +54,11 @@ function analyze(){
 }
 async function importSelected(){
  if(state.importing)return;
+ // Keep the destination, source PDF, and reviewed text fixed until this batch finishes.
+ const controls=['importProject','importSource','importLabel','rawQuestions','rawAnswers','matchNow']
+  .map(id=>[$(id),$(id).disabled]);
  state.importing=true;
+ for(const [control] of controls)control.disabled=true;
  ready();
  try{
   if(!state.snapshot||!state.project)throw Error('ابتدا شماره‌ها را تطبیق بده');
@@ -79,6 +83,7 @@ async function importSelected(){
   note(completed+' سؤال جدید به D1 منتقل شد. هیچ‌کدام تأیید علمی یا منتشر نشده‌اند.');
  }finally{
   state.importing=false;
+  for(const [control,wasDisabled] of controls)control.disabled=wasDisabled;
   ready();
  }
 }
