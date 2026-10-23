@@ -1,6 +1,6 @@
 /* ZH-85 | Search/query and publication intent only. NEVER sends network requests. */
 const digits='۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩';
-const normalize=s=>String(s??'').normalize('NFKC').replace(/[۰-۹٠-٩]/g,c=>String(digits.indexOf(c)%10)).replace(/[يى]/g,'ی').replace(/ك/g,'ک').replace(/\s+/g,' ').trim().toLowerCase();
+const normalize=s=>String(s??'').normalize('NFKC').replace(/[۰-۹٠-٩]/g,c=>String(digits.indexOf(c)%10)).replace(/[يى]/g,'ی').replace(/ك/g,'ک').replace(/[\s\u200c]+/g,' ').trim().toLowerCase();
 export function searchApprovedBank(records,{query='',subject='',projectId='',limit=40}={}){
  if(!Array.isArray(records))return [];
  const q=normalize(query),s=normalize(subject),cap=Number.isInteger(limit)?Math.max(1,Math.min(limit,100)):40;
