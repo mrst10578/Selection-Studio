@@ -11,8 +11,13 @@ async function api(path,opts={}){
 async function safely(fn){try{await fn()}catch(e){note(e?.message==='ASSET_STORAGE_NOT_CONFIGURED'?'اتصال R2 هنوز فعال نیست. ورود پیش‌نویس فعلاً متوقف است.':e.message||'خطا',true)}}
 const path=()=>'/api/v1/projects/'+state.project;
 function reset(){state.snapshot=null;state.reviewed.clear();state.imported.clear();$('matchList').replaceChildren();$('importDrafts').disabled=true}
+// Import deduplication is scoped to the exact reviewed question and source, not a global number.
+function importKey(number){
+ const match=state.snapshot?.matches.find(item=>item.number===number);
+ return JSON.stringify([state.project,$('importSource').value,number,match?.question,match?.answer]);
+}
 function ready(){
- $('importDrafts').disabled=state.importing||!state.project||!/^[a-f0-9]{64}$/i.test($('importSource').value)||![...state.reviewed].some(n=>!state.imported.has(n));
+ $('importDrafts').disabled=state.importing||!state.project||!/^[a-f0-9]{64}$/i.test($('importSource').value)||![...state.reviewed].some(n=>!state.imported.has(importKey(n)));
 }
 let sourcesGeneration=0;
 async function sources(){
@@ -67,7 +72,7 @@ async function importSelected(){
  ready();
  try{
   if(!state.snapshot||!state.project)throw Error('ابتدا شماره‌ها را تطبیق بده');
-  const chosen=[...state.reviewed].filter(n=>!state.imported.has(n)).sort((a,b)=>a-b);
+  const chosen=[...state.reviewed].filter(n=>!state.imported.has(importKey(n))).sort((a,b)=>a-b);
   if(!chosen.length)throw Error('هیچ جفت تأییدشده‌ای انتخاب نشده است');
   if(chosen.length>50)throw Error('هر مرحله حداکثر ۵۰ سؤال را بپذیر');
   const sourceDigest=$('importSource').value;
@@ -76,14 +81,14 @@ async function importSelected(){
   const review=explicitMatchReview(state.snapshot,{actor:state.operator,acceptedNumbers:chosen,sourceFingerprint:sourceDigest});
   let completed=0;
   for(const number of review.accepted){
-   if(state.imported.has(number))continue;
+   if(state.imported.has(importKey(number)))continue;
    const matched=state.snapshot.matches.find(x=>x.number===number);
    const content={questionText:matched.question,answerText:matched.answer,latex:[],
      sourceLabel:$('importLabel').value.slice(0,160),sourceDigest,sourceNumber:number,
      taxonomyId:'',operatorConfirmed:false,scientificPending:0};
    const data=await api(path()+'/questions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({content})});
    if(data.question?.state!=='draft')throw Error('سرور پیش‌نویس معتبر برنگرداند');
-   state.imported.add(number);completed++;ready();
+   state.imported.add(importKey(number));completed++;ready();
   }
   note(completed+' سؤال جدید به D1 منتقل شد. هیچ‌کدام تأیید علمی یا منتشر نشده‌اند.');
  }finally{
