@@ -66,4 +66,17 @@ test.describe("Ember Atelier premium theme",()=>{
   await expect(page.locator("#previewDialog")).toBeVisible();
   await expect(page.locator("#previewContent")).toContainText("پاسخ اول");
  });
+ test("fixed dark theme survives blocked localStorage",async({page})=>{
+  await page.goto("/studio/");
+  const state=await page.evaluate(async()=>{
+   const originalRemove=Storage.prototype.removeItem;
+   Storage.prototype.removeItem=function(){throw new DOMException("Storage disabled","SecurityError")};
+   try{
+    const {applyTheme}=await import("/studio/appearance.js");
+    return {result:applyTheme(),theme:document.documentElement.dataset.theme};
+   }finally{Storage.prototype.removeItem=originalRemove}
+  });
+  expect(state).toEqual({result:"dark",theme:"dark"});
+ });
+
 });
