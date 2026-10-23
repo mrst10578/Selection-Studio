@@ -111,4 +111,36 @@ test.describe('ZH-82 reviewed answer importer',()=>{
   expect(requests).toBe(1);
  });
 
+ test('late PDF asset response from a previous project cannot pollute current options',async({page})=>{
+  await mock(page);
+  const other='87654321-8765-4321-8765-432187654321',otherDigest='e'.repeat(64);
+  await page.route('**/api/v1/projects',route=>route.fulfill({status:200,contentType:'application/json',
+   body:JSON.stringify({projects:[{id:P,name:'زیست'},{id:other,name:'شیمی'}]})}));
+  let release;
+  const pending=new Promise(resolve=>{release=resolve});
+  let requested=0,delivered=0;
+  await page.route('**/api/v1/projects/'+other+'/assets',async route=>{
+   requested++;
+   await pending;
+   await route.fulfill({status:200,contentType:'application/json',
+    body:JSON.stringify({assets:[{digest:otherDigest,role:'question_pdf'}]})});
+   delivered++;
+  });
+  await page.goto('/review-console/exam-importer.html');
+  await expect(page.locator('#importProject')).toBeEnabled();
+  await page.locator('#importProject').selectOption(other);
+  await expect.poll(()=>requested).toBe(1);
+  try{
+   await page.locator('#importProject').selectOption(P);
+   await expect(page.locator('#importSource option[value="'+digest+'"]')).toHaveCount(1);
+  }finally{
+   release();
+  }
+  await expect.poll(()=>delivered).toBe(1);
+  await page.waitForTimeout(100);
+  await expect(page.locator('#importProject')).toHaveValue(P);
+  await expect(page.locator('#importSource option')).toHaveCount(2);
+  await expect(page.locator('#importSource option[value="'+otherDigest+'"]')).toHaveCount(0);
+ });
+
 });
