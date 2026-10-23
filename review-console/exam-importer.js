@@ -93,7 +93,7 @@ async function importSelected(){
   for(const [index,number] of review.accepted.entries()){
    if(state.imported.has(importKey(number)))continue;
    if(index===0||index%progressEvery===0||index===review.accepted.length-1)
-    note('در حال انتقال پیش‌نویس: سؤال '+(index+1)+' از '+review.accepted.length+'.');
+    note('در حال انتقال پیش‌نویس: سؤال '+(index+1).toLocaleString('fa-IR')+' از '+review.accepted.length.toLocaleString('fa-IR')+'.');
    const matched=state.snapshot.matches.find(x=>x.number===number);
    const content={questionText:matched.question,answerText:matched.answer,latex:[],
      sourceLabel:$('importLabel').value.slice(0,160),sourceDigest,sourceNumber:number,
