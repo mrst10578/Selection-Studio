@@ -16,3 +16,23 @@ test('accepted preview is not an external publication action',()=>{
  assert.equal(out.dispatched,false);assert.equal(out.items[0].revision,3);
  assert.equal(Object.hasOwn(out,'token'),false);
 });
+
+test('bank search hides records with missing or malformed scientific pending counters',()=>{
+ for(const value of [undefined,null,'0',NaN,-1,1]){
+  const row={...r,scientificPending:value};
+  assert.deepEqual(searchApprovedBank([row]),[],`pending=${String(value)} must not be searchable`);
+ }
+ assert.deepEqual(searchApprovedBank([r]).map(row=>row.id),['Q-3']);
+});
+test('publication preview rejects malformed scientific pending counters',()=>{
+ const options={target:'telegram',actor:'operatorA',confirmation:'CONFIRM_PUBLICATION_PREVIEW'};
+ for(const value of [undefined,null,'0',NaN,-1,1]){
+  assert.throws(
+   ()=>preparePublicationIntent([{...r,scientificPending:value}],options),
+   /UNAPPROVED_QUESTION/,
+   `pending=${String(value)} must not pass review gate`,
+  );
+ }
+ const out=preparePublicationIntent([r],options);
+ assert.equal(out.dispatched,false);
+});
