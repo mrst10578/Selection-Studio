@@ -1,5 +1,8 @@
 /* ZH-85 | Search/query and publication intent only. NEVER sends network requests. */
 const digits='۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩';
+// Invisible formatting controls must never be accepted in reviewer identities.
+const unsafeIdentityControls=/[\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufeff]/u;
+const identityKey=value=>value.normalize('NFKC').trim().toLowerCase();
 const normalize=s=>String(s??'').normalize('NFKC').replace(/[۰-۹٠-٩]/g,c=>String(digits.indexOf(c)%10)).replace(/[يى]/g,'ی').replace(/ك/g,'ک').replace(/[\s\u200c]+/g,' ').trim().toLowerCase();
 export function searchApprovedBank(records,{query='',subject='',projectId='',limit=40}={}){
  if(!Array.isArray(records))return [];
@@ -25,7 +28,7 @@ export function preparePublicationIntent(records,{target,actor,confirmation}={})
   if(!r||typeof r.id!=='string'||!r.id||ids.has(r.id))throw Error('INVALID_QUESTION_IDS');
   if(r.reviewStatus!=='approved'||r.state==='draft'||r.deleted||r.softDeleted||r.scientificPending!==0||!Number.isSafeInteger(r.revision)||r.revision<1)throw Error('UNAPPROVED_QUESTION');
   const evidence=r.reviewEvidence;
-  if(!evidence||typeof evidence.reviewer!=='string'||!evidence.reviewer.trim()||typeof evidence.operator!=='string'||!evidence.operator.trim()||evidence.reviewer.trim().toLowerCase()===evidence.operator.trim().toLowerCase()||evidence.sourceRevision!==r.revision||evidence.decision!=='approve')throw Error('INVALID_REVIEW_EVIDENCE');
+  if(!evidence||typeof evidence.reviewer!=='string'||!evidence.reviewer.trim()||typeof evidence.operator!=='string'||!evidence.operator.trim()||unsafeIdentityControls.test(evidence.reviewer)||unsafeIdentityControls.test(evidence.operator)||identityKey(evidence.reviewer)===identityKey(evidence.operator)||evidence.sourceRevision!==r.revision||evidence.decision!=='approve')throw Error('INVALID_REVIEW_EVIDENCE');
   ids.add(r.id);selections.push({id:r.id,revision:r.revision});
  }
  return {target,actor,items:selections,createdAt:new Date().toISOString(),status:'pending_server_reauthorization_and_final_dispatch_approval',dispatched:false};
