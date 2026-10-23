@@ -277,8 +277,8 @@ test.describe('ZH-82 reviewed answer importer',()=>{
   await page.goto('/review-console/exam-importer.html');
   await expect(page.locator('#importProject')).toBeEnabled();
   await page.locator('#importSource').selectOption(digest);
-  await page.locator('#rawQuestions').fill('۱) سؤال اول\\n۲) سؤال دوم');
-  await page.locator('#rawAnswers').fill('۱) پاسخ اول\\n۲) پاسخ دوم');
+  await page.locator('#rawQuestions').fill('۱) سؤال اول\n۲) سؤال دوم');
+  await page.locator('#rawAnswers').fill('۱) پاسخ اول\n۲) پاسخ دوم');
   await page.locator('#matchNow').click();
   await page.locator('[data-number="1"]').check();
   await page.locator('[data-number="2"]').check();
