@@ -32,3 +32,14 @@ test('distinct reviewers still produce a non-dispatching preview intent', () => 
  assert.equal(result.items.length, 1);
  assert.equal(result.status, 'pending_server_reauthorization_and_final_dispatch_approval');
 });
+
+
+test('zero-width or bidi control characters cannot disguise reviewer identity', () => {
+ for (const disguised of ['reviewer\u200b@example.com', 'reviewer\u202e@example.com']) {
+  assert.throws(() => preparePublicationIntent([reviewed(disguised, 'reviewer@example.com')], options), /INVALID_REVIEW_EVIDENCE/);
+ }
+});
+
+test('fullwidth Unicode email cannot count as a separate reviewer', () => {
+ assert.throws(() => preparePublicationIntent([reviewed('ｒｅｖｉｅｗｅｒ＠ｅｘａｍｐｌｅ．ｃｏｍ', 'reviewer@example.com')], options), /INVALID_REVIEW_EVIDENCE/);
+});
