@@ -36,3 +36,12 @@ test('publication preview rejects malformed scientific pending counters',()=>{
  const out=preparePublicationIntent([r],options);
  assert.equal(out.dispatched,false);
 });
+
+test('approved search omits records with unusable question IDs or revisions',()=>{
+ const bad=[
+  {...r,id:undefined}, {...r,id:''}, {...r,id:'  '}, {...r,id:123},
+  {...r,revision:undefined}, {...r,revision:0}, {...r,revision:-1},
+  {...r,revision:1.5}, {...r,revision:'3'}, {...r,revision:NaN},
+ ];
+ assert.deepEqual(searchApprovedBank([...bad,r]).map(x=>x.id),['Q-3']);
+});
