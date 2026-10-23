@@ -29,6 +29,8 @@ export function installWindowsMetadataShortcuts({
   function handler(e){
     if(!enabled()||isTypingTarget(e.target)){if(prefix)clear();return}
     const digit=e.code.match(/^Digit([0-9])$/);
+    // Auto-repeat of Ctrl+1 must not be mistaken for an intentional second digit (11).
+    if(e.repeat&&digit&&e.ctrlKey&&!e.altKey&&!e.shiftKey&&!e.metaKey){e.preventDefault();return}
     // After Ctrl+1, accept a plain second digit as promised by the on-screen hint.
     if(prefix==="1"&&digit&&!e.ctrlKey&&!e.altKey&&!e.shiftKey&&!e.metaKey){
       e.preventDefault();chapterDigit(digit[1]);return;
