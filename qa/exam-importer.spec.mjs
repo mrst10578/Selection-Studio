@@ -143,4 +143,50 @@ test.describe('ZH-82 reviewed answer importer',()=>{
   await expect(page.locator('#importSource option[value="'+otherDigest+'"]')).toHaveCount(0);
  });
 
+ test('imported question numbers are scoped to project, PDF, and reviewed content',async({page})=>{
+  const postedA=await mock(page);
+  const other='87654321-8765-4321-8765-432187654321',digestB='e'.repeat(64);
+  const postedB=[];
+  await page.route('**/api/v1/projects',route=>route.fulfill({status:200,contentType:'application/json',
+   body:JSON.stringify({projects:[{id:P,name:'زیست'},{id:other,name:'شیمی'}]})}));
+  await page.route('**/api/v1/projects/'+other+'/assets',route=>route.fulfill({status:200,contentType:'application/json',
+   body:JSON.stringify({assets:[{digest:digestB,role:'question_pdf'}]})}));
+  await page.route('**/api/v1/projects/'+other+'/questions',route=>{
+   postedB.push(route.request().postDataJSON());
+   return route.fulfill({status:201,contentType:'application/json',
+    body:JSON.stringify({question:{id:'87654321-1234-1234-1234-123456789012',state:'draft'}})});
+  });
+  await page.goto('/review-console/exam-importer.html');
+  await expect(page.locator('#importProject')).toBeEnabled();
+  const questions=page.locator('#rawQuestions'),answers=page.locator('#rawAnswers');
+  await questions.fill('۱) سؤال مشترک');
+  await answers.fill('۱) پاسخ مشترک');
+  async function importOne(project,source){
+   await page.locator('#importProject').selectOption(project);
+   await expect(page.locator('#importSource')).toBeEnabled();
+   await page.locator('#importSource').selectOption(source);
+   await page.locator('#matchNow').click();
+   await page.locator('[data-number="1"]').check();
+   await expect(page.locator('#importDrafts')).toBeEnabled();
+   await page.locator('#importDrafts').click();
+   await expect(page.locator('#importNotice')).toContainText('منتقل شد');
+  }
+  await importOne(P,digest);
+  expect(postedA).toHaveLength(1);
+  await importOne(other,digestB);
+  expect(postedB).toHaveLength(1);
+  await page.locator('#importProject').selectOption(P);
+  await expect(page.locator('#importSource')).toBeEnabled();
+  await page.locator('#importSource').selectOption(digest);
+  await page.locator('#matchNow').click();
+  await page.locator('[data-number="1"]').check();
+  await expect(page.locator('#importDrafts')).toBeDisabled();
+  await questions.fill('۱) سؤال جدید با همان شماره');
+  await page.locator('#matchNow').click();
+  await page.locator('[data-number="1"]').check();
+  await expect(page.locator('#importDrafts')).toBeEnabled();
+  expect(postedA).toHaveLength(1);
+  expect(postedB).toHaveLength(1);
+ });
+
 });
