@@ -189,4 +189,38 @@ test.describe('ZH-82 reviewed answer importer',()=>{
   expect(postedB).toHaveLength(1);
  });
 
+ test('partial import failure reports saved count and does not resend successful drafts',async({page})=>{
+  await mock(page);
+  const attempts=[];
+  let failSecond=true;
+  await page.route('**/api/v1/projects/'+P+'/questions',route=>{
+   const number=route.request().postDataJSON().content.sourceNumber;
+   attempts.push(number);
+   if(number===2&&failSecond){
+    failSecond=false;
+    return route.fulfill({status:503,contentType:'application/json',
+     body:JSON.stringify({error:'Temporary storage failure'})});
+   }
+   return route.fulfill({status:201,contentType:'application/json',
+    body:JSON.stringify({question:{id:'87654321-1234-1234-1234-123456789012',state:'draft'}})});
+  });
+  await page.goto('/review-console/exam-importer.html');
+  await expect(page.locator('#importProject')).toBeEnabled();
+  await page.locator('#importSource').selectOption(digest);
+  await page.locator('#rawQuestions').fill('۱) سؤال اول\n۲) سؤال دوم');
+  await page.locator('#rawAnswers').fill('۱) پاسخ اول\n۲) پاسخ دوم');
+  await page.locator('#matchNow').click();
+  await page.locator('[data-number="1"]').check();
+  await page.locator('[data-number="2"]').check();
+  await page.locator('#importDrafts').click();
+  await expect(page.locator('#importNotice')).toContainText('1 سؤال ثبت شد');
+  await expect(page.locator('#importNotice')).toContainText('بانک پیش‌نویس‌ها را بررسی کن');
+  await expect(page.locator('#importNotice')).toHaveAttribute('data-state','error');
+  expect(attempts).toEqual([1,2]);
+  await expect(page.locator('#importDrafts')).toBeEnabled();
+  await page.locator('#importDrafts').click();
+  await expect(page.locator('#importNotice')).toContainText('1 سؤال جدید');
+  expect(attempts).toEqual([1,2,2]);
+ });
+
 });
