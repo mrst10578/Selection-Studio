@@ -1,6 +1,6 @@
 import {parseNumberedBlocks,matchExamAnswers,explicitMatchReview} from '../engine/answer-matcher.js';
 const $=id=>document.getElementById(id);
-const state={operator:'',project:'',snapshot:null,reviewed:new Set(),imported:new Set()};
+const state={operator:'',project:'',snapshot:null,reviewed:new Set(),imported:new Set(),importing:false};
 const note=(text,error=false)=>{$('importNotice').textContent=text;$('importNotice').dataset.state=error?'error':'ok'};
 const el=(tag,text)=>{const e=document.createElement(tag);e.textContent=text||'';return e};
 async function api(path,opts={}){
@@ -12,7 +12,7 @@ async function safely(fn){try{await fn()}catch(e){note(e?.message==='ASSET_STORA
 const path=()=>'/api/v1/projects/'+state.project;
 function reset(){state.snapshot=null;state.reviewed.clear();state.imported.clear();$('matchList').replaceChildren();$('importDrafts').disabled=true}
 function ready(){
- $('importDrafts').disabled=!state.project||!/^[a-f0-9]{64}$/i.test($('importSource').value)||![...state.reviewed].some(n=>!state.imported.has(n));
+ $('importDrafts').disabled=state.importing||!state.project||!/^[a-f0-9]{64}$/i.test($('importSource').value)||![...state.reviewed].some(n=>!state.imported.has(n));
 }
 async function sources(){
  const selection=$('importSource');selection.replaceChildren(new Option('انتخاب PDF سؤال',''));selection.disabled=true;
@@ -53,26 +53,34 @@ function analyze(){
  ready();
 }
 async function importSelected(){
- if(!state.snapshot||!state.project)throw Error('ابتدا شماره‌ها را تطبیق بده');
- const chosen=[...state.reviewed].filter(n=>!state.imported.has(n)).sort((a,b)=>a-b);
- if(!chosen.length)throw Error('هیچ جفت تأییدشده‌ای انتخاب نشده است');
- if(chosen.length>50)throw Error('هر مرحله حداکثر ۵۰ سؤال را بپذیر');
- const sourceDigest=$('importSource').value;
- if(!/^[a-f0-9]{64}$/i.test(sourceDigest))throw Error('PDF خصوصی منبع را انتخاب کن');
- // This evidence is local only; the server stores every imported question as an UNAPPROVED DRAFT.
- const review=explicitMatchReview(state.snapshot,{actor:state.operator,acceptedNumbers:chosen,sourceFingerprint:sourceDigest});
- let completed=0;
- for(const number of review.accepted){
-  if(state.imported.has(number))continue;
-  const matched=state.snapshot.matches.find(x=>x.number===number);
-  const content={questionText:matched.question,answerText:matched.answer,latex:[],
-    sourceLabel:$('importLabel').value.slice(0,160),sourceDigest,sourceNumber:number,
-    taxonomyId:'',operatorConfirmed:false,scientificPending:0};
-  const data=await api(path()+'/questions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({content})});
-  if(data.question?.state!=='draft')throw Error('سرور پیش‌نویس معتبر برنگرداند');
-  state.imported.add(number);completed++;ready();
+ if(state.importing)return;
+ state.importing=true;
+ ready();
+ try{
+  if(!state.snapshot||!state.project)throw Error('ابتدا شماره‌ها را تطبیق بده');
+  const chosen=[...state.reviewed].filter(n=>!state.imported.has(n)).sort((a,b)=>a-b);
+  if(!chosen.length)throw Error('هیچ جفت تأییدشده‌ای انتخاب نشده است');
+  if(chosen.length>50)throw Error('هر مرحله حداکثر ۵۰ سؤال را بپذیر');
+  const sourceDigest=$('importSource').value;
+  if(!/^[a-f0-9]{64}$/i.test(sourceDigest))throw Error('PDF خصوصی منبع را انتخاب کن');
+  // This evidence is local only; the server stores every imported question as an UNAPPROVED DRAFT.
+  const review=explicitMatchReview(state.snapshot,{actor:state.operator,acceptedNumbers:chosen,sourceFingerprint:sourceDigest});
+  let completed=0;
+  for(const number of review.accepted){
+   if(state.imported.has(number))continue;
+   const matched=state.snapshot.matches.find(x=>x.number===number);
+   const content={questionText:matched.question,answerText:matched.answer,latex:[],
+     sourceLabel:$('importLabel').value.slice(0,160),sourceDigest,sourceNumber:number,
+     taxonomyId:'',operatorConfirmed:false,scientificPending:0};
+   const data=await api(path()+'/questions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({content})});
+   if(data.question?.state!=='draft')throw Error('سرور پیش‌نویس معتبر برنگرداند');
+   state.imported.add(number);completed++;ready();
+  }
+  note(completed+' سؤال جدید به D1 منتقل شد. هیچ‌کدام تأیید علمی یا منتشر نشده‌اند.');
+ }finally{
+  state.importing=false;
+  ready();
  }
- note(completed+' سؤال جدید به D1 منتقل شد. هیچ‌کدام تأیید علمی یا منتشر نشده‌اند.');
 }
 $('matchNow').addEventListener('click',analyze);
 for(const id of ['rawQuestions','rawAnswers'])$(id).addEventListener('input',reset);
