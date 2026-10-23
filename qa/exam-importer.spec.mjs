@@ -263,4 +263,35 @@ test.describe('ZH-82 reviewed answer importer',()=>{
   expect(attempts).toEqual([1,2,2]);
  });
 
+ test('announces draft import progress while the second request is pending',async({page})=>{
+  await mock(page);
+  let releaseSecond;
+  const secondPending=new Promise(resolve=>{releaseSecond=resolve});
+  let requests=0;
+  await page.route('**/api/v1/projects/'+P+'/questions',async route=>{
+   requests++;
+   if(requests===2)await secondPending;
+   await route.fulfill({status:201,contentType:'application/json',
+    body:JSON.stringify({question:{id:'87654321-1234-1234-1234-123456789012',state:'draft'}})});
+  });
+  await page.goto('/review-console/exam-importer.html');
+  await expect(page.locator('#importProject')).toBeEnabled();
+  await page.locator('#importSource').selectOption(digest);
+  await page.locator('#rawQuestions').fill('۱) سؤال اول\\n۲) سؤال دوم');
+  await page.locator('#rawAnswers').fill('۱) پاسخ اول\\n۲) پاسخ دوم');
+  await page.locator('#matchNow').click();
+  await page.locator('[data-number="1"]').check();
+  await page.locator('[data-number="2"]').check();
+  await page.locator('#importDrafts').click();
+  try{
+   await expect.poll(()=>requests).toBe(2);
+   await expect(page.locator('#importNotice')).toContainText('سؤال ۲ از ۲');
+   await expect(page.locator('#importDrafts')).toBeDisabled();
+  }finally{
+   releaseSecond();
+  }
+  await expect(page.locator('#importNotice')).toContainText('2 سؤال جدید');
+  expect(requests).toBe(2);
+ });
+
 });
