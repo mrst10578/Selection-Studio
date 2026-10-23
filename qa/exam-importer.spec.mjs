@@ -15,6 +15,25 @@ async function mock(page){
  return posted;
 }
 test.describe('ZH-82 reviewed answer importer',()=>{
+ test('invalid PDF asset entries do not block healthy source selection',async({page})=>{
+  const posted=await mock(page);
+  await page.route('**/api/v1/projects/'+P+'/assets',route=>route.fulfill({status:200,contentType:'application/json',
+   body:JSON.stringify({assets:[null,{role:'question_pdf',digest:null},{role:'question_pdf',digest:'bad'},
+    {role:'answer_pdf',digest:'a'.repeat(64)},{role:'question_pdf',digest}]})}));
+  await page.goto('/review-console/exam-importer.html');
+  await expect(page.locator('#importProject')).toBeEnabled();
+  await expect(page.locator('#importSource')).toBeEnabled();
+  await expect(page.locator('#importSource option')).toHaveCount(2);
+  await page.locator('#importSource').selectOption(digest);
+  await page.locator('#rawQuestions').fill('۱) سؤال سالم');
+  await page.locator('#rawAnswers').fill('۱) پاسخ سالم');
+  await page.locator('#matchNow').click();
+  await page.locator('[data-number="1"]').check();
+  await page.locator('#importDrafts').click();
+  await expect(page.locator('#importNotice')).toContainText('منتقل شد');
+  expect(posted).toHaveLength(1);
+ });
+
  test('matching is local and no question is saved until explicit checkbox and button',async({page})=>{
   const posted=await mock(page);
   await page.goto('/review-console/exam-importer.html');
