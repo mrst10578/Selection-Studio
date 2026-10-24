@@ -92,7 +92,16 @@ async function loadBank(append=false){
  if(cursor)qs.set('cursor',cursor);
  let result;
  try{result=await api('/api/v1/bank/questions?'+qs)}
- catch(error){if(seq===state.bankRequestSeq){state.bankLoading=false;render();throw error}return}
+ catch(error){
+  if(seq!==state.bankRequestSeq)return;
+  state.bankLoading=false;render();
+  // Failed requests must also restore the keyboard trigger without stealing moved focus.
+  if((focusFromSearch||focusFromMore)&&
+     (document.activeElement===document.body||document.activeElement===$('loadBank')||document.activeElement===$('loadMoreBank'))){
+   (focusFromMore&&!$('loadMoreBank').hidden?$('loadMoreBank'):$('loadBank')).focus();
+  }
+  throw error;
+ }
  if(seq!==state.bankRequestSeq||key!==currentBankFilter())return;
  const incoming=Array.isArray(result.questions)?result.questions:[];
  const seen=new Set(append?state.bank.map(x=>x.id):[]);
