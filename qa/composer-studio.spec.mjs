@@ -88,3 +88,28 @@ test('keyboard selection toggle retains focus after the bank list re-renders',as
  await expect(first).toHaveAttribute('aria-pressed','false');
  await expect(page.locator('#selectedList .composer-selection')).toHaveCount(0);
 });
+
+
+test('keyboard reordering follows the moved question across disabled edge controls',async({page})=>{
+ await mock(page);
+ await page.goto('/review-console/composer-studio.html');
+ const bank=page.locator('#approvedList button');
+ await expect(bank).toHaveCount(2);
+ await bank.nth(0).click();
+ await bank.nth(1).click();
+ const rows=page.locator('#selectedList .composer-selection');
+ await expect(rows).toHaveCount(2);
+ await expect(rows.nth(0)).toContainText('مقدار ۲');
+ await expect(rows.nth(1)).toContainText('نتیجه x');
+ // Move the second question to the top using only the keyboard.
+ await rows.nth(1).getByRole('button',{name:'بالا'}).focus();
+ await page.keyboard.press('Enter');
+ await expect(rows.nth(0)).toContainText('نتیجه x');
+ await expect(rows.nth(0).getByRole('button',{name:'بالا'})).toBeDisabled();
+ await expect(rows.nth(0).getByRole('button',{name:'پایین'})).toBeFocused();
+ // Focus should follow that question back down, switching controls at the bottom.
+ await page.keyboard.press('Enter');
+ await expect(rows.nth(1)).toContainText('نتیجه x');
+ await expect(rows.nth(1).getByRole('button',{name:'پایین'})).toBeDisabled();
+ await expect(rows.nth(1).getByRole('button',{name:'بالا'})).toBeFocused();
+});
