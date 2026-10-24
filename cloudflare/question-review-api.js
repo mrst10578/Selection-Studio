@@ -11,7 +11,7 @@ async function digest(value){const bytes=await crypto.subtle.digest('SHA-256',ne
 async function input(req,max=4096){
  if(!req.headers.get('content-type')?.toLowerCase().startsWith('application/json'))throw Error('JSON_REQUIRED');
  const declared=req.headers.get('content-length');
- if(declared!==null&&(!/^\\d+$/.test(declared)||Number(declared)>max))throw Error('BODY_TOO_LARGE');
+ if(declared!==null&&(!/^\d+$/.test(declared)||Number(declared)>max))throw Error('BODY_TOO_LARGE');
  if(!req.body)throw Error('INVALID_JSON');
  const reader=req.body.getReader(),parts=[];let total=0;
  try{
