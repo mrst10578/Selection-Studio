@@ -122,3 +122,51 @@ test('approval rejects malformed scientificPending values before writing review 
  assert.equal(f.db0.prepare('SELECT count(*) AS n FROM bank_review_events').get().n,1);
  f.db0.close();
 });
+
+test('bounded reviewer assignment JSON rejects oversized bodies before audit writes',async()=>{
+ const f=fixture(),u=new URL('https://preview.example/api/v1/reviews/assignments');
+ const payload=JSON.stringify({projectId,reviewerEmail:'reviewer@example.test'});
+ const call=async(body,extraHeaders={},duplex=false)=>{
+  const req=new Request(u,{method:'POST',headers:{'Content-Type':'application/json',...extraHeaders},
+   body,...(duplex?{duplex:'half'}:{})});
+  const res=await handleReviewApi(req,f.env,{email:'owner@example.test'},operator,u);
+  return {status:res.status,data:await res.json()};
+ };
+ const valid=await call(payload.padEnd(512,' '));
+ assert.equal(valid.status,201);
+ assert.equal((await call(payload.padEnd(513,' '))).status,413);
+ assert.equal((await call(payload,{'Content-Length':'513'})).status,413);
+ assert.equal((await call(payload,{'Content-Length':'not-a-number'})).status,413);
+ const streamed=new ReadableStream({
+  start(controller){controller.enqueue(new TextEncoder().encode(' '.repeat(500)))},
+  pull(controller){controller.enqueue(new TextEncoder().encode(' '.repeat(20)));controller.close()}
+ });
+ const streamedResult=await call(streamed,{},true);
+ assert.equal(streamedResult.status,413);
+ assert.equal(streamedResult.data.error,'BODY_TOO_LARGE');
+ assert.equal(f.db0.prepare("SELECT count(*) AS n FROM security_audit WHERE action='reviewer_assign'").get().n,1);
+ f.db0.close();
+});
+
+test('bounded review decision JSON accepts 4096 bytes but rejects overflow without a review event',async()=>{
+ const f=fixture();
+ const grant=await f.run({actor:operator,email:'owner@example.test',path:'/assignments',method:'POST',
+  data:{projectId,reviewerEmail:'reviewer@example.test'}});
+ assert.equal(grant.status,201);
+ const u=new URL('https://preview.example/api/v1/reviews/projects/'+projectId+'/questions/'+questionId);
+ const payload=JSON.stringify({baseRevision:1,decision:'reject',checks:{}});
+ const call=async(body,extraHeaders={})=>{
+  const req=new Request(u,{method:'POST',headers:{'Content-Type':'application/json',...extraHeaders},body});
+  const res=await handleReviewApi(req,f.env,{email:'reviewer@example.test'},reviewer,u);
+  return {status:res.status,data:await res.json()};
+ };
+ assert.equal((await call(payload.padEnd(4096,' '))).status,201);
+ const tooLarge=await call(payload.padEnd(4097,' '));
+ assert.equal(tooLarge.status,413);
+ assert.equal(tooLarge.data.error,'BODY_TOO_LARGE');
+ assert.equal((await call(payload,{'Content-Length':'4097'})).status,413);
+ assert.equal((await call('{')).status,400);
+ assert.equal(f.db0.prepare('SELECT count(*) AS n FROM bank_review_events').get().n,1);
+ assert.equal(f.db0.prepare("SELECT count(*) AS n FROM security_audit WHERE action='question_review_attempt'").get().n,1);
+ f.db0.close();
+});
