@@ -52,7 +52,7 @@ export async function handleApprovedBankApi(request,env,actor,url){
    const q=normalize(url.searchParams.get('q')||'').slice(0,100);
    const subject=normalize(url.searchParams.get('subject')||'').slice(0,80);
    const all=await validApproved(env.SECURITY_DB,actor,pid||null);
-   const filtered=all.filter(x=>(!subject||normalize(x.subject)===subject)&&(!q||normalize(x.questionText).includes(q)));
+   const filtered=all.filter(x=>(!subject||normalize(x.subject)===subject)&&(!q||normalize(x.questionText).includes(q)||normalize(x.answerText).includes(q)));
    return j({questions:filtered.slice(0,100),scanned:all.length,limited:all.length===300});
   }
   if(path==='/api/v1/bank/exams/compose'&&method==='POST'){
