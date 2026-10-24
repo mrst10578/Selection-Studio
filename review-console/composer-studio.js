@@ -63,6 +63,10 @@ function render(){
   });
   buttons.append(remove);row.append(buttons);list.append(row);
  });
+ const count=$('composerSelectionCount');
+ const message=new Intl.NumberFormat('fa-IR').format(state.selected.length)+' سؤال انتخاب شده است.';
+ // Announce changes only: unrelated re-renders must not repeat the screen-reader message.
+ if(count.textContent!==message)count.textContent=message;
  controls();
 }
 const currentBankFilter=()=>JSON.stringify([$('composerProject').value,$('composerQuery').value.trim()]);
