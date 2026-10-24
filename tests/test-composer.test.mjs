@@ -13,6 +13,18 @@ test('draft, unapproved, duplicated and critical-warning questions cannot be com
  assert.throws(()=>composeApprovedExam([{...approved('x'),state:'draft'}]),/QUESTION_NOT_APPROVED/);
  assert.throws(()=>composeApprovedExam([{...approved('x'),scientificPending:1}]),/QUESTION_NOT_APPROVED/);
 });
+test('composer fails closed for invalid scientific-review counters',()=>{
+ const invalid=[undefined,null,'0','1',-1,0.5,NaN,Infinity,true,{},[]];
+ for(const value of invalid){
+  assert.throws(
+   ()=>composeApprovedExam([{...approved('x'),scientificPending:value}]),
+   /QUESTION_NOT_APPROVED/,
+   'must reject scientificPending='+String(value)
+  );
+ }
+ assert.equal(composeApprovedExam([approved('x')]).items.length,1);
+});
+
 test('print-ready right-to-left HTML escapes malicious transcription content',()=>{
  const html=exportExamHTML(composeApprovedExam([approved('x','<img src=x onerror=alert(1)>')],{title:'عنوان'}));
  assert.ok(html.includes('dir="rtl"'));assert.ok(html.includes('&lt;img'));
