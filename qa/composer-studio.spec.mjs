@@ -224,7 +224,7 @@ test('bank loading uses one concise live status and never announces the whole qu
  await finishRequest();
  await expect(list).toHaveAttribute('aria-busy','false');
  await expect(list.getByRole('button')).toHaveCount(1);
- await expect(status).toContainText('۱ سؤال تأییدشده');
+ await expect(status).toContainText('1 سؤال تأییدشده');
 });
 
 test('failed bank request returns keyboard focus to the search control',async({page})=>{
