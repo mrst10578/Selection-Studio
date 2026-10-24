@@ -42,7 +42,7 @@ export async function handleApprovedBankApi(request,env,actor,url){
   if(path==='/api/v1/bank/exams/compose'&&method==='POST'){
    const data=await input(request);
    if(!data||typeof data!=='object'||Array.isArray(data)||Object.keys(data).some(k=>!['title','questionIds','sourceRevisions','includeAnswers'].includes(k))||
-    typeof data.title!=='string'||!data.title.trim()||data.title.length>140||
+    typeof data.title!=='string'||!data.title.trim()||data.title.length>140||/[\u0000-\u001f\u007f-\u009f\u2028-\u202e\u2066-\u2069]/u.test(data.title)||
     !Array.isArray(data.questionIds)||!data.questionIds.length||data.questionIds.length>100||
     data.questionIds.some(v=>!id.test(v))||new Set(data.questionIds).size!==data.questionIds.length||!Array.isArray(data.sourceRevisions)||data.sourceRevisions.length!==data.questionIds.length||data.sourceRevisions.some(v=>!Number.isSafeInteger(v)||v<1)||
     typeof data.includeAnswers!=='boolean')return j({error:'INVALID_EXAM_REQUEST'},400);
