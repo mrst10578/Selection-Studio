@@ -95,7 +95,7 @@ export async function handleReviewApi(request,env,identity,actor,url){
   const sourceDigest=hash64.test(content.sourceDigest||'')?content.sourceDigest:'0'.repeat(64);
   if(data.decision==='approve'){
    if(!fields.every(k=>checks[k]))return json({error:'INCOMPLETE_SCIENTIFIC_REVIEW'},422);
-   if(content.operatorConfirmed!==true||sourceDigest==='0'.repeat(64)||Number(content.scientificPending||0)>0)return json({error:'OPERATOR_OR_SOURCE_NOT_VERIFIED'},422);
+   if(content.operatorConfirmed!==true||sourceDigest==='0'.repeat(64)||content.scientificPending!==0)return json({error:'OPERATOR_OR_SOURCE_NOT_VERIFIED'},422);
    const source=await sql(db,"SELECT digest FROM bank_assets WHERE project_id=? AND actor=? AND digest=? AND role='question_pdf' AND deleted_at IS NULL",pid,project.actor,sourceDigest).first();
    if(!source)return json({error:'MISSING_PRIVATE_SOURCE_PDF'},422);
   }
