@@ -205,6 +205,28 @@ test('keyboard bank refresh restores focus to first result or the search button 
  await expect(search).toBeFocused();
 });
 
+test('bank loading uses one concise live status and never announces the whole question list',async({page})=>{
+ let finishRequest;
+ const row={id:q1,projectId:P,revision:1,questionText:'سؤال نمونه',answerText:'پاسخ',sourceNumber:1};
+ await page.route('**/api/v1/projects',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({projects:[{id:P,name:'زیست'}]})}));
+ await page.route('**/api/v1/bank/questions**',route=>{finishRequest=()=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({questions:[row],nextCursor:null})});});
+ await page.goto('/review-console/composer-studio.html');
+ const status=page.locator('#composerNotice'),list=page.locator('#approvedList');
+ await expect(status).toHaveAttribute('role','status');
+ await expect(status).toHaveAttribute('aria-live','polite');
+ await expect(status).toHaveAttribute('aria-atomic','true');
+ await expect(list).not.toHaveAttribute('aria-live');
+ await expect(status).toHaveText('در حال جست‌وجوی سؤال‌های تأییدشده…');
+ await expect(list).toHaveAttribute('aria-busy','true');
+ await expect(list).toContainText('در حال دریافت سؤال‌ها…');
+ await expect(list).not.toContainText('پیدا نشد');
+ await expect.poll(()=>typeof finishRequest).toBe('function');
+ await finishRequest();
+ await expect(list).toHaveAttribute('aria-busy','false');
+ await expect(list.getByRole('button')).toHaveCount(1);
+ await expect(status).toContainText('۱ سؤال تأییدشده');
+});
+
 test('failed bank request returns keyboard focus to the search control',async({page})=>{
  await mock(page);
  await page.goto('/review-console/composer-studio.html');
@@ -215,6 +237,8 @@ test('failed bank request returns keyboard focus to the search control',async({p
  await search.focus();
  await page.keyboard.press('Enter');
  await expect(page.locator('#composerNotice')).toContainText('SERVICE_UNAVAILABLE');
+  await expect(page.locator('#composerNotice')).toHaveAttribute('role','status');
+  await expect(page.locator('#composerNotice')).toHaveAttribute('aria-atomic','true');
  await expect(search).toBeEnabled();
  await expect(search).toBeFocused();
 });
