@@ -45,3 +45,21 @@ test('approved search omits records with unusable question IDs or revisions',()=
  ];
  assert.deepEqual(searchApprovedBank([...bad,r]).map(x=>x.id),['Q-3']);
 });
+
+test('bank search ignores Arabic tashkeel and tatweel on either side of the query',()=>{
+ const vocalized={...r,id:'Q-AR-1',subject:'عَرَبِيّ',questionText:'تَحْلِیل قــانون چیست؟'};
+ const plain={...r,id:'Q-AR-2',subject:'عربی',questionText:'تحلیل قانون چیست؟'};
+ const unapproved={...vocalized,id:'Q-AR-3',reviewStatus:'pending'};
+ assert.deepEqual(
+  searchApprovedBank([vocalized,unapproved],{query:'تحلیل قانون',subject:'عربی'}).map(x=>x.id),
+  ['Q-AR-1'],
+ );
+ assert.deepEqual(
+  searchApprovedBank([plain],{query:'تَحْلِیل قــانون',subject:'عَرَبِيّ'}).map(x=>x.id),
+  ['Q-AR-2'],
+ );
+ assert.deepEqual(
+  searchApprovedBank([plain],{query:'تحلیل زیست',subject:'عربی'}),
+  [],
+ );
+});
