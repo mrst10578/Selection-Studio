@@ -59,8 +59,10 @@ test('approved bank pagination keeps selection, deduplicates rows, and resets cu
  await expect(page.locator('#approvedList button')).toHaveCount(1);
  await expect(page.locator('#loadMoreBank')).toBeVisible();
  await page.locator('#approvedList button').first().click();
- await page.locator('#loadMoreBank').click();
+ await page.locator('#loadMoreBank').focus();
+ await page.keyboard.press('Enter');
  await expect(page.locator('#approvedList button')).toHaveCount(2);
+ await expect(page.locator('#approvedList button').nth(1)).toBeFocused();
  await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
  await expect(page.locator('#loadMoreBank')).toBeHidden();
  expect(seen[1]).toEqual({query:null,cursor:'page-2'});
@@ -165,4 +167,22 @@ test('selected question count is announced without repeating on reorder',async({
  await expect(count).toHaveText('۱ سؤال انتخاب شده است.');
  await page.locator('#selectedList .composer-selection').first().getByRole('button',{name:'حذف'}).click();
  await expect(count).toHaveText('۰ سؤال انتخاب شده است.');
+});
+
+
+test('pagination restores focus to search when the next page has no new questions',async({page})=>{
+ const row={id:q1,projectId:P,revision:1,questionText:'سؤال تکراری',answerText:'پاسخ',sourceNumber:1};
+ await page.route('**/api/v1/projects',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({projects:[{id:P,name:'زیست'}]})}));
+ await page.route('**/api/v1/bank/questions**',route=>{
+  const next=new URL(route.request().url()).searchParams.has('cursor');
+  return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({questions:[row],nextCursor:next?null:'page-2'})});
+ });
+ await page.goto('/review-console/composer-studio.html');
+ const more=page.locator('#loadMoreBank');
+ await expect(more).toBeVisible();
+ await more.focus();
+ await page.keyboard.press('Enter');
+ await expect(more).toBeHidden();
+ await expect(page.locator('#approvedList button')).toHaveCount(1);
+ await expect(page.locator('#loadBank')).toBeFocused();
 });
