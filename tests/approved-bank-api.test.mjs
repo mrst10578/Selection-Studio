@@ -123,13 +123,13 @@ test('server-approved bank rejects malformed scientific pending values for searc
 
 test('exam draft titles reject control and bidi override characters without an audit event',async()=>{
  const x=f(),base={questionIds:[qid],sourceRevisions:[1],includeAnswers:false};
- for(const title of ['آزمون\\nنهایی','آزمون\\tنهایی','آزمون\\u0000نهایی','آزمون\\u0085نهایی','آزمون\\u2028نهایی','آزمون\\u202eنهایی','آزمون\\u2066نهایی']){
+ for(const title of ['آزمون\nنهایی','آزمون\tنهایی','آزمون\u0000نهایی','آزمون\u0085نهایی','آزمون\u2028نهایی','آزمون\u202eنهایی','آزمون\u2066نهایی']){
   const result=await x.call('/exams/compose','POST',{...base,title});
   assert.equal(result.status,400,JSON.stringify(title));
   assert.equal(result.data.error,'INVALID_EXAM_REQUEST');
  }
  assert.equal(x.d.prepare("SELECT count(*) AS n FROM security_audit WHERE action='exam_draft_compose'").get().n,0);
- const valid=await x.call('/exams/compose','POST',{...base,title:'\\u200fآزمون زیست‌شناسی ۱۴۰۵'});
+ const valid=await x.call('/exams/compose','POST',{...base,title:'\u200fآزمون زیست‌شناسی ۱۴۰۵'});
  assert.equal(valid.status,200,'legitimate Persian RTL marks and half-spaces must remain valid');
  assert.equal(x.d.prepare("SELECT count(*) AS n FROM security_audit WHERE action='exam_draft_compose'").get().n,1);
  x.d.close();
