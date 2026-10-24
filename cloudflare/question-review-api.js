@@ -10,8 +10,24 @@ const listed=(mail,value)=>String(value||'').split(',').map(email).filter(Boolea
 async function digest(value){const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value));return [...new Uint8Array(bytes)].map(x=>x.toString(16).padStart(2,'0')).join('')}
 async function input(req,max=4096){
  if(!req.headers.get('content-type')?.toLowerCase().startsWith('application/json'))throw Error('JSON_REQUIRED');
- const s=await req.text();if(new TextEncoder().encode(s).length>max)throw Error('BODY_TOO_LARGE');
- try{return JSON.parse(s)}catch{throw Error('INVALID_JSON')}
+ const declared=req.headers.get('content-length');
+ if(declared!==null&&(!/^\\d+$/.test(declared)||Number(declared)>max))throw Error('BODY_TOO_LARGE');
+ if(!req.body)throw Error('INVALID_JSON');
+ const reader=req.body.getReader(),parts=[];let total=0;
+ try{
+  while(true){
+   const {done,value}=await reader.read();if(done)break;
+   total+=value.byteLength;
+   if(total>max)throw Error('BODY_TOO_LARGE');
+   parts.push(value);
+  }
+ }finally{
+  if(total>max)await reader.cancel().catch(()=>{});
+  reader.releaseLock();
+ }
+ const bytes=new Uint8Array(total);let offset=0;
+ for(const part of parts){bytes.set(part,offset);offset+=part.byteLength}
+ try{return JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes))}catch{throw Error('INVALID_JSON')}
 }
 const fields=['sourceVerified','transcriptionVerified','answerVerified','taxonomyVerified','figuresVerified','warningsResolved'];
 function checksOf(value){
