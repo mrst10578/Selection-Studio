@@ -204,3 +204,36 @@ test('keyboard bank refresh restores focus to first result or the search button 
  await expect(page.locator('#approvedList button')).toHaveCount(0);
  await expect(search).toBeFocused();
 });
+
+test('failed bank request returns keyboard focus to the search control',async({page})=>{
+ await mock(page);
+ await page.goto('/review-console/composer-studio.html');
+ await expect(page.locator('#approvedList button')).toHaveCount(2);
+ await page.locator('#composerQuery').fill('خطا');
+ await page.route('**/api/v1/bank/questions**',route=>route.fulfill({status:503,contentType:'application/json',body:'{"error":"SERVICE_UNAVAILABLE"}'}));
+ const search=page.locator('#loadBank');
+ await search.focus();
+ await page.keyboard.press('Enter');
+ await expect(page.locator('#composerNotice')).toContainText('SERVICE_UNAVAILABLE');
+ await expect(search).toBeEnabled();
+ await expect(search).toBeFocused();
+});
+
+test('failed pagination keeps existing questions and restores keyboard focus',async({page})=>{
+ const row={id:q1,projectId:P,revision:1,questionText:'سؤال موجود',answerText:'پاسخ',sourceNumber:1};
+ await page.route('**/api/v1/projects',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({projects:[{id:P,name:'زیست'}]})}));
+ await page.route('**/api/v1/bank/questions**',route=>{
+  const append=new URL(route.request().url()).searchParams.has('cursor');
+  return route.fulfill(append?{status:503,contentType:'application/json',body:'{"error":"PAGE_UNAVAILABLE"}'}:
+   {status:200,contentType:'application/json',body:JSON.stringify({questions:[row],nextCursor:'page-2'})});
+ });
+ await page.goto('/review-console/composer-studio.html');
+ const more=page.locator('#loadMoreBank');
+ await expect(more).toBeVisible();
+ await more.focus();
+ await page.keyboard.press('Enter');
+ await expect(page.locator('#composerNotice')).toContainText('PAGE_UNAVAILABLE');
+ await expect(page.locator('#approvedList button')).toHaveCount(1);
+ await expect(more).toBeEnabled();
+ await expect(more).toBeFocused();
+});
