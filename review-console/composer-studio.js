@@ -1,6 +1,6 @@
 import {exportExamHTML,exportExamJSONL} from '../engine/test-composer.js';
 const $=id=>document.getElementById(id);
-const state={bank:[],selected:[],nextCursor:null,bankFilterKey:'',bankRequestSeq:0,bankLoading:false,ready:false};
+const state={bank:[],selected:[],nextCursor:null,bankFilterKey:'',bankRequestSeq:0,bankLoading:false,ready:false,composeBusy:false};
 const notice=(s,error=false)=>{$('composerNotice').textContent=s;$('composerNotice').dataset.state=error?'error':'ok'};
 const e=(tag,text)=>{const node=document.createElement(tag);node.textContent=text||'';return node};
 async function api(path,options={}){
@@ -9,7 +9,18 @@ async function api(path,options={}){
  if(!res.ok){const err=Error(data?.error||'اتصال برقرار نشد');err.status=res.status;throw err}return data;
 }
 async function safe(fn){try{await fn()}catch(error){notice(error?.status===409?'سؤال‌ها تغییر کرده‌اند یا تأییدشان منقضی شده است؛ بانک را دوباره بررسی کن.':error.message||'خطا در ساخت آزمون',true)}}
-function controls(){for(const id of ['previewExam','exportJsonl','exportHtml','printExam'])$(id).disabled=!state.selected.length}
+async function runComposeAction(fn){
+ if(state.composeBusy)return;
+ const trigger=document.activeElement;
+ state.composeBusy=true;controls();
+ try{await safe(fn)}finally{
+  state.composeBusy=false;controls();
+  // Disabling a focused action can move focus to body; restore it only if untouched.
+  if(['previewExam','exportJsonl','exportHtml','printExam'].includes(trigger?.id)&&
+     document.activeElement===document.body&&!trigger.disabled)trigger.focus();
+ }
+}
+function controls(){for(const id of ['previewExam','exportJsonl','exportHtml','printExam'])$(id).disabled=!state.selected.length||state.composeBusy}
 function render(){
  const available=$('approvedList');available.replaceChildren();
  available.setAttribute('aria-busy',String(state.bankLoading));
@@ -141,7 +152,7 @@ $('loadBank').addEventListener('click',()=>void safe(()=>loadBank()));
 $('loadMoreBank').addEventListener('click',()=>void safe(()=>loadBank(true)));
 $('composerQuery').addEventListener('input',()=>{invalidateBankSearch();notice('عبارت جست‌وجو تغییر کرد؛ برای دریافت نتایج جدید «جست‌وجو و بازخوانی» را بزن.');});
 $('composerProject').addEventListener('change',()=>{state.selected=[];invalidateBankSearch();void safe(()=>loadBank())});
-$('previewExam').addEventListener('click',()=>void safe(async()=>{
+$('previewExam').addEventListener('click',()=>void runComposeAction(async()=>{
  const exam=await manifest(),host=$('examPreviewPaper');host.replaceChildren();
  host.append(e('h2',exam.title));
  for(const question of exam.items){
@@ -151,18 +162,19 @@ $('previewExam').addEventListener('click',()=>void safe(async()=>{
  $('examPreviewDialog').showModal();notice('پیش‌نمایش بدون انتشار ساخته شد.');
 }));
 $('closeExamPreview').addEventListener('click',()=>$('examPreviewDialog').close());
-$('exportJsonl').addEventListener('click',()=>void safe(async()=>{
+$('exportJsonl').addEventListener('click',()=>void runComposeAction(async()=>{
  download(exportExamJSONL(await manifest()),'examforge-exam.jsonl','application/x-ndjson;charset=utf-8');
  notice('خروجی JSONL ساخته شد. هیچ انتشار خارجی انجام نشد.');
 }));
-$('exportHtml').addEventListener('click',()=>void safe(async()=>{
+$('exportHtml').addEventListener('click',()=>void runComposeAction(async()=>{
  download(exportExamHTML(await manifest()),'examforge-exam.html','text/html;charset=utf-8');
  notice('فایل HTML آماده شد. هیچ انتشار خارجی انجام نشد.');
 }));
 $('printExam').addEventListener('click',()=>{
+ if(state.composeBusy)return;
  const windowRef=window.open('','_blank');
  if(!windowRef){notice('مرورگر پنجره چاپ را مسدود کرده است. از خروجی HTML استفاده کن.',true);return}
- void safe(async()=>{
+ void runComposeAction(async()=>{
   try{
    const html=exportExamHTML(await manifest());
    windowRef.document.open();windowRef.document.write(html);windowRef.document.close();windowRef.focus();
