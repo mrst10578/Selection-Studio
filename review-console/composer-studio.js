@@ -79,6 +79,9 @@ async function loadBank(append=false){
  const cursor=append&&state.bankFilterKey===key?state.nextCursor:null;
  if(append&&!cursor)return;
  const seq=++state.bankRequestSeq;
+ // Preserve keyboard navigation when the focused pagination control disappears.
+ const focusFromMore=append&&document.activeElement===$('loadMoreBank');
+ const previousCount=state.bank.length;
  state.bankLoading=true;state.bankFilterKey=key;
  if(!append){state.bank=[];state.nextCursor=null}
  render();
@@ -96,6 +99,11 @@ async function loadBank(append=false){
  // Selected questions survive pagination and text filters, but not project switches.
  state.selected=state.selected.filter(x=>!project||x.projectId===project);
  state.bankLoading=false;render();
+ if(focusFromMore&&(document.activeElement===document.body||document.activeElement===$('loadMoreBank'))){
+  const firstNew=$('approvedList').querySelectorAll('button')[previousCount];
+  const more=$('loadMoreBank');
+  (firstNew||(!more.hidden?more:$('loadBank'))).focus();
+ }
  notice(state.bank.length+' سؤال تأییدشده در فهرست است.'+(state.nextCursor?' برای موارد قدیمی‌تر «نمایش سؤال‌های بیشتر» را بزن.':'')+' پیش از خروجی دوباره در سرور بررسی می‌شوند.');
 }
 async function manifest(){
