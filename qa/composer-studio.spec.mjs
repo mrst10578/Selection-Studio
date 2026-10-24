@@ -307,3 +307,40 @@ test('failed compose validation re-enables export actions for retry',async({page
  await expect(exportButton).toBeEnabled();
  await expect(exportButton).toBeFocused();
 });
+
+test('print requests only one dialog after a slow compose response, even with load and fallback',async({page})=>{
+ await mock(page);
+ let releaseRequest,requests=0;
+ await page.route('**/api/v1/bank/exams/compose',async route=>{
+  requests++;
+  await new Promise(resolve=>{releaseRequest=resolve});
+  const payload=route.request().postDataJSON();
+  return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
+   status:'draft_export_only',manifest:{title:payload.title,publishable:false,
+    answersIncluded:payload.includeAnswers,items:[{index:1,id:q1,revision:2,question:'مقدار ۲ چند است؟'}]}
+  })});
+ });
+ await page.goto('/review-console/composer-studio.html');
+ await page.locator('#approvedList button').first().click();
+ await page.evaluate(()=>{
+  window.__printSpy={opened:0,calls:0,html:''};
+  window.open=()=>{
+   window.__printSpy.opened++;
+   return {closed:false,focus(){},close(){},
+    document:{open(){},write(html){window.__printSpy.html=html},close(){}},
+    addEventListener(type,callback){if(type==='load')setTimeout(callback,0)},
+    print(){window.__printSpy.calls++}
+   };
+  };
+ });
+ await page.locator('#printExam').click();
+ await expect.poll(()=>requests).toBe(1);
+ expect(await page.evaluate(()=>window.__printSpy)).toMatchObject({opened:1,calls:0});
+ releaseRequest();
+ await expect.poll(()=>page.evaluate(()=>window.__printSpy.calls)).toBe(1);
+ await page.waitForTimeout(650); // The 500ms fallback must not print a second time.
+ const spy=await page.evaluate(()=>window.__printSpy);
+ expect(spy).toMatchObject({opened:1,calls:1});
+ expect(spy.html).toContain('مقدار ۲');
+ await expect(page.locator('#printExam')).toBeEnabled();
+});
