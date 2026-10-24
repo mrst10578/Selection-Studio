@@ -93,3 +93,32 @@ test('a reviewer re-grant gets a new immutable generation; decisions cannot reus
  assert.equal(f.db0.prepare('SELECT grant_id FROM bank_review_events WHERE question_id=?').get(questionId).grant_id,second);
  f.db0.close();
 });
+
+test('approval rejects malformed scientificPending values before writing review events',async()=>{
+ const f=fixture(),path='/projects/'+projectId+'/questions/'+questionId;
+ const assignment={actor:operator,email:'owner@example.test',path:'/assignments',method:'POST',data:{projectId,reviewerEmail:'reviewer@example.test'}};
+ assert.equal((await f.run(assignment)).status,201);
+ f.db0.prepare("INSERT INTO bank_assets(project_id,actor,digest,mime,role,object_key,byte_size) VALUES(?,?,?,?,?,?,?)")
+  .run(projectId,operator,sourceDigest,'application/pdf','question_pdf','private-assets/'+operator+'/'+sourceDigest+'.pdf',90);
+ const update=f.db0.prepare('UPDATE bank_questions SET content_json=? WHERE id=?');
+ const base={questionText:'Test question',operatorConfirmed:true,sourceDigest};
+ const cases=[
+  ['missing',undefined],['null',null],['string zero','0'],['negative',-1],
+  ['boolean false',false],['fractional',0.5],['array',[]]
+ ];
+ for(const [label,value] of cases){
+  const content={...base};
+  if(value!==undefined)content.scientificPending=value;
+  update.run(JSON.stringify(content),questionId);
+  const response=await f.run({path,method:'POST',data:{baseRevision:1,decision:'approve',checks:checklist}});
+  assert.equal(response.status,422,label);
+  assert.equal(response.body.error,'OPERATOR_OR_SOURCE_NOT_VERIFIED',label);
+ }
+ assert.equal(f.db0.prepare('SELECT count(*) AS n FROM bank_review_events').get().n,0);
+ update.run(JSON.stringify({...base,scientificPending:0}),questionId);
+ const valid=await f.run({path,method:'POST',data:{baseRevision:1,decision:'approve',checks:checklist}});
+ assert.equal(valid.status,201);
+ assert.equal(valid.body.autoPublish,false);
+ assert.equal(f.db0.prepare('SELECT count(*) AS n FROM bank_review_events').get().n,1);
+ f.db0.close();
+});
