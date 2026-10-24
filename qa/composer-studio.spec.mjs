@@ -186,3 +186,21 @@ test('pagination restores focus to search when the next page has no new question
  await expect(page.locator('#approvedList button')).toHaveCount(1);
  await expect(page.locator('#loadBank')).toBeFocused();
 });
+
+test('keyboard bank refresh restores focus to first result or the search button when empty',async({page})=>{
+ await mock(page);
+ await page.goto('/review-console/composer-studio.html');
+ const search=page.locator('#loadBank');
+ await page.locator('#composerQuery').fill('پاسخ');
+ await search.focus();
+ await page.keyboard.press('Enter');
+ await expect(page.locator('#approvedList button').first()).toBeFocused();
+
+ // A second search with no matches must not leave keyboard users on the document body.
+ await page.route('**/api/v1/bank/questions**',route=>route.fulfill({status:200,contentType:'application/json',body:'{"questions":[],"nextCursor":null}'}));
+ await page.locator('#composerQuery').fill('ناموجود');
+ await search.focus();
+ await page.keyboard.press('Enter');
+ await expect(page.locator('#approvedList button')).toHaveCount(0);
+ await expect(search).toBeFocused();
+});
