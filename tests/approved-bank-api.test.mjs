@@ -247,3 +247,52 @@ test('exam composition can select an older approved question beyond the 300-row 
  assert.equal((await x.call('/exams/compose','POST',body)).status,409,'older question still requires current independent approval');
  x.d.close();
 });
+
+test('approved-bank cursor pages every verified question without skipping older matches',async()=>{
+ const x=f();
+ const original=JSON.parse(x.d.prepare('SELECT content_json FROM bank_questions WHERE id=?').get(qid).content_json);
+ const checklist=JSON.stringify({sourceVerified:true,transcriptionVerified:true,answerVerified:true,taxonomyVerified:true,figuresVerified:true,warningsResolved:true});
+ const addQuestion=x.d.prepare('INSERT INTO bank_questions(id,project_id,actor,content_json) VALUES(?,?,?,?)');
+ const addReview=x.d.prepare('INSERT INTO bank_review_events(id,project_id,question_id,source_revision,reviewer_actor,reviewer_email_hash,grant_id,decision,checklist_json,source_digest) VALUES(?,?,?,?,?,?,?,?,?,?)');
+ for(let i=0;i<300;i++){
+  const suffix=i.toString(16).padStart(7,'0');
+  const nextId='f'+suffix+'-1234-1234-1234-123456789012';
+  addQuestion.run(nextId,pid,actor,JSON.stringify({...original,questionText:'Newer question '+i,answerText:'newer answer'}));
+  addReview.run('e'+suffix+'-1111-1111-1111-111111111111',pid,nextId,1,reviewer,'d'.repeat(64),grant,'approve',checklist,digest);
+ }
+ const ids=[],pages=[];
+ let cursor=null;
+ for(let page=0;page<6;page++){
+  const url='/questions'+(cursor?'?cursor='+encodeURIComponent(cursor):'');
+  const result=await x.call(url);
+  assert.equal(result.status,200);
+  assert.ok(result.data.questions.length<=100,'page must be capped at 100 results');
+  ids.push(...result.data.questions.map(q=>q.id));
+  pages.push(result.data);
+  cursor=result.data.nextCursor;
+  if(cursor===null)break;
+  assert.equal(typeof cursor,'string','continuation token must be usable as a query parameter');
+ }
+ assert.equal(pages[0].scanned,300,'default scan remains bounded to 300 approved candidates');
+ assert.equal(pages[0].limited,true);
+ assert.deepEqual(pages.map(p=>p.questions.length),[100,100,100,1]);
+ assert.equal(ids.length,301);
+ assert.equal(new Set(ids).size,301,'pagination must not duplicate or skip approved questions');
+ assert.ok(ids.includes(qid),'oldest approved question must eventually be visible');
+ assert.equal(pages.at(-1).nextCursor,null);
+ assert.equal(pages.at(-1).limited,false);
+ const rare=await x.call('/questions?q='+encodeURIComponent('سؤال تأیید شده'));
+ assert.equal(rare.status,200);
+ assert.equal(rare.data.questions.length,0,'first 300 newer records do not match');
+ assert.ok(rare.data.nextCursor,'a zero-match page must still allow continuing the scan');
+ const old=await x.call('/questions?q='+encodeURIComponent('سؤال تأیید شده')+'&cursor='+encodeURIComponent(rare.data.nextCursor));
+ assert.deepEqual(old.data.questions.map(q=>q.id),[qid]);
+ for(const bad of ['-1','1.5','garbage','%20']){
+  assert.equal((await x.call('/questions?cursor='+bad)).status,400,'invalid cursor '+bad);
+ }
+ x.d.prepare("UPDATE bank_review_events SET decision='reject' WHERE question_id=?").run(qid);
+ assert.deepEqual((await x.call('/questions?q='+encodeURIComponent('سؤال تأیید شده')+'&cursor='+encodeURIComponent(rare.data.nextCursor))).data.questions,[],
+  'pagination must never bypass a later reviewer rejection');
+ assert.equal(x.d.prepare("SELECT count(*) AS n FROM security_audit WHERE action='exam_draft_compose'").get().n,0);
+ x.d.close();
+});
