@@ -72,3 +72,19 @@ test('approved bank pagination keeps selection, deduplicates rows, and resets cu
  await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
  expect(seen.at(-1)).toEqual({query:'دیگر',cursor:null});
 });
+
+test('keyboard selection toggle retains focus after the bank list re-renders',async({page})=>{
+ await mock(page);
+ await page.goto('/review-console/composer-studio.html');
+ const first=page.locator('#approvedList button').first();
+ await expect(first).toBeVisible();
+ await first.focus();
+ await page.keyboard.press('Enter');
+ await expect(first).toBeFocused();
+ await expect(first).toHaveAttribute('aria-pressed','true');
+ await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
+ await page.keyboard.press('Enter');
+ await expect(first).toBeFocused();
+ await expect(first).toHaveAttribute('aria-pressed','false');
+ await expect(page.locator('#selectedList .composer-selection')).toHaveCount(0);
+});
