@@ -207,3 +207,17 @@ test('malformed stored question JSON cannot take down healthy approved-bank sear
  assert.deepEqual((await x.call('/questions')).data.questions.map(q=>q.id).sort(),[qid,badId].sort());
  x.d.close();
 });
+
+test('approved-bank search matches answer-only keywords while retaining independent review',async()=>{
+ const x=f();
+ for(const query of ['گزینه','گزينه']){
+  const result=await x.call('/questions?projectId='+pid+'&q='+encodeURIComponent(query));
+  assert.equal(result.status,200,query);
+  assert.deepEqual(result.data.questions.map(q=>q.id),[qid], 'answer-only keyword '+query);
+ }
+ assert.deepEqual((await x.call('/questions?q='+encodeURIComponent('ناموجود'))).data.questions,[]);
+ x.d.prepare("UPDATE bank_review_events SET decision='reject' WHERE question_id=?").run(qid);
+ assert.deepEqual((await x.call('/questions?q='+encodeURIComponent('گزینه'))).data.questions,[],
+  'matching an answer must not bypass the independent approval gate');
+ x.d.close();
+});
