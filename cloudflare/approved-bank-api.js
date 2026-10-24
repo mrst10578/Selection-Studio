@@ -23,8 +23,24 @@ async function validApproved(db,actor,scope){
 }
 async function input(request){
  if(!request.headers.get('content-type')?.toLowerCase().startsWith('application/json'))throw Error('JSON_REQUIRED');
- const bytes=await request.text();if(new TextEncoder().encode(bytes).length>12000)throw Error('BODY_TOO_LARGE');
- try{return JSON.parse(bytes)}catch{throw Error('INVALID_JSON')}
+ const max=12000,declared=request.headers.get('content-length');
+ if(declared!==null&&(!/^\d+$/.test(declared)||Number(declared)>max))throw Error('BODY_TOO_LARGE');
+ if(!request.body)throw Error('INVALID_JSON');
+ const reader=request.body.getReader(),parts=[];let total=0;
+ try{
+  while(true){
+   const {done,value}=await reader.read();if(done)break;
+   total+=value.byteLength;
+   if(total>max)throw Error('BODY_TOO_LARGE');
+   parts.push(value);
+  }
+ }finally{
+  if(total>max)await reader.cancel().catch(()=>{});
+  reader.releaseLock();
+ }
+ const bytes=new Uint8Array(total);let offset=0;
+ for(const part of parts){bytes.set(part,offset);offset+=part.byteLength}
+ try{return JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes))}catch{throw Error('INVALID_JSON')}
 }
 export async function handleApprovedBankApi(request,env,actor,url){
  if(!env.SECURITY_DB?.prepare||!hash32.test(actor||''))return j({error:'BANK_UNAVAILABLE'},503);
