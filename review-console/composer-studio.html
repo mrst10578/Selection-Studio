@@ -19,12 +19,12 @@
  <label for="composerProject">پروژه</label><select id="composerProject" disabled><option value="">در حال بررسی ورود</option></select>
  <label for="composerQuery">جست‌وجوی متن</label><input id="composerQuery" placeholder="بخشی از متن سؤال" maxlength="100">
  <button type="button" id="loadBank" disabled>جست‌وجو و بازخوانی</button>
- <div id="approvedList" class="bank-list" aria-live="polite"></div>
+ <div id="approvedList" class="bank-list"></div>
  <button type="button" id="loadMoreBank" aria-controls="approvedList" hidden disabled>نمایش سؤال‌های بیشتر</button>
 </aside>
 <section class="bank-panel bank-editor" aria-label="ترتیب سؤالات و خروجی">
  <h2>ساخت آزمون</h2>
- <p id="composerNotice" role="status" aria-live="polite">برای شروع وارد حساب اپراتور شو.</p>
+ <p id="composerNotice" role="status" aria-live="polite" aria-atomic="true">برای شروع وارد حساب اپراتور شو.</p>
  <p id="examFingerprint" class="bank-help" aria-live="polite">شناسه نسخه خروجی پس از ساخت نمایش داده می‌شود.</p>
  <label for="examTitle">عنوان آزمون</label><input id="examTitle" maxlength="140" value="آزمون جدید">
  <label class="bank-confirm"><input id="includeExamAnswers" type="checkbox"><span>پاسخ‌ها هم در خروجی بیایند</span></label>
