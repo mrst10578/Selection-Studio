@@ -42,3 +42,33 @@ test.describe('ZH-86 reviewed-only exam composer',()=>{
   await expect(page.locator('#examPreviewDialog')).not.toBeVisible();
  });
 });
+
+test('approved bank pagination keeps selection, deduplicates rows, and resets cursor on filter edits',async({page})=>{
+ const seen=[];
+ const row=(id,text)=>({id,projectId:P,revision:1,questionText:text,answerText:'پاسخ',sourceNumber:1});
+ await page.route('**/api/v1/projects',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({projects:[{id:P,name:'زیست'}]})}));
+ await page.route('**/api/v1/bank/questions**',route=>{
+  const url=new URL(route.request().url()),cursor=url.searchParams.get('cursor'),query=url.searchParams.get('q');
+  seen.push({query,cursor});
+  const data=query==='دیگر'?{questions:[row(q2,'سؤال دیگر')],nextCursor:null}:
+   cursor==='page-2'?{questions:[row(q1,'سؤال تکراری'),row(q2,'سؤال قدیمی')],nextCursor:null}:
+   {questions:[row(q1,'سؤال جدید')],nextCursor:'page-2'};
+  return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(data)});
+ });
+ await page.goto('/review-console/composer-studio.html');
+ await expect(page.locator('#approvedList button')).toHaveCount(1);
+ await expect(page.locator('#loadMoreBank')).toBeVisible();
+ await page.locator('#approvedList button').first().click();
+ await page.locator('#loadMoreBank').click();
+ await expect(page.locator('#approvedList button')).toHaveCount(2);
+ await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
+ await expect(page.locator('#loadMoreBank')).toBeHidden();
+ expect(seen[1]).toEqual({query:null,cursor:'page-2'});
+ await page.locator('#composerQuery').fill('دیگر');
+ await expect(page.locator('#approvedList button')).toHaveCount(0);
+ await expect(page.locator('#loadMoreBank')).toBeHidden();
+ await page.locator('#loadBank').click();
+ await expect(page.locator('#approvedList button')).toHaveCount(1);
+ await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
+ expect(seen.at(-1)).toEqual({query:'دیگر',cursor:null});
+});
