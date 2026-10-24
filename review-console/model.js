@@ -4,8 +4,8 @@ export function clone(value){return structuredClone(value)}
 export function questionIssues(question){
   const issues=[];
   const region=r=>r&&Number.isInteger(Number(r.page))&&Number(r.page)>0&&Array.isArray(r.bbox_norm)&&r.bbox_norm.length===4&&r.bbox_norm.every(v=>Number.isFinite(Number(v))&&Number(v)>=0&&Number(v)<=1)&&Number(r.bbox_norm[2])>Number(r.bbox_norm[0])&&Number(r.bbox_norm[3])>Number(r.bbox_norm[1]);
-  if(!region(question?.question_regions?.[0]))issues.push("برش سؤال");
-  if(!region(question?.answer_regions?.[0]))issues.push("برش پاسخ");
+  if(!Array.isArray(question?.question_regions)||!question.question_regions.length||question.question_regions.some(item=>!region(item)))issues.push("برش سؤال");
+  if(!Array.isArray(question?.answer_regions)||!question.answer_regions.length||question.answer_regions.some(item=>!region(item)))issues.push("برش پاسخ");
   if(!question?.chapter)issues.push("فصل");
   if(!question?.unit)issues.push(question?.subject==="BIO"?"گفتار":"مبحث");
   if(!["level_1","level_2","level_3","level_4","level_5"].includes(question?.difficulty))issues.push("سطح سؤال");

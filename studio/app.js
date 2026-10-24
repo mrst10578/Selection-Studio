@@ -4,6 +4,8 @@ import {
 } from "./store.js";
 import {putPreview} from "./preview-db.js";
 import {PdfCropper,validRegion} from "./pdf-crop.js";
+import {createCropQueue} from "./crop-queue.js";
+import {installOcrWorkbench} from "./ocr-panel.js";
 import {isTypingTarget,toast} from "./ui-runtime.js";
 import "./operator-auth.js";
 import {installWindowsMetadataShortcuts} from "./windows-shortcuts.js";
@@ -16,6 +18,7 @@ let exam=loadExamDraft();
 let activePane="question";
 let submittingQuestion=false;
 let biologyGate={ready:false,issues:["مشخص کن سؤال زیست ترکیبی هست یا نه"]};
+let ocrWorkbench=null;
 
 
 function pdfViewerError(error){
@@ -45,8 +48,8 @@ function installCropFreeze(crop,buttonId,clearId){
   };
   syncCropFreezeButton(buttonId,clearId,crop.isRegionLocked());
 }
-const qCrop=new PdfCropper({canvas:$("qCanvas"),stage:$("qStage"),pageLabel:$("qPage"),prevBtn:$("qPrev"),nextBtn:$("qNext"),modeBtn:$("qCropLock"),onChange:()=>renderGate(),onPageChange:(page,total)=>updatePageJump("qPageJump",page,total),onError:cropError});
-const aCrop=new PdfCropper({canvas:$("aCanvas"),stage:$("aStage"),pageLabel:$("aPage"),prevBtn:$("aPrev"),nextBtn:$("aNext"),modeBtn:$("aCropLock"),onChange:()=>renderGate(),onPageChange:(page,total)=>updatePageJump("aPageJump",page,total),onError:cropError});
+const qCrop=new PdfCropper({canvas:$("qCanvas"),stage:$("qStage"),pageLabel:$("qPage"),prevBtn:$("qPrev"),nextBtn:$("qNext"),modeBtn:$("qCropLock"),onChange:()=>{renderGate();ocrWorkbench?.syncContext()},onPageChange:(page,total)=>updatePageJump("qPageJump",page,total),onError:cropError});
+const aCrop=new PdfCropper({canvas:$("aCanvas"),stage:$("aStage"),pageLabel:$("aPage"),prevBtn:$("aPrev"),nextBtn:$("aNext"),modeBtn:$("aCropLock"),onChange:()=>{renderGate();ocrWorkbench?.syncContext()},onPageChange:(page,total)=>updatePageJump("aPageJump",page,total),onError:cropError});
 installCropFreeze(qCrop,"qRegionLock","qClear");installCropFreeze(aCrop,"aRegionLock","aClear");
 function updatePageJump(id,page,total){const input=$(id);if(!input)return;input.value=page||"";input.max=total||"";input.disabled=!total}
 function installPageJump(id,crop){const input=$(id);input.addEventListener("change",()=>{const page=Number(input.value);if(Number.isInteger(page)&&page>=1&&page<=crop.pdf?.numPages)crop.go(page);else input.value=crop.page||""})}
@@ -200,11 +203,18 @@ function updatePdfState(crop,stateId){
 }
 async function loadPdfInput(input,crop,label,stateId){
   const selected=input.files[0]||null;
+  const previousFile=crop.file;
   updatePdfState(crop,stateId);
   try{
     const result=await crop.loadFile(selected);
     if(result?.status==="stale")return;
-    if(result?.status==="ready")toast(label+" آماده شد","ok");
+    if(result?.status==="ready"){
+      if(previousFile!==crop.file){
+        const kind=crop===qCrop?"question":"answer";
+        cropQueue.clear(kind);ocrWorkbench?.invalidate(kind);
+      }
+      toast(label+" آماده شد","ok");
+    }
   }catch(error){
     input.value="";
     const kept=crop.file?.name?" سند فعال قبلی «"+crop.file.name+"» حفظ شد.":"";
@@ -223,10 +233,23 @@ function switchPane(name){
   $("answerPane").classList.toggle("hidden",name!=="answer");
   $("questionTab").classList.toggle("active",name==="question");
   $("answerTab").classList.toggle("active",name==="answer");
+  ocrWorkbench?.setActive(name);
   requestAnimationFrame(()=>{(name==="question"?qCrop:aCrop).refresh()});
 }
 $("questionTab").onclick=()=>switchPane("question");
 $("answerTab").onclick=()=>switchPane("answer");
+const cropQueue=createCropQueue({question:qCrop,answer:aCrop,switchPane,onNotice:message=>toast(message),onChange:()=>{renderGate();ocrWorkbench?.syncContext()}});
+ocrWorkbench=installOcrWorkbench({
+  capture:kind=>cropQueue.capture(kind),
+  getIdentity:()=>String(exam?.id||"not-saved")+":"+String($("sourceNumber").value||""),
+  getFingerprint:kind=>{
+    const crop=kind==="question"?qCrop:aCrop;
+    const regions=cropQueue.selections(kind);
+    if(!crop.file||!crop.pdf||!regions.length)return null;
+    return JSON.stringify([crop.documentGeneration,crop.file.name,crop.pdf.numPages,regions]);
+  },
+  onNotice:(message,tone="error")=>toast(message,tone)
+});
 
 function setSegmented(target,value){
   $(target).value=value?String(value):"";
@@ -292,8 +315,8 @@ function gateState(){
   const checks={
     exam:Boolean(sessionMatchesForm()&&qCrop.isRenderReady()&&aCrop.isRenderReady()),
     number:Boolean(source!==null&&unique),
-    question:qCrop.isRegionReady(),
-    answer:aCrop.isRegionReady(),
+    question:qCrop.isRenderReady()&&cropQueue.selections("question").length>0,
+    answer:aCrop.isRenderReady()&&cropQueue.selections("answer").length>0,
     taxonomy:Boolean($("chapter").value&&$("unit").value&&[10,11,12].includes(Number($("grade").value))),
     difficulty:["level_1","level_2","level_3","level_4","level_5"].includes($("difficulty").value),
     key:[1,2,3,4].includes(Number($("correctOption").value)),
@@ -318,8 +341,8 @@ function renderGate(){
   $("nextAction").textContent=msg;
   const order=["exam","question","answer","meta","ready"],idx=order.indexOf(s);
   document.querySelectorAll("[data-step]").forEach(el=>{const i=order.indexOf(el.dataset.step);el.classList.toggle("done",i>=0&&i<idx);el.classList.toggle("active",i===idx)});
-  $("questionCropState").textContent=qCrop.loading||qCrop.rendering?"در حال آماده‌سازی":qCrop.isRegionReady()?"ثبت شد":qCrop.region?"نیازمند رندر":"بدون برش";
-  $("answerCropState").textContent=aCrop.loading||aCrop.rendering?"در حال آماده‌سازی":aCrop.isRegionReady()?"ثبت شد":aCrop.region?"نیازمند رندر":"بدون برش";
+  $("questionCropState").textContent=qCrop.loading||qCrop.rendering?"در حال آماده‌سازی":qCrop.isRegionReady()&&cropQueue.selections("question").length===1?"ثبت شد":cropQueue.selections("question").length?`${cropQueue.selections("question").length} برش آماده`:"بدون برش";
+  $("answerCropState").textContent=aCrop.loading||aCrop.rendering?"در حال آماده‌سازی":aCrop.isRegionReady()&&cropQueue.selections("answer").length===1?"ثبت شد":cropQueue.selections("answer").length?`${cropQueue.selections("answer").length} برش آماده`:"بدون برش";
   $("questionIdentity").textContent="سؤال "+($("sourceNumber").value||"-");
 }
 document.querySelectorAll("[data-check]").forEach(button=>button.addEventListener("click",()=>{
@@ -354,7 +377,7 @@ $("subject").addEventListener("change",()=>{renderTaxonomy();persistSticky();ren
 $("grade").addEventListener("change",()=>{if(!isMath())renderTaxonomy();persistSticky();renderGate()});
 $("chapter").addEventListener("change",()=>{renderUnits();persistSticky();renderGate()});
 $("unit").addEventListener("change",()=>{syncMathGradeFromUnit();persistSticky();renderGate()});
-$("sourceNumber").addEventListener("input",()=>{$("sourceNumber").value=normalizedDate($("sourceNumber").value);renderGate()});
+$("sourceNumber").addEventListener("input",()=>{$("sourceNumber").value=normalizedDate($("sourceNumber").value);renderGate();ocrWorkbench?.syncContext()});
 $("provider").addEventListener("input",()=>{renderProviderWarning();renderSession()});
 $("operator").addEventListener("input",renderSession);
 
@@ -367,12 +390,14 @@ $("questionForm").addEventListener("submit",async e=>{
   renderGate();
   const source=sourceQuestionNumber(),id=buildQuestionId(exam.id,source);
   try{
-    const [qCapture,aCapture]=await Promise.all([qCrop.captureCrop(),aCrop.captureCrop()]);
+    const [qCapture,aCapture]=await ocrWorkbench.guardCapture(()=>Promise.all([cropQueue.capture("question"),cropQueue.capture("answer")]));
     const visualHash=await qCrop.visualHash(qCapture.blob);
+    const approvedOcr=ocrWorkbench?.reviewForSave();
     const record={
       id,exam_id:exam.id,source_question_number:source,subject:$("subject").value,grade:Number($("grade").value),
       chapter:$("chapter").value,unit:$("unit").value,difficulty:$("difficulty").value,correct_option:Number($("correctOption").value),
-      question_regions:[qCapture.region],answer_regions:[aCapture.region],visual_hash:visualHash,
+      question_regions:qCapture.regions,answer_regions:aCapture.regions,visual_hash:visualHash,
+      ...(approvedOcr?{ocr_review:approvedOcr}:{}),
       biology_combination:$("subject").value==="BIO"?biologyEditor.getValue():null,status:"draft",review_status:"pending",
       entered_by:$("operator").value.trim(),created_at:new Date().toISOString()
     };
@@ -380,7 +405,7 @@ $("questionForm").addEventListener("submit",async e=>{
     records.push(record);
     saveRecords(records);
     $("sourceNumber").value=String(source+1);
-    qCrop.setRegionLocked(false);aCrop.setRegionLocked(false);qCrop.clearRegion();aCrop.clearRegion();setSegmented("difficulty","");setSegmented("correctOption","");biologyEditor.reset();switchPane("question");
+    qCrop.setRegionLocked(false);aCrop.setRegionLocked(false);qCrop.clearAllRegions();aCrop.clearAllRegions();cropQueue.reset();ocrWorkbench?.reset();setSegmented("difficulty","");setSegmented("correctOption","");biologyEditor.reset();switchPane("question");
     renderRecent();
     toast(`سؤال ${source} ثبت شد · ${activeRecords().length} سؤال در فهرست`,"ok");
   }catch(error){

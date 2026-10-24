@@ -1,0 +1,65 @@
+name: Roll back Selection Studio Pages (manual)
+on:
+  workflow_dispatch:
+    inputs:
+      deployment_id:
+        description: "Previous successful Cloudflare Pages PRODUCTION deployment UUID"
+        required: true
+        type: string
+      reason:
+        description: "Incident or change ticket for the rollback audit trail"
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Validate destination and rollback target
+        env:
+          DEPLOYMENT_ID: ${{ inputs.deployment_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$DEPLOYMENT_ID" =~ ^[0-9a-fA-F-]{36}$ ]] || { echo "Deployment UUID required"; exit 1; }
+          test -n "${{ secrets.CLOUDFLARE_API_TOKEN }}"
+          test -n "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"
+      - name: Confirm successful production target
+        shell: bash
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          DEPLOYMENT_ID: ${{ inputs.deployment_id }}
+        run: |
+          set -euo pipefail
+          curl -fsS -H "Authorization: Bearer $TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT_ID/pages/projects/selection-studio/deployments/$DEPLOYMENT_ID" \
+            -o /tmp/selection-studio-rollback-target.json
+          python - <<'PY'
+          import json
+          d=json.load(open('/tmp/selection-studio-rollback-target.json',encoding='utf-8'))
+          target=d.get('result') or {}
+          assert d.get('success') is True, 'API lookup failed'
+          assert target.get('environment')=='production', 'Rollback target must be production'
+          assert (target.get('latest_stage') or {}).get('status')=='success', 'Rollback target not successful'
+          print('Verified successful production rollback target')
+          PY
+      - name: Execute explicit production rollback
+        shell: bash
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          DEPLOYMENT_ID: ${{ inputs.deployment_id }}
+        run: |
+          set -euo pipefail
+          curl -fsS -X POST -H "Authorization: Bearer $TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT_ID/pages/projects/selection-studio/deployments/$DEPLOYMENT_ID/rollback" \
+            -o /tmp/selection-studio-rollback.json
+          python - <<'PY'
+          import json
+          r=json.load(open('/tmp/selection-studio-rollback.json',encoding='utf-8'))
+          assert r.get('success') is True, 'Cloudflare rejected rollback'
+          print('Production rollback accepted by Cloudflare')
+          PY

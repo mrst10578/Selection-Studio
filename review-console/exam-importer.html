@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="fa" dir="rtl" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ورود دفترچه و پاسخنامه | Selection Studio</title>
+<link rel="stylesheet" href="../studio/design-system.css">
+<link rel="stylesheet" href="../studio/atelier-ui.css">
+<link rel="stylesheet" href="./bank-studio.css">
+</head>
+<body class="bank-studio atelier">
+<header class="bank-header">
+ <div><span class="bank-eyebrow">EXAMFORGE / EXAM IMPORTER</span><h1>ورود سؤال و تطبیق پاسخنامه</h1><p>متن بازبینی‌شده OCR را در دو ستون وارد کن. فقط سؤالاتی که خودت انتخاب و تأیید کرده‌ای به پیش‌نویس منتقل می‌شوند.</p></div>
+ <nav aria-label="ناوبری"><a href="./bank-studio.html">بانک پیش‌نویس‌ها</a><a href="./ocr-studio.html">بازبینی OCR</a><a href="./composer-studio.html">آزمون‌ساز</a></nav>
+</header>
+<main class="bank-layout">
+ <aside class="bank-panel bank-sidebar" aria-label="انتخاب منبع و پروژه">
+  <h2>منبع ورود</h2>
+  <label for="importProject">پروژه مقصد</label><select id="importProject" disabled><option value="">در حال بررسی هویت</option></select>
+  <label for="importSource">PDF خصوصی دفترچه سؤال</label><select id="importSource" disabled><option value="">ابتدا منبع را در بانک سؤال بارگذاری کن</option></select>
+  <label for="importLabel">نام آزمون / دفترچه</label><input id="importLabel" maxlength="160" placeholder="نام آزمون و سال">
+  <p class="bank-help">ورود به بانک بدون PDF خصوصی مرجع مجاز نیست. نتیجه واردشده همچنان پیش‌نویس و نیازمند بازبینی علمی است.</p>
+ </aside>
+ <section class="bank-panel bank-editor">
+  <h2>متن سؤال و پاسخ</h2>
+  <p id="importNotice" role="status" aria-live="polite">آماده انتخاب پروژه</p>
+  <label for="rawQuestions">سؤالات شماره‌دار بازبینی‌شده</label>
+  <textarea id="rawQuestions" rows="11" dir="rtl" placeholder="۱) متن سؤال اول&#10;۲) متن سؤال دوم"></textarea>
+  <label for="rawAnswers">پاسخنامه شماره‌دار بازبینی‌شده</label>
+  <textarea id="rawAnswers" rows="8" dir="rtl" placeholder="۱) پاسخ تشریحی اول&#10;۲) پاسخ تشریحی دوم"></textarea>
+  <button id="matchNow" type="button" class="bank-primary">تطبیق شماره‌ها، بدون ذخیره</button>
+  <section aria-labelledby="matchHeading">
+   <h2 id="matchHeading">نتیجه تطبیق و انتخاب دستی</h2>
+   <div id="matchList" class="bank-results" aria-live="polite"></div>
+  </section>
+  <div class="bank-actions"><p id="importSelectionStatus">۰ سؤال تأییدشده آماده انتقال است (حداکثر ۵۰ سؤال در هر مرحله).</p><button id="importDrafts" type="button" aria-describedby="importSelectionStatus" disabled>انتقال موارد تأییدشده به پیش‌نویس D1</button></div>
+ </section>
+ <aside class="bank-panel bank-review" aria-label="قوانین تطبیق و ورود">
+  <h2>قوانین ورود امن</h2>
+  <p>شماره تکراری، سؤال بدون پاسخ و پاسخ بدون سؤال به‌صورت خودکار پذیرفته نمی‌شوند. فقط شماره‌های انتخاب‌شده انتقال می‌یابند.</p>
+  <p>بعد از ورود، متن همچنان نیازمند تأیید اپراتور در برابر PDF اصلی و سپس بررسی مستقل علمی خواهد بود.</p>
+ </aside>
+</main>
+<script type="module" src="./exam-importer.js"></script>
+</body>
+</html>

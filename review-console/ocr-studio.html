@@ -7,12 +7,13 @@
   <title>استودیوی بازتایپ | Selection Studio</title>
   <link rel="stylesheet" href="../studio/design-system.css">
   <link rel="stylesheet" href="./ocr-studio.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.19.0/dist/katex.min.css" integrity="sha384-3rdsX6e5mueWyoweR9NIVmtEsUkokpBT/0ALqKKIBMr9j4qhHkaIkAcGgsE6uVlp" crossorigin="anonymous">
   <link rel="stylesheet" href="../studio/atelier-ui.css">
 </head>
 <body class="atelier atelier-ocr">
 <header class="ocr-header">
   <div><span class="eyebrow">پنل مدیریت / بانک تست</span><h1>استودیوی بازتایپ و یکدست‌سازی</h1><p>مرجع اصلی همیشه برش PDF است؛ متن هوشمند پیش‌نویس قابل‌بازبینی است.</p></div>
-  <nav aria-label="ناوبری استودیو"><a href="./index.html">بازگشت به مدیریت</a><button id="printBtn" class="primary" type="button">چاپ / خروجی PDF</button></nav>
+  <nav aria-label="ناوبری استودیو"><a href="./index.html">بازگشت به مدیریت</a><a href="./bank-studio.html">بانک پیش‌نویس سؤال</a><a href="./exam-importer.html">تطبیق سؤال و پاسخنامه</a><button id="printBtn" class="primary" type="button">چاپ / خروجی PDF</button></nav>
 </header>
 <main class="ocr-layout">
   <aside class="ocr-panel ocr-sidebar" aria-label="فهرست سؤال‌ها">
@@ -43,19 +44,40 @@
       <label class="ocr-label" for="questionTitle">عنوان سؤال</label><input id="questionTitle" placeholder="نام سؤال">
       <label class="ocr-label" for="questionText">سؤال و گزینه‌ها</label>
       <textarea id="questionText" dir="rtl" rows="12" placeholder="متن استخراج‌شده اینجا قرار می‌گیرد. اعداد، گزینه‌ها و فرمول‌ها را با تصویر اصلی تطبیق بده."></textarea>
-      <div class="ocr-actions"><button id="extractBtn" class="primary" type="button">بازشناسی هوشمند تصویر</button><button id="verifyBtn" type="button">بازبینی دوم</button><button id="extractAllBtn" type="button">بازشناسی همه تصاویر</button></div>
+      <section class="ocr-live-preview" aria-label="پیش‌نمایش زنده متن و فرمول">
+        <div class="ocr-live-head"><strong>پیش‌نمایش زنده متن و فرمول</strong><output id="latexStatus" aria-live="polite">آماده</output></div>
+        <div id="liveMathPreview" class="ocr-live-paper" dir="rtl"></div>
+        <p class="ocr-note">فرمول‌ها در قالب LaTeX نمایش داده می‌شوند. اگر کتابخانه در دسترس نباشد، متن خام حفظ می‌شود.</p>
+      </section>
+      <section id="ocrStructurePanel" class="ocr-structured" aria-label="ساختار استخراج‌شده سؤال" hidden>
+        <div class="ocr-live-head"><strong>ساختار تشخیص داده‌شده</strong><span id="ocrStructureMeta" class="ocr-note"></span></div>
+        <div id="ocrStructureList" class="ocr-structured-list"></div>
+      </section>
+      <div class="ocr-actions ocr-stage-actions">
+        <button id="extractBtn" class="primary" type="button">۱. استخراج متن و گزینه‌ها</button>
+        <button id="verifyBtn" type="button">۲. بازبینی مستقل متن</button>
+        <button id="formulaBtn" type="button">۳. بازبینی دقیق فرمول‌ها</button>
+        <button id="extractAllBtn" type="button">استخراج تصاویر بدون متن</button>
+      </div>
+      <p class="ocr-note">مراحل بازبینی دوم و فرمول‌ها فقط با انتخاب شما درخواست جدیدی به سرویس OCR می‌فرستند. خروجی بازبینی تا تأییدتان جایگزین متن نمی‌شود.</p>
+      <section id="ocrCandidatePanel" class="ocr-candidate" aria-label="پیشنهاد اصلاح متن" hidden>
+        <div class="ocr-candidate-title"><strong id="ocrCandidateHeading">پیشنهاد بازبینی</strong><span>نیازمند تأیید اپراتور</span></div>
+        <label class="ocr-label" for="ocrCandidateText">متن پیشنهادی (قابل اصلاح)</label>
+        <textarea id="ocrCandidateText" dir="rtl" rows="7"></textarea>
+        <div id="ocrDiffWarnings" class="ocr-warnings" aria-live="polite"></div>
+        <div class="ocr-live-paper ocr-candidate-preview" id="ocrCandidatePreview"></div>
+        <div class="ocr-actions">
+          <button id="acceptOcrCandidate" class="primary" type="button">پذیرش متن پیشنهادی</button>
+          <button id="rejectOcrCandidate" type="button">رد پیشنهاد و حفظ متن</button>
+        </div>
+      </section>
       <p id="ocrStatus" role="status" aria-live="polite">آماده</p>
       <div id="warnings" class="ocr-warnings" aria-live="polite"></div>
     </section>
   </section>
   <aside class="ocr-panel ocr-settings" aria-label="خروجی و تنظیمات">
     <h2>اتصال هوش مصنوعی</h2>
-    <p class="ocr-note">مدل Gemma 4 روی Cloudflare اکانت Zh #2. کلید هرگز در سورس یا پروژه ذخیره نمی‌شود.</p>
-    <label class="ocr-label" for="accessFile">خواندن فایل دسترسی خصوصی</label><input id="accessFile" type="file" accept=".txt,text/plain">
-    <label class="ocr-label" for="accessToken">توکن دسترسی</label><input id="accessToken" type="password" autocomplete="off" spellcheck="false" placeholder="فقط در حافظه همین صفحه">
-    <details><summary>آدرس Worker</summary><label class="ocr-label" for="workerEndpoint">نشانی API</label><input id="workerEndpoint" dir="ltr" value="https://examforge-free-ocr.zh-st-2.workers.dev/ocr"></details>
-    <hr>
-    <h2>قالب یکدست همه سؤال‌ها</h2>
+    <p class="ocr-note">درخواست بازشناسی از مسیر امن همین سایت ارسال می‌شود. ورود و دسترسی با Cloudflare Access کنترل می‌شود و نیازی به واردکردن کلید شخصی نیست.</p>
     <label class="ocr-label" for="bankTitle">عنوان جزوه</label><input id="bankTitle" value="بانک تست">
     <label class="ocr-label" for="fontFamily">فونت متن</label><select id="fontFamily"><option value="Tahoma">Tahoma</option><option value="Arial">Arial</option><option value="serif">Serif</option></select>
     <label class="ocr-label" for="fontSize">اندازه فونت</label><output id="fontSizeValue" for="fontSize">۱۷</output><input id="fontSize" type="range" min="13" max="24" value="17">

@@ -19,7 +19,7 @@ test.describe("Ember Atelier premium theme",()=>{
 
  for(const s of scenarios){
   test("renders accessible theme on "+s.path,async({page})=>{
-   await page.goto(s.path);
+   await page.goto(s.path,{waitUntil:'domcontentloaded'});
    await expect(page.locator("body")).toHaveClass(new RegExp(s.body));
    await expect(page.locator(s.selector).first()).toBeVisible();
    const state=await page.evaluate(()=>{
@@ -66,4 +66,17 @@ test.describe("Ember Atelier premium theme",()=>{
   await expect(page.locator("#previewDialog")).toBeVisible();
   await expect(page.locator("#previewContent")).toContainText("پاسخ اول");
  });
+ test("fixed dark theme survives blocked localStorage",async({page})=>{
+  await page.goto("/studio/");
+  const state=await page.evaluate(async()=>{
+   const originalRemove=Storage.prototype.removeItem;
+   Storage.prototype.removeItem=function(){throw new DOMException("Storage disabled","SecurityError")};
+   try{
+    const {applyTheme}=await import("/studio/appearance.js");
+    return {result:applyTheme(),theme:document.documentElement.dataset.theme};
+   }finally{Storage.prototype.removeItem=originalRemove}
+  });
+  expect(state).toEqual({result:"dark",theme:"dark"});
+ });
+
 });

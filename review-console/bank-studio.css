@@ -1,0 +1,38 @@
+:root{color-scheme:dark}
+body.bank-studio{margin:0;background:#0a0e15;color:#edf4fa;font:500 14px/1.8 Tahoma,"Segoe UI",system-ui,sans-serif;min-height:100dvh}
+.bank-header{max-width:1560px;margin:auto;padding:24px clamp(14px,3vw,36px);display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.bank-header h1{margin:2px 0;font-size:clamp(1.25rem,3vw,2rem)}.bank-header p{margin:0;color:#c1d0dd}.bank-header nav{display:flex;gap:10px;flex-wrap:wrap}
+.bank-header nav a{border:1px solid #526879;padding:8px 12px;border-radius:10px;color:#c8e3e5;text-decoration:none;min-height:40px;box-sizing:border-box}
+.bank-eyebrow{font:.7rem ui-monospace,monospace;color:#92c9bf;letter-spacing:.09em;direction:ltr;unicode-bidi:isolate}
+.bank-layout{max-width:1560px;margin:auto;padding:0 clamp(14px,3vw,36px) 32px;display:grid;grid-template-columns:minmax(210px,270px) minmax(340px,1fr) minmax(235px,300px);gap:14px;align-items:start}
+.bank-panel{background:linear-gradient(156deg,#202e3d,#101a29);border:1px solid #415366;border-radius:17px;padding:16px;min-width:0;box-sizing:border-box}
+.bank-panel h2{margin:4px 0 12px;font-size:1.1rem}.bank-panel h3{font-size:.94rem}.bank-panel p{color:#b6cbd6}.bank-panel label{display:grid;gap:5px;margin:12px 0 5px;font-weight:700;font-size:.78rem}
+.bank-panel :is(input,textarea,select){background:#0b1724;color:#f4f8fa;border:1px solid #60788c;border-radius:9px;box-sizing:border-box;max-width:100%;min-width:0;padding:10px;font:500 .86rem/1.8 Tahoma,"Segoe UI",system-ui,sans-serif;width:100%}
+.bank-panel :is(input,textarea,select):focus-visible,.bank-panel button:focus-visible,.bank-header a:focus-visible{outline:2px solid #8bdecf;outline-offset:2px}
+.bank-panel button{border:1px solid #69939b;background:#203a48;color:#f3f7fb;border-radius:10px;padding:9px 12px;min-height:43px;cursor:pointer;font:700 .77rem/1.4 Tahoma,"Segoe UI",sans-serif;max-width:100%}
+.bank-panel button:disabled,.bank-panel :is(input,select,textarea):disabled{opacity:.55;cursor:not-allowed}
+.bank-panel .bank-primary{background:#24564b;border-color:#70b9a5}.bank-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.bank-actions>*{flex:1 1 auto}
+.bank-list{display:grid;gap:7px;margin-top:10px;max-height:50vh;overflow:auto}.bank-list button{width:100%;text-align:right;white-space:normal;overflow-wrap:anywhere}.bank-list button[aria-current="true"]{border-color:#8cd7c0;background:#2a5553}
+.bank-help,.bank-review p{font-size:.76rem;line-height:1.8}.bank-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.bank-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.bank-heading output{color:#a7dfcf}
+#notice{background:#172d3b;border:1px solid #4e6c7d;border-radius:8px;padding:8px 11px;font-size:.78rem}
+#notice[data-state="error"]{color:#ffbba8;border-color:#a75c5c}
+.bank-results{margin:7px 0 16px;display:grid;gap:8px;min-width:0;overflow-wrap:anywhere;font-size:.77rem}
+.bank-result{background:#111f2c;border:1px solid #435e71;padding:8px;border-radius:9px;white-space:pre-wrap}.bank-result small{display:block;color:#9fbdca}
+#historyPanel{margin-top:18px;border-top:1px solid #53677a}#historyList{display:grid;gap:7px}#historyList .bank-result{max-height:180px;overflow:auto}
+@media(max-width:1050px){.bank-layout{grid-template-columns:minmax(220px,300px) minmax(0,1fr)}.bank-review{grid-column:1/-1}}@media(max-width:650px){.bank-layout{grid-template-columns:minmax(0,1fr)}.bank-review{grid-column:auto}.bank-fields{grid-template-columns:1fr}.bank-panel{padding:12px}}
+
+.bank-asset-section{margin-top:20px;padding-top:15px;border-top:1px solid #53677a}
+.bank-panel .bank-confirm{display:flex;align-items:flex-start;gap:11px;padding:12px;margin:12px 0;border:1px solid #527b74;background:#132b2b;border-radius:10px;font-size:.78rem;line-height:1.75}
+.bank-panel .bank-confirm input[type="checkbox"]{width:21px;height:21px;min-width:21px;margin:4px 0 0;accent-color:#84cdb5}
+.bank-download{display:block;margin-top:7px;color:#bde9d7;font-weight:700}
+.bank-result .bank-download:focus-visible{outline:2px solid #8bdecf;outline-offset:3px}
+
+.composer-selection{display:grid;gap:6px}
+.composer-selection .bank-actions{margin-top:0}
+.bank-preview-dialog{color:#f4f7fa;background:#111c2b;border:1px solid #617c8c;border-radius:14px;width:min(780px,calc(100vw - 20px));max-height:85dvh;overflow:auto;padding:18px}
+.bank-preview-dialog::backdrop{background:rgb(0 0 0 / 75%)}
+.bank-preview-dialog button{float:left;background:#274e52;color:#fff;border:1px solid #779ba3;border-radius:8px;padding:8px 13px;min-height:44px}
+#examPreviewPaper{clear:both;margin-top:32px;padding:20px;background:#fff;color:#111;border-radius:8px;line-height:2}
+#examPreviewPaper section{border-bottom:1px solid #ddd;padding:16px 0;white-space:pre-wrap}
+#examPreviewPaper p{color:#111;white-space:pre-wrap}

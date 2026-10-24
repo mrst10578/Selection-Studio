@@ -3,10 +3,13 @@ import {test,expect} from "@playwright/test";
 const SAMPLE="iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAGUlEQVR4nGP8//8/AymAiSTVoxpGNQwpDQBVbQMdPVIhQwAAAABJRU5ErkJggg==";
 
 test.describe("Admin typed test-bank editor",()=>{
-  test("requires existing review console session",async({page})=>{
+  test("uses edge-managed authentication instead of browser tokens",async({page})=>{
     await page.goto("/review-console/ocr-studio.html");
-    await expect(page).toHaveURL(/review-console\/(?:index\.html)?$/);
-    await expect(page.locator("#adminLoginForm")).toBeVisible();
+    await expect(page.locator(".ocr-layout")).toBeVisible();
+    await expect(page.locator("#questionList")).toHaveCount(1);
+    await expect(page.locator("#accessToken")).toHaveCount(0);
+    await expect(page.locator("#workerEndpoint")).toHaveCount(0);
+    await expect(page.locator("#extractBtn")).toBeVisible();
   });
 
   test("renders and exports reviewed questions while leaving metadata untouched",async({page})=>{
@@ -31,23 +34,22 @@ test.describe("Admin typed test-bank editor",()=>{
     expect(download.suggestedFilename()).toBe("TestBank_Typed.html");
   });
 
-  test("performs mocked Cloudflare OCR without embedding credentials",async({page})=>{
+  test("performs same-origin OCR without embedding credentials",async({page})=>{
     await page.addInitScript(()=>sessionStorage.setItem("selection-review-admin-user-v1","admin"));
     await page.goto("/review-console/ocr-studio.html");
     await page.locator("#images").setInputFiles({name:"source.png",mimeType:"image/png",buffer:Buffer.from(SAMPLE,"base64")});
     await expect(page.locator("#questionList .ocr-list-row")).toHaveCount(1);
-    let authenticated=false;
-    await page.route("https://examforge-free-ocr.zh-st-2.workers.dev/ocr",async route=>{
+    let browserSentNoSecret=false;
+    await page.route("**/api/ocr",async route=>{
       const request=route.request();
-      authenticated=request.headers()["authorization"]==="Bearer test-only-key";
+      browserSentNoSecret=!request.headers()["authorization"];
       const body=request.postDataJSON();
       expect(body.image).toMatch(/^data:image\/jpeg;base64,/);
       await route.fulfill({status:200,contentType:"application/json",headers:{"access-control-allow-origin":"*"},body:JSON.stringify({result:{choices:[{message:{content:JSON.stringify({questions:[{number:"12",stem:"سؤال بازتایپ شده",options:[{label:"الف",text:"گزینه صحیح"}],extras:[],figure_required:false,uncertainties:[],confidence:"high"}],page_notes:""})}}]}})});
     });
-    await page.locator("#accessToken").fill("test-only-key");
     await page.locator("#extractBtn").click();
     await expect(page.locator("#questionText")).toHaveValue(/سؤال بازتایپ شده/);
-    expect(authenticated).toBe(true);
+    expect(browserSentNoSecret).toBe(true);
     await expect(page.locator("#reviewed")).not.toBeChecked();
   });
 
