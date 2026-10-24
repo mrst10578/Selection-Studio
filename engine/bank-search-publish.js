@@ -3,7 +3,7 @@ const digits='۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩';
 // Invisible formatting controls must never be accepted in reviewer identities.
 const unsafeIdentityControls=/[\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufeff]/u;
 const identityKey=value=>value.normalize('NFKC').trim().toLowerCase();
-const normalize=s=>String(s??'').normalize('NFKC').replace(/[۰-۹٠-٩]/g,c=>String(digits.indexOf(c)%10)).replace(/[يى]/g,'ی').replace(/ك/g,'ک').replace(/[\s\u200c]+/g,' ').trim().toLowerCase();
+const normalize=s=>String(s??'').normalize('NFKC').replace(/[۰-۹٠-٩]/g,c=>String(digits.indexOf(c)%10)).replace(/[\u0640\u064b-\u065f\u0670]/g,'').replace(/[يى]/g,'ی').replace(/ك/g,'ک').replace(/[\s\u200c]+/g,' ').trim().toLowerCase();
 export function searchApprovedBank(records,{query='',subject='',projectId='',limit=40}={}){
  if(!Array.isArray(records))return [];
  const q=normalize(query),s=normalize(subject),cap=Number.isInteger(limit)?Math.max(1,Math.min(limit,100)):40;
