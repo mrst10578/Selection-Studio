@@ -221,3 +221,29 @@ test('approved-bank search matches answer-only keywords while retaining independ
   'matching an answer must not bypass the independent approval gate');
  x.d.close();
 });
+
+test('exam composition can select an older approved question beyond the 300-row search window',async()=>{
+ const x=f();
+ const original=JSON.parse(x.d.prepare('SELECT content_json FROM bank_questions WHERE id=?').get(qid).content_json);
+ const checklist=JSON.stringify({sourceVerified:true,transcriptionVerified:true,answerVerified:true,taxonomyVerified:true,figuresVerified:true,warningsResolved:true});
+ const addQuestion=x.d.prepare('INSERT INTO bank_questions(id,project_id,actor,content_json) VALUES(?,?,?,?)');
+ const addReview=x.d.prepare('INSERT INTO bank_review_events(id,project_id,question_id,source_revision,reviewer_actor,reviewer_email_hash,grant_id,decision,checklist_json,source_digest) VALUES(?,?,?,?,?,?,?,?,?,?)');
+ for(let i=0;i<300;i++){
+  const suffix=i.toString(16).padStart(7,'0');
+  const nextId='f'+suffix+'-1234-1234-1234-123456789012';
+  addQuestion.run(nextId,pid,actor,JSON.stringify({...original,questionText:'Newer approved question '+i}));
+  addReview.run('e'+suffix+'-1111-1111-1111-111111111111',pid,nextId,1,reviewer,'d'.repeat(64),grant,'approve',checklist,digest);
+ }
+ const search=await x.call('/questions');
+ assert.equal(search.status,200);
+ assert.equal(search.data.scanned,300,'search scan cap remains unchanged');
+ assert.equal(search.data.limited,true);
+ assert.ok(!search.data.questions.some(q=>q.id===qid),'oldest approved question is outside search window');
+ const body={title:'Older verified question',questionIds:[qid],sourceRevisions:[1],includeAnswers:true};
+ const composed=await x.call('/exams/compose','POST',body);
+ assert.equal(composed.status,200,'explicitly selected approved question must not be blocked by search cap');
+ assert.deepEqual(composed.data.manifest.items.map(q=>q.id),[qid]);
+ x.d.prepare("UPDATE bank_review_events SET decision='reject' WHERE question_id=?").run(qid);
+ assert.equal((await x.call('/exams/compose','POST',body)).status,409,'older question still requires current independent approval');
+ x.d.close();
+});
