@@ -16,7 +16,7 @@ function render(){
  const more=$('loadMoreBank');more.hidden=!state.nextCursor;more.disabled=state.bankLoading||!state.nextCursor;
  $('loadBank').disabled=!state.ready||state.bankLoading;
  if(!state.bank.length)available.append(e('p','سؤال تأییدشده‌ای با این جست‌وجو پیدا نشد.'));
- for(const question of state.bank){
+ for(const [index,question] of state.bank.entries()){
   const selected=state.selected.some(x=>x.id===question.id);
   const row=e('button',(selected?'✓ ':'+ ')+'سؤال '+(question.sourceNumber||'?')+' · '+question.questionText.slice(0,100));
   row.type='button';row.setAttribute('aria-pressed',String(selected));
@@ -25,6 +25,8 @@ function render(){
    else if(state.selected.length<100)state.selected.push(question);
    else{notice('هر آزمون حداکثر ۱۰۰ سؤال دارد',true);return}
    render();
+   // Rebuilding the list removes the clicked button; restore keyboard focus.
+   available.querySelectorAll('button')[index]?.focus();
   });available.append(row);
  }
  const list=$('selectedList');list.replaceChildren();
