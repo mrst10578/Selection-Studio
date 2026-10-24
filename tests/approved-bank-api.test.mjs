@@ -101,3 +101,22 @@ test('bank search accepts Arabic-Indic and Latin digits in Persian questions',as
  }
  x.d.close();
 });
+
+test('server-approved bank rejects malformed scientific pending values for search and compose',async()=>{
+ const x=f(),request={title:'زیست',questionIds:[qid],sourceRevisions:[1],includeAnswers:false};
+ for(const value of [null,'0',-1,1,false,[]]){
+  x.d.prepare("UPDATE bank_questions SET content_json=json_set(content_json,'$.scientificPending',json(?)) WHERE id=?").run(JSON.stringify(value),qid);
+  const search=await x.call('/questions');
+  assert.equal(search.status,200);
+  assert.deepEqual(search.data.questions,[],`value=${JSON.stringify(value)} should be excluded`);
+  const compose=await x.call('/exams/compose','POST',request);
+  assert.equal(compose.status,409,`value=${JSON.stringify(value)} must not be exportable`);
+ }
+ x.d.prepare("UPDATE bank_questions SET content_json=json_remove(content_json,'$.scientificPending') WHERE id=?").run(qid);
+ assert.deepEqual((await x.call('/questions')).data.questions,[],'missing pending counter must be excluded');
+ assert.equal((await x.call('/exams/compose','POST',request)).status,409);
+ x.d.prepare("UPDATE bank_questions SET content_json=json_set(content_json,'$.scientificPending',0) WHERE id=?").run(qid);
+ assert.deepEqual((await x.call('/questions')).data.questions.map(q=>q.id),[qid]);
+ assert.equal((await x.call('/exams/compose','POST',request)).status,200);
+ x.d.close();
+});
