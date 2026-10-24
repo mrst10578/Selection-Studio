@@ -38,7 +38,13 @@ function render(){
   for(const [label,move] of [['بالا',-1],['پایین',1]]){
    const button=e('button',label);button.type='button';button.disabled=i+move<0||i+move>=state.selected.length;
    button.addEventListener('click',()=>{
-    const copy=[...state.selected];[copy[i],copy[i+move]]=[copy[i+move],copy[i]];state.selected=copy;render()
+    const target=i+move;
+    const copy=[...state.selected];[copy[i],copy[target]]=[copy[target],copy[i]];state.selected=copy;render();
+    // Keep focus with the moved question, even when its move button becomes disabled at an edge.
+    const movedButtons=list.querySelectorAll('.composer-selection')[target]?.querySelectorAll('button');
+    const preferred=movedButtons?.[move===-1?0:1];
+    const fallback=movedButtons?.[move===-1?1:0];
+    (preferred&&!preferred.disabled?preferred:fallback)?.focus();
    });buttons.append(button);
   }
   const remove=e('button','حذف');remove.type='button';
