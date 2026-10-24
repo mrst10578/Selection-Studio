@@ -113,3 +113,30 @@ test('keyboard reordering follows the moved question across disabled edge contro
  await expect(rows.nth(1).getByRole('button',{name:'پایین'})).toBeDisabled();
  await expect(rows.nth(1).getByRole('button',{name:'بالا'})).toBeFocused();
 });
+
+test('keyboard removal focuses the next, previous, or original bank control',async({page})=>{
+ await mock(page);
+ await page.goto('/review-console/composer-studio.html');
+ const bank=page.locator('#approvedList button');
+ await expect(bank).toHaveCount(2);
+ await bank.nth(0).click();
+ await bank.nth(1).click();
+ const rows=page.locator('#selectedList .composer-selection');
+ await rows.nth(0).getByRole('button',{name:'حذف'}).focus();
+ await page.keyboard.press('Enter');
+ await expect(rows).toHaveCount(1);
+ await expect(rows.first()).toContainText('نتیجه x');
+ await expect(rows.first().getByRole('button',{name:'حذف'})).toBeFocused();
+ // Removing the final selection returns focus to that question in the bank.
+ await page.keyboard.press('Enter');
+ await expect(rows).toHaveCount(0);
+ await expect(bank.nth(1)).toBeFocused();
+ // Removing the last row from a nonempty list focuses the previous row.
+ await bank.nth(0).click();
+ await bank.nth(1).click();
+ await rows.nth(1).getByRole('button',{name:'حذف'}).focus();
+ await page.keyboard.press('Enter');
+ await expect(rows).toHaveCount(1);
+ await expect(rows.first()).toContainText('مقدار ۲');
+ await expect(rows.first().getByRole('button',{name:'حذف'})).toBeFocused();
+});
