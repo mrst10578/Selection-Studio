@@ -178,8 +178,15 @@ $('printExam').addEventListener('click',()=>{
   try{
    const html=exportExamHTML(await manifest());
    windowRef.document.open();windowRef.document.write(html);windowRef.document.close();windowRef.focus();
-   windowRef.addEventListener('load',()=>windowRef.print(),{once:true});
-   setTimeout(()=>{try{windowRef.print()}catch{}},500);
+   // A fast load event and the fallback timer must never open two print dialogs.
+   let printRequested=false;
+   const printOnce=()=>{
+    if(printRequested||windowRef.closed)return;
+    printRequested=true;
+    try{windowRef.print()}catch{}
+   };
+   windowRef.addEventListener('load',printOnce,{once:true});
+   setTimeout(printOnce,500);
    notice('پنجره چاپ باز شد؛ برای ساخت PDF گزینه ذخیره PDF را انتخاب کن.');
   }catch(err){windowRef.close();throw err}
  });
