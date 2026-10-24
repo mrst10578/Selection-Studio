@@ -15,7 +15,7 @@ function render(){
  available.setAttribute('aria-busy',String(state.bankLoading));
  const more=$('loadMoreBank');more.hidden=!state.nextCursor;more.disabled=state.bankLoading||!state.nextCursor;
  $('loadBank').disabled=!state.ready||state.bankLoading;
- if(!state.bank.length)available.append(e('p','سؤال تأییدشده‌ای با این جست‌وجو پیدا نشد.'));
+ if(!state.bank.length)available.append(e('p',state.bankLoading?'در حال دریافت سؤال‌ها…':'سؤال تأییدشده‌ای با این جست‌وجو پیدا نشد.'));
  for(const [index,question] of state.bank.entries()){
   const selected=state.selected.some(x=>x.id===question.id);
   const row=e('button',(selected?'✓ ':'+ ')+'سؤال '+(question.sourceNumber||'?')+' · '+question.questionText.slice(0,100));
@@ -86,6 +86,7 @@ async function loadBank(append=false){
  const previousCount=state.bank.length;
  state.bankLoading=true;state.bankFilterKey=key;
  if(!append){state.bank=[];state.nextCursor=null}
+ notice(append?'در حال بارگذاری سؤال‌های بیشتر…':'در حال جست‌وجوی سؤال‌های تأییدشده…');
  render();
  const qs=new URLSearchParams();
  if(project)qs.set('projectId',project);if(query)qs.set('q',query);
