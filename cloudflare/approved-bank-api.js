@@ -13,7 +13,7 @@ async function validApproved(db,actor,scope){
  const result=[];
  for(const row of rows.results||[]){
   const content=JSON.parse(row.content_json);
-  if(content.operatorConfirmed!==true||Number(content.scientificPending||0)>0||!/^[a-f0-9]{64}$/i.test(content.sourceDigest||''))continue;
+  if(content.operatorConfirmed!==true||content.scientificPending!==0||!/^[a-f0-9]{64}$/i.test(content.sourceDigest||''))continue;
   result.push({id:row.id,projectId:row.project_id,revision:row.revision,state:'reviewed',reviewStatus:'approved',scientificPending:0,softDeleted:false,
    questionText:String(content.questionText||'').slice(0,16000),answerText:String(content.answerText||'').slice(0,16000),
    subject:String(content.taxonomyId||''),sourceNumber:content.sourceNumber||null,sourceDigest:content.sourceDigest,
