@@ -1,6 +1,6 @@
 import {exportExamHTML,exportExamJSONL} from '../engine/test-composer.js';
 const $=id=>document.getElementById(id);
-const state={bank:[],selected:[]};
+const state={bank:[],selected:[],nextCursor:null,bankFilterKey:'',bankRequestSeq:0,bankLoading:false,ready:false};
 const notice=(s,error=false)=>{$('composerNotice').textContent=s;$('composerNotice').dataset.state=error?'error':'ok'};
 const e=(tag,text)=>{const node=document.createElement(tag);node.textContent=text||'';return node};
 async function api(path,options={}){
@@ -12,6 +12,9 @@ async function safe(fn){try{await fn()}catch(error){notice(error?.status===409?'
 function controls(){for(const id of ['previewExam','exportJsonl','exportHtml','printExam'])$(id).disabled=!state.selected.length}
 function render(){
  const available=$('approvedList');available.replaceChildren();
+ available.setAttribute('aria-busy',String(state.bankLoading));
+ const more=$('loadMoreBank');more.hidden=!state.nextCursor;more.disabled=state.bankLoading||!state.nextCursor;
+ $('loadBank').disabled=!state.ready||state.bankLoading;
  if(!state.bank.length)available.append(e('p','سؤال تأییدشده‌ای با این جست‌وجو پیدا نشد.'));
  for(const question of state.bank){
   const selected=state.selected.some(x=>x.id===question.id);
@@ -42,16 +45,34 @@ function render(){
  });
  controls();
 }
-async function loadBank(){
- const project=$('composerProject').value,query=$('composerQuery').value;
+const currentBankFilter=()=>JSON.stringify([$('composerProject').value,$('composerQuery').value.trim()]);
+function invalidateBankSearch(){
+ ++state.bankRequestSeq;state.bank=[];state.nextCursor=null;state.bankFilterKey='';state.bankLoading=false;
+ render();
+}
+async function loadBank(append=false){
+ const project=$('composerProject').value,query=$('composerQuery').value.trim(),key=currentBankFilter();
+ const cursor=append&&state.bankFilterKey===key?state.nextCursor:null;
+ if(append&&!cursor)return;
+ const seq=++state.bankRequestSeq;
+ state.bankLoading=true;state.bankFilterKey=key;
+ if(!append){state.bank=[];state.nextCursor=null}
+ render();
  const qs=new URLSearchParams();
- if(project)qs.set('projectId',project);if(query.trim())qs.set('q',query.trim());
- const result=await api('/api/v1/bank/questions?'+qs);
- state.bank=result.questions||[];
- const ids=new Set(state.bank.map(x=>x.id));
- // Previously selected items may be from another filter; preserve only in same project.
- state.selected=state.selected.filter(x=>(!project||x.projectId===project));
- render();notice(state.bank.length+' سؤال دارای تأیید علمی معتبر در نتیجه جست‌وجو است. پیش از خروجی دوباره در سرور بررسی می‌شوند.');
+ if(project)qs.set('projectId',project);if(query)qs.set('q',query);
+ if(cursor)qs.set('cursor',cursor);
+ let result;
+ try{result=await api('/api/v1/bank/questions?'+qs)}
+ catch(error){if(seq===state.bankRequestSeq){state.bankLoading=false;render();throw error}return}
+ if(seq!==state.bankRequestSeq||key!==currentBankFilter())return;
+ const incoming=Array.isArray(result.questions)?result.questions:[];
+ const seen=new Set(append?state.bank.map(x=>x.id):[]);
+ state.bank=append?[...state.bank,...incoming.filter(x=>!seen.has(x.id))]:incoming;
+ state.nextCursor=typeof result.nextCursor==='string'&&result.nextCursor?result.nextCursor:null;
+ // Selected questions survive pagination and text filters, but not project switches.
+ state.selected=state.selected.filter(x=>!project||x.projectId===project);
+ state.bankLoading=false;render();
+ notice(state.bank.length+' سؤال تأییدشده در فهرست است.'+(state.nextCursor?' برای موارد قدیمی‌تر «نمایش سؤال‌های بیشتر» را بزن.':'')+' پیش از خروجی دوباره در سرور بررسی می‌شوند.');
 }
 async function manifest(){
  if(!state.selected.length)throw Error('سؤالی انتخاب نشده است');
@@ -68,8 +89,10 @@ function download(text,name,type){
  const url=URL.createObjectURL(new Blob([text],{type})),a=document.createElement('a');
  a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);
 }
-$('loadBank').addEventListener('click',()=>void safe(loadBank));
-$('composerProject').addEventListener('change',()=>{state.selected=[];void safe(loadBank)});
+$('loadBank').addEventListener('click',()=>void safe(()=>loadBank()));
+$('loadMoreBank').addEventListener('click',()=>void safe(()=>loadBank(true)));
+$('composerQuery').addEventListener('input',()=>{invalidateBankSearch();notice('عبارت جست‌وجو تغییر کرد؛ برای دریافت نتایج جدید «جست‌وجو و بازخوانی» را بزن.');});
+$('composerProject').addEventListener('change',()=>{state.selected=[];invalidateBankSearch();void safe(()=>loadBank())});
 $('previewExam').addEventListener('click',()=>void safe(async()=>{
  const exam=await manifest(),host=$('examPreviewPaper');host.replaceChildren();
  host.append(e('h2',exam.title));
@@ -106,5 +129,5 @@ void safe(async()=>{
  const projects=await api('/api/v1/projects');
  const select=$('composerProject');select.replaceChildren(new Option('همه پروژه‌های خودم',''));
  for(const p of projects.projects||[])select.add(new Option(p.name,p.id));
- select.disabled=false;$('loadBank').disabled=false;await loadBank();
+ select.disabled=false;state.ready=true;await loadBank();
 });
