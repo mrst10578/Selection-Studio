@@ -7,7 +7,7 @@ export function composeApprovedExam(questions,{title='آزمون',includeAnswers
  const ids=new Set(),items=[];
  for(const q of questions){
   if(!q||typeof q.id!=='string'||!q.id||ids.has(q.id))throw Error('DUPLICATE_OR_MISSING_ID');
-  if(q.reviewStatus!=='approved'||q.scientificPending>0||q.softDeleted||q.deleted||q.state==='draft'||!Number.isSafeInteger(q.revision)||q.revision<1)throw Error('QUESTION_NOT_APPROVED');
+  if(q.reviewStatus!=='approved'||q.scientificPending!==0||q.softDeleted||q.deleted||q.state==='draft'||!Number.isSafeInteger(q.revision)||q.revision<1)throw Error('QUESTION_NOT_APPROVED');
   if(typeof q.questionText!=='string'||!q.questionText.trim())throw Error('EMPTY_QUESTION');
   if(q.questionText.length>16000)throw Error('QUESTION_TOO_LONG');
   if(includeAnswers&&(typeof q.answerText!=='string'||!q.answerText.trim()))throw Error('ANSWER_MISSING');
