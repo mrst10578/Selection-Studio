@@ -261,3 +261,49 @@ test('failed pagination keeps existing questions and restores keyboard focus',as
  await expect(more).toBeEnabled();
  await expect(more).toBeFocused();
 });
+
+test('compose export is single-flight while the server validates, then restores keyboard focus',async({page})=>{
+ await mock(page);
+ let releaseRequest,requests=0;
+ await page.route('**/api/v1/bank/exams/compose',async route=>{
+  requests++;
+  await new Promise(resolve=>{releaseRequest=resolve});
+  const payload=route.request().postDataJSON();
+  return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
+   status:'draft_export_only',manifest:{title:payload.title,publishable:false,
+    answersIncluded:payload.includeAnswers,items:[{index:1,id:q1,revision:2,question:'مقدار ۲ چند است؟'}]}
+  })});
+ });
+ await page.goto('/review-console/composer-studio.html');
+ await page.locator('#approvedList button').first().click();
+ const exportButton=page.locator('#exportJsonl');
+ await exportButton.focus();
+ await page.keyboard.press('Enter');
+ await expect.poll(()=>requests).toBe(1);
+ for(const id of ['previewExam','exportJsonl','exportHtml','printExam'])
+  await expect(page.locator('#'+id)).toBeDisabled();
+ // A synthetic click cannot bypass the in-flight guard even when the button is disabled.
+ await page.evaluate(()=>document.getElementById('exportJsonl').dispatchEvent(new MouseEvent('click',{bubbles:true})));
+ expect(requests).toBe(1);
+ const downloadPromise=page.waitForEvent('download');
+ releaseRequest();
+ expect((await downloadPromise).suggestedFilename()).toBe('examforge-exam.jsonl');
+ await expect(exportButton).toBeEnabled();
+ await expect(exportButton).toBeFocused();
+ expect(requests).toBe(1);
+});
+
+test('failed compose validation re-enables export actions for retry',async({page})=>{
+ await mock(page);
+ await page.route('**/api/v1/bank/exams/compose',route=>route.fulfill({
+  status:503,contentType:'application/json',body:'{"error":"COMPOSE_TEMPORARILY_UNAVAILABLE"}'
+ }));
+ await page.goto('/review-console/composer-studio.html');
+ await page.locator('#approvedList button').first().click();
+ const exportButton=page.locator('#exportJsonl');
+ await exportButton.focus();
+ await page.keyboard.press('Enter');
+ await expect(page.locator('#composerNotice')).toContainText('COMPOSE_TEMPORARILY_UNAVAILABLE');
+ await expect(exportButton).toBeEnabled();
+ await expect(exportButton).toBeFocused();
+});
