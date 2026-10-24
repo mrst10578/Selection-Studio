@@ -20,7 +20,7 @@ function f(){
   const r=await handleApprovedBankApi(new Request(u,{method,headers:body?{'Content-Type':'application/json'}:{},...(body?{body:JSON.stringify(body)}:{})}),env,as,u);
   return {status:r.status,data:await r.json()};
  };
- return {d,call};
+ return {d,call,env};
 }
 test('only actor-owned and independently reviewed current records are searchable',async()=>{
  const x=f();
@@ -152,5 +152,35 @@ test('server search ignores Arabic diacritics and tatweel without altering appro
  assert.deepEqual((await x.call('/questions?q='+encodeURIComponent('تَحْلِیل'))).data.questions.map(q=>q.id),[qid]);
  x.d.prepare("UPDATE bank_review_events SET decision='reject' WHERE question_id=?").run(qid);
  assert.deepEqual((await x.call('/questions?q='+encodeURIComponent('تحلیل'))).data.questions,[],'search must still enforce independent approval');
+ x.d.close();
+});
+
+test('compose enforces the 12KB byte limit before and during streaming without auditing rejected bodies',async()=>{
+ const x=f(),url=new URL('https://preview.example/api/v1/bank/exams/compose');
+ const base={title:'زیست',questionIds:[qid],sourceRevisions:[1],includeAnswers:false};
+ const send=async request=>{
+  const response=await handleApprovedBankApi(request,x.env,actor,url);
+  return {status:response.status,data:await response.json()};
+ };
+ const make=(body,headers={})=>new Request(url,{method:'POST',headers:{'Content-Type':'application/json',...headers},body});
+ const declared=await send(make('{}',{'Content-Length':'12001'}));
+ assert.equal(declared.status,413,'oversized declared length must be rejected before reading');
+ assert.equal(declared.data.error,'BODY_TOO_LARGE');
+ const oversized=await send(make(JSON.stringify(base)+' '.repeat(12001)));
+ assert.equal(oversized.status,413,'large bodies without a declared length must also be rejected');
+ const streamed=new ReadableStream({start(controller){
+  controller.enqueue(new Uint8Array(7000));
+  controller.enqueue(new Uint8Array(7000));
+  controller.close();
+ }});
+ const streamedResult=await send(new Request(url,{method:'POST',headers:{'Content-Type':'application/json'},body:streamed,duplex:'half'}));
+ assert.equal(streamedResult.status,413,'chunked bodies must be capped while reading');
+ assert.equal(x.d.prepare("SELECT count(*) AS n FROM security_audit WHERE action='exam_draft_compose'").get().n,0);
+ const raw=JSON.stringify(base);
+ const exact=raw+' '.repeat(12000-Buffer.byteLength(raw,'utf8'));
+ assert.equal(Buffer.byteLength(exact,'utf8'),12000);
+ const accepted=await send(make(exact));
+ assert.equal(accepted.status,200,'exactly 12KB of valid JSON should remain accepted');
+ assert.equal(x.d.prepare("SELECT count(*) AS n FROM security_audit WHERE action='exam_draft_compose'").get().n,1);
  x.d.close();
 });
