@@ -22,7 +22,8 @@ function validateContent(data){
  return JSON.stringify({questionText:data.questionText,answerText:data.answerText||'',latex:data.latex||[],taxonomyId:data.taxonomyId||'',sourceLabel:data.sourceLabel||'',sourceNumber:data.sourceNumber||null,operatorConfirmed:data.operatorConfirmed===true,scientificPending:data.scientificPending||0,sourceDigest:data.sourceDigest||''});
 }
 async function parseJson(request,max=42000){
- if(!request.headers.get('content-type')?.toLowerCase().startsWith('application/json'))throw Error('JSON_REQUIRED');
+ const mediaType=request.headers.get('content-type')?.split(';',1)[0].trim().toLowerCase();
+ if(mediaType!=='application/json')throw Error('JSON_REQUIRED');
  if(Number(request.headers.get('content-length')||0)>max)throw Error('PAYLOAD_TOO_LARGE');
  const raw=await request.text();
  if(new TextEncoder().encode(raw).length>max)throw Error('PAYLOAD_TOO_LARGE');
