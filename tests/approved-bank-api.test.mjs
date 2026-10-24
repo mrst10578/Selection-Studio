@@ -184,3 +184,26 @@ test('compose enforces the 12KB byte limit before and during streaming without a
  assert.equal(x.d.prepare("SELECT count(*) AS n FROM security_audit WHERE action='exam_draft_compose'").get().n,1);
  x.d.close();
 });
+
+test('malformed stored question JSON cannot take down healthy approved-bank search or compose',async()=>{
+ const x=f(),badId='99999999-1234-1234-1234-123456789012';
+ const original=x.d.prepare('SELECT content_json FROM bank_questions WHERE id=?').get(qid).content_json;
+ x.d.prepare('INSERT INTO bank_questions(id,project_id,actor,content_json) SELECT ?,project_id,actor,content_json FROM bank_questions WHERE id=?').run(badId,qid);
+ const checks=JSON.stringify({sourceVerified:true,transcriptionVerified:true,answerVerified:true,taxonomyVerified:true,figuresVerified:true,warningsResolved:true});
+ x.d.prepare('INSERT INTO bank_review_events(id,project_id,question_id,source_revision,reviewer_actor,reviewer_email_hash,grant_id,decision,checklist_json,source_digest) VALUES(?,?,?,?,?,?,?,?,?,?)')
+  .run('99999999-1111-1111-1111-111111111111',pid,badId,1,reviewer,'d'.repeat(64),grant,'approve',checks,digest);
+ assert.deepEqual((await x.call('/questions')).data.questions.map(q=>q.id).sort(),[qid,badId].sort());
+ for(const malformed of ['{broken','null','[]','"string"']){
+  x.d.prepare('UPDATE bank_questions SET content_json=? WHERE id=?').run(malformed,badId);
+  const search=await x.call('/questions');
+  assert.equal(search.status,200,'search should survive '+malformed);
+  assert.deepEqual(search.data.questions.map(q=>q.id),[qid],'healthy question must remain visible');
+  const rejected=await x.call('/exams/compose','POST',{title:'draft',questionIds:[badId],sourceRevisions:[1],includeAnswers:false});
+  assert.equal(rejected.status,409,'malformed question must not be exported');
+ }
+ const valid=await x.call('/exams/compose','POST',{title:'draft',questionIds:[qid],sourceRevisions:[1],includeAnswers:false});
+ assert.equal(valid.status,200,'unrelated approved question remains exportable');
+ x.d.prepare('UPDATE bank_questions SET content_json=? WHERE id=?').run(original,badId);
+ assert.deepEqual((await x.call('/questions')).data.questions.map(q=>q.id).sort(),[qid,badId].sort());
+ x.d.close();
+});
