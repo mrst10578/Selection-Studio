@@ -81,6 +81,8 @@ async function loadBank(append=false){
  const seq=++state.bankRequestSeq;
  // Preserve keyboard navigation when the focused pagination control disappears.
  const focusFromMore=append&&document.activeElement===$('loadMoreBank');
+ // A keyboard-triggered refresh disables its own button; recover focus after the results arrive.
+ const focusFromSearch=!append&&document.activeElement===$('loadBank');
  const previousCount=state.bank.length;
  state.bankLoading=true;state.bankFilterKey=key;
  if(!append){state.bank=[];state.nextCursor=null}
@@ -99,6 +101,10 @@ async function loadBank(append=false){
  // Selected questions survive pagination and text filters, but not project switches.
  state.selected=state.selected.filter(x=>!project||x.projectId===project);
  state.bankLoading=false;render();
+ // Do not override focus if the operator moved to another control while the request was pending.
+ if(focusFromSearch&&(document.activeElement===document.body||document.activeElement===$('loadBank'))){
+  ($('approvedList').querySelector('button')||$('loadBank')).focus();
+ }
  if(focusFromMore&&(document.activeElement===document.body||document.activeElement===$('loadMoreBank'))){
   const firstNew=$('approvedList').querySelectorAll('button')[previousCount];
   const more=$('loadMoreBank');
