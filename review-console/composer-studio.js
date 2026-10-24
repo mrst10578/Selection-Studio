@@ -48,7 +48,19 @@ function render(){
    });buttons.append(button);
   }
   const remove=e('button','حذف');remove.type='button';
-  remove.addEventListener('click',()=>{state.selected=state.selected.filter(x=>x.id!==question.id);render()});
+  remove.addEventListener('click',()=>{
+   state.selected=state.selected.filter(x=>x.id!==question.id);render();
+   // A removed button no longer exists: focus the next removal action, then the previous one.
+   const remaining=list.querySelectorAll('.composer-selection');
+   if(remaining.length){
+    remaining[Math.min(i,remaining.length-1)].querySelectorAll('button')[2]?.focus();
+   }else{
+    // When the selection becomes empty, return to its bank entry (or the search control).
+    const bankIndex=state.bank.findIndex(x=>x.id===question.id);
+    const bankButton=bankIndex>=0?available.querySelectorAll('button')[bankIndex]:null;
+    (bankButton||$('loadBank')).focus();
+   }
+  });
   buttons.append(remove);row.append(buttons);list.append(row);
  });
  controls();
