@@ -140,3 +140,29 @@ test('keyboard removal focuses the next, previous, or original bank control',asy
  await expect(rows.first()).toContainText('مقدار ۲');
  await expect(rows.first().getByRole('button',{name:'حذف'})).toBeFocused();
 });
+
+test('selected question count is announced without repeating on reorder',async({page})=>{
+ await mock(page);
+ await page.goto('/review-console/composer-studio.html');
+ const count=page.locator('#composerSelectionCount');
+ await expect(count).toHaveAttribute('role','status');
+ await expect(count).toHaveAttribute('aria-live','polite');
+ await expect(count).toHaveAttribute('aria-atomic','true');
+ await expect(count).toHaveText('۰ سؤال انتخاب شده است.');
+ const bank=page.locator('#approvedList button');
+ await bank.nth(0).click();
+ await expect(count).toHaveText('۱ سؤال انتخاب شده است.');
+ await bank.nth(1).click();
+ await expect(count).toHaveText('۲ سؤال انتخاب شده است.');
+ await count.evaluate(el=>{
+  window.__countAnnouncements=0;
+  new MutationObserver(()=>window.__countAnnouncements++).observe(el,{subtree:true,childList:true,characterData:true});
+ });
+ await page.locator('#selectedList .composer-selection').nth(1).getByRole('button',{name:'بالا'}).click();
+ await expect(count).toHaveText('۲ سؤال انتخاب شده است.');
+ expect(await page.evaluate(()=>window.__countAnnouncements)).toBe(0);
+ await bank.nth(0).click();
+ await expect(count).toHaveText('۱ سؤال انتخاب شده است.');
+ await page.locator('#selectedList .composer-selection').first().getByRole('button',{name:'حذف'}).click();
+ await expect(count).toHaveText('۰ سؤال انتخاب شده است.');
+});
