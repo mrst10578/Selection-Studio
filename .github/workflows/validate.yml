@@ -46,6 +46,8 @@ jobs:
           node --test tests/*.test.mjs
       - name: Test Worker core
         run: node --test worker/test/*.test.mjs
+      - name: Test question API JSON media-type regression
+        run: node --test tests/question-api-content-type.test.mjs tests/question-api.test.mjs
       - name: Install QA dependencies
         run: npm install --no-audit --no-fund
       - name: Install Playwright Chromium
