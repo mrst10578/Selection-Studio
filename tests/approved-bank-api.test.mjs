@@ -120,3 +120,23 @@ test('server-approved bank rejects malformed scientific pending values for searc
  assert.equal((await x.call('/exams/compose','POST',request)).status,200);
  x.d.close();
 });
+
+test('server search ignores Arabic diacritics and tatweel without altering approved content',async()=>{
+ const x=f();
+ const read=()=>JSON.parse(x.d.prepare('SELECT content_json FROM bank_questions WHERE id=?').get(qid).content_json);
+ const update=content=>x.d.prepare('UPDATE bank_questions SET content_json=? WHERE id=?').run(JSON.stringify(content),qid);
+ const original=read();
+ const accented='تَحْلِیل و فـیزیک';
+ update({...original,questionText:accented,taxonomyId:'زِيست'});
+ for(const query of ['تحلیل','فیزیک','تَحْلِیل']){
+  const result=await x.call('/questions?subject='+encodeURIComponent('زیست')+'&q='+encodeURIComponent(query));
+  assert.equal(result.status,200,query);
+  assert.deepEqual(result.data.questions.map(q=>q.id),[qid],query);
+  assert.equal(result.data.questions[0].questionText,accented,'search must not rewrite stored text');
+ }
+ update({...original,questionText:'تحلیل و فیزیک',taxonomyId:'زیست'});
+ assert.deepEqual((await x.call('/questions?q='+encodeURIComponent('تَحْلِیل'))).data.questions.map(q=>q.id),[qid]);
+ x.d.prepare("UPDATE bank_review_events SET decision='reject' WHERE question_id=?").run(qid);
+ assert.deepEqual((await x.call('/questions?q='+encodeURIComponent('تحلیل'))).data.questions,[],'search must still enforce independent approval');
+ x.d.close();
+});
