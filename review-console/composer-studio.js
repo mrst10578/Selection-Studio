@@ -142,6 +142,10 @@ async function loadBank(append=false){
    q&&typeof q.id==='string'&&q.id.trim()&&typeof q.projectId==='string'&&
    typeof q.questionText==='string'&&Number.isSafeInteger(q.revision)))
    throw Error('پاسخ بانک سؤال نامعتبر است');
+  // Never display rows from another project when the operator filtered by one.
+  // Treat a mixed-project API page as invalid rather than leaking its contents.
+  if(project&&result.questions.some(q=>q.projectId!==project))
+   throw Error('پاسخ بانک سؤال با پروژه انتخاب‌شده مطابقت ندارد');
  }
  catch(error){
   if(seq!==state.bankRequestSeq)return;
