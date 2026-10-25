@@ -14,8 +14,12 @@ function cursorDecode(raw){
  try{
   const text=atob(raw.replace(/-/g,'+').replace(/_/g,'/')+'='.repeat((4-raw.length%4)%4));
   const value=JSON.parse(text);
-  if(!Array.isArray(value)||value.length!==2||typeof value[0]!=='string'||value[0].length<10||value[0].length>64||
-   !/^[0-9T: .Z+\-]+$/.test(value[0])||typeof value[1]!=='string'||!id.test(value[1]))return null;
+  // D1 CURRENT_TIMESTAMP uses canonical UTC YYYY-MM-DD HH:MM:SS. Reject
+  // impossible or noncanonical dates instead of silently returning empty pages.
+  if(!Array.isArray(value)||value.length!==2||typeof value[0]!=='string'||
+   !/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value[0])||typeof value[1]!=='string'||!id.test(value[1]))return null;
+  const timestamp=new Date(value[0].replace(' ','T')+'Z');
+  if(!Number.isFinite(timestamp.getTime())||timestamp.toISOString().slice(0,19).replace('T',' ')!==value[0])return null;
   return value;
  }catch{return null}
 }
