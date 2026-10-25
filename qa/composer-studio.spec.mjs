@@ -579,3 +579,31 @@ test('malformed successful bank response keeps previous rows and cursor usable',
  expect(firstPageCalls).toBe(2);
  expect(continuations).toBe(1);
 });
+
+
+test('initial bank failures show retry guidance instead of a false empty result',async({page})=>{
+ const row={id:q1,projectId:P,revision:1,questionText:'سؤال بازیابی‌شده',answerText:'پاسخ',sourceNumber:1};
+ let requests=0;
+ await page.route('**/api/v1/projects',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({projects:[{id:P,name:'زیست'}]})}));
+ await page.route('**/api/v1/bank/questions**',route=>{
+  requests++;
+  if(requests===1)return route.fulfill({status:503,contentType:'application/json',body:'{"error":"SERVICE_UNAVAILABLE"}'});
+  if(requests===2)return route.fulfill({status:200,contentType:'application/json',body:'{"questions":[{"id":"broken"}]}'});
+  return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({questions:[row],nextCursor:null})});
+ });
+ await page.goto('/review-console/composer-studio.html');
+ const list=page.locator('#approvedList'),search=page.locator('#loadBank');
+ await expect(page.locator('#composerNotice')).toContainText('SERVICE_UNAVAILABLE');
+ await expect(list).toContainText('دریافت سؤال‌ها ناموفق بود');
+ await expect(list).not.toContainText('سؤال تأییدشده‌ای با این جست‌وجو پیدا نشد');
+ await expect(search).toBeEnabled();
+ await search.click();
+ await expect(page.locator('#composerNotice')).toContainText('پاسخ بانک سؤال نامعتبر است');
+ await expect(list).toContainText('دریافت سؤال‌ها ناموفق بود');
+ await expect(search).toBeEnabled();
+ await search.click();
+ await expect(list.getByRole('button')).toHaveCount(1);
+ await expect(list).toContainText('سؤال بازیابی‌شده');
+ await expect(list).not.toContainText('دریافت سؤال‌ها ناموفق بود');
+ expect(requests).toBe(3);
+});
