@@ -854,3 +854,26 @@ test('filtered bank rejects a cross-project API row without replacing valid resu
  await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
  expect(filteredRequests).toBe(2);
 });
+
+test('selected-question actions identify their target to screen readers after reordering',async({page})=>{
+ await mock(page);
+ await page.goto('/review-console/composer-studio.html');
+ const bank=page.locator('#approvedList button'),selected=page.locator('#selectedList .composer-selection');
+ await expect(bank).toHaveCount(2);
+ await bank.nth(0).click();
+ await bank.nth(1).click();
+ await expect(selected).toHaveCount(2);
+ // The visible labels remain short, but accessible names identify each target.
+ const firstRemove=selected.nth(0).getByRole('button',{name:/^حذف، سؤال ۱/});
+ const secondRemove=selected.nth(1).getByRole('button',{name:/^حذف، سؤال ۲/});
+ await expect(firstRemove).toHaveAccessibleName(/پروژه زیست، مقدار ۲ چند است/);
+ await expect(secondRemove).toHaveAccessibleName(/پروژه زیست، نتیجه x\\^2 چیست/);
+ await expect(firstRemove).toHaveText('حذف');
+ const moveUp=selected.nth(1).getByRole('button',{name:/^بالا، سؤال ۲/});
+ await expect(moveUp).toHaveAccessibleName(/نتیجه x\\^2 چیست/);
+ await moveUp.focus();
+ await page.keyboard.press('Enter');
+ await expect(selected.nth(0)).toContainText('نتیجه x^2 چیست');
+ await expect(selected.nth(0).getByRole('button',{name:/^حذف، سؤال ۱/})).toHaveAccessibleName(/نتیجه x\\^2 چیست/);
+ await expect(selected.nth(1).getByRole('button',{name:/^حذف، سؤال ۲/})).toHaveAccessibleName(/مقدار ۲ چند است/);
+});
