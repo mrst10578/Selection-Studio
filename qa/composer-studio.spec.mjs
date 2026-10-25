@@ -776,3 +776,37 @@ test('bank refresh preserves keyboard focus on the same question after row reord
  await expect(bank.nth(1)).toBeFocused();
  expect(loads).toBe(2);
 });
+
+test('filtered bank rejects a cross-project API row without replacing valid results',async({page})=>{
+ const foreignProject='12345678-1234-1234-1234-123456789099';
+ const own={id:q1,projectId:P,revision:1,questionText:'سؤال پروژه خودم',sourceNumber:1};
+ const foreign={id:q2,projectId:foreignProject,revision:1,questionText:'سؤال پروژه دیگر',sourceNumber:2};
+ let filteredRequests=0;
+ await page.route('**/api/v1/projects',route=>route.fulfill({
+  status:200,contentType:'application/json',
+  body:JSON.stringify({projects:[{id:P,name:'زیست'}]})
+ }));
+ await page.route('**/api/v1/bank/questions**',route=>{
+  const selectedProject=new URL(route.request().url()).searchParams.get('projectId');
+  if(selectedProject===P)filteredRequests++;
+  const questions=selectedProject===P&&filteredRequests===2?[own,foreign]:[own];
+  return route.fulfill({
+   status:200,contentType:'application/json',
+   body:JSON.stringify({questions,nextCursor:null})
+  });
+ });
+ await page.goto('/review-console/composer-studio.html');
+ await expect(page.locator('#approvedList button')).toHaveCount(1);
+ await page.locator('#composerProject').selectOption(P);
+ await expect(page.locator('#approvedList button')).toHaveCount(1);
+ await page.locator('#approvedList button').first().click();
+ await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
+ await page.locator('#loadBank').click();
+ await expect(page.locator('#composerNotice')).toContainText('با پروژه انتخاب‌شده مطابقت ندارد');
+ await expect(page.locator('#composerNotice')).toHaveAttribute('data-state','error');
+ await expect(page.locator('#approvedList button')).toHaveCount(1);
+ await expect(page.locator('#approvedList')).toContainText('سؤال پروژه خودم');
+ await expect(page.locator('#approvedList')).not.toContainText('سؤال پروژه دیگر');
+ await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
+ expect(filteredRequests).toBe(2);
+});
