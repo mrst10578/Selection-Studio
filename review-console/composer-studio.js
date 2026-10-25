@@ -117,7 +117,13 @@ async function loadBank(append=false){
  if(seq!==state.bankRequestSeq||key!==currentBankFilter())return;
  const incoming=Array.isArray(result.questions)?result.questions:[];
  const seen=new Set(append?state.bank.map(x=>x.id):[]);
- state.bank=append?[...state.bank,...incoming.filter(x=>!seen.has(x.id))]:incoming;
+ // De-duplicate within each API page as well as across pagination boundaries.
+ const uniqueIncoming=incoming.filter(question=>{
+  if(seen.has(question.id))return false;
+  seen.add(question.id);
+  return true;
+ });
+ state.bank=append?[...state.bank,...uniqueIncoming]:uniqueIncoming;
  state.nextCursor=typeof result.nextCursor==='string'&&result.nextCursor?result.nextCursor:null;
  // Selected questions survive pagination and text filters, but not project switches.
  state.selected=state.selected.filter(x=>!project||x.projectId===project);
