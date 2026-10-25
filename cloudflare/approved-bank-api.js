@@ -9,9 +9,9 @@ const normalize=s=>String(s||'').normalize('NFKC').replace(/[۰-۹]/g,c=>String(
 // Cursor is a read-only position, not an authorization token. Every page still
 // rechecks ownership, source evidence and current independent reviewer approval.
 const cursorEncode=(row,scope)=>btoa(JSON.stringify([row.updated_at,row.id,scope])).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
-// Bind continuation positions to the normalized search context. A cursor is not an auth token.
-async function cursorScope(projectId,q,subject){
- const data=new TextEncoder().encode(JSON.stringify([projectId,q,subject]));
+// Bind continuation positions to the actor and normalized search context. A cursor is not an auth token.
+async function cursorScope(actor,projectId,q,subject){
+ const data=new TextEncoder().encode(JSON.stringify([actor,projectId,q,subject]));
  const digest=new Uint8Array(await crypto.subtle.digest('SHA-256',data));
  return Array.from(digest.slice(0,16),b=>b.toString(16).padStart(2,'0')).join('');
 }
@@ -89,7 +89,7 @@ export async function handleApprovedBankApi(request,env,actor,url){
    const q=normalize(url.searchParams.get('q')||'').slice(0,100);
    const subject=normalize(url.searchParams.get('subject')||'').slice(0,80);
    const rawCursor=url.searchParams.get('cursor');
-   const scope=await cursorScope(pid,q,subject);
+   const scope=await cursorScope(actor,pid,q,subject);
    const cursor=rawCursor===null?null:cursorDecode(rawCursor,scope);
    if(rawCursor!==null&&!cursor)return j({error:'INVALID_CURSOR'},400);
    return j(await validApproved(env.SECURITY_DB,actor,pid||null,null,{q,subject,cursor,scope}));
