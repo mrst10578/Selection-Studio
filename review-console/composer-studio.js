@@ -2,6 +2,8 @@ import {exportExamHTML,exportExamJSONL} from '../engine/test-composer.js';
 const $=id=>document.getElementById(id);
 const state={bank:[],selected:[],nextCursor:null,bankFilterKey:'',bankRequestSeq:0,seenBankCursors:new Set(),bankLoading:false,bankLoadError:false,ready:false,composeBusy:false};
 let renderedSelectedKey=null;
+// Use the already-authorized project list to identify questions in cross-project search.
+const projectNames=new Map();
 const notice=(s,error=false)=>{
  const node=$('composerNotice'),status=error?'error':'ok';
  // A live region must not re-announce identical guidance on every keystroke.
@@ -40,7 +42,9 @@ function render(){
  if(!state.bank.length)available.append(e('p',state.bankLoading?'در حال دریافت سؤال‌ها…':state.bankLoadError?'دریافت سؤال‌ها ناموفق بود؛ برای تلاش دوباره «جست‌وجو و بازخوانی» را بزن.':'سؤال تأییدشده‌ای با این جست‌وجو پیدا نشد.'));
  for(const [index,question] of state.bank.entries()){
   const selected=state.selected.some(x=>x.id===question.id);
-  const row=e('button',(selected?'✓ ':'+ ')+'سؤال '+(question.sourceNumber||'?')+' · '+question.questionText.slice(0,100));
+  // In an all-project search, source numbers alone are ambiguous.
+  const projectLabel=$('composerProject').value?'':' · پروژه: '+(projectNames.get(question.projectId)||'نامشخص');
+  const row=e('button',(selected?'✓ ':'+ ')+'سؤال '+(question.sourceNumber||'?')+projectLabel+' · '+question.questionText.slice(0,100));
   row.type='button';row.dataset.questionId=question.id;row.setAttribute('aria-pressed',String(selected));
   row.addEventListener('click',()=>{
    if(selected)state.selected=state.selected.filter(x=>x.id!==question.id);
@@ -278,6 +282,6 @@ void safe(async()=>{
  const session=await api('/api/session');if(session.role!=='operator')throw Error('ورود به حساب اپراتور لازم است');
  const projects=await api('/api/v1/projects');
  const select=$('composerProject');select.replaceChildren(new Option('همه پروژه‌های خودم',''));
- for(const p of projects.projects||[])select.add(new Option(p.name,p.id));
+ for(const p of projects.projects||[]){select.add(new Option(p.name,p.id));projectNames.set(p.id,p.name)}
  select.disabled=false;state.ready=true;await loadBank();
 });
