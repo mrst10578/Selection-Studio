@@ -43,6 +43,40 @@ test.describe('ZH-86 reviewed-only exam composer',()=>{
  });
 });
 
+test('all-project bank labels each question with its project and keeps filtered rows concise',async({page})=>{
+ const P2='12345678-1234-1234-1234-123456789099';
+ const rows=[
+  {id:q1,projectId:P,revision:1,questionText:'سؤال زیست',sourceNumber:1},
+  {id:q2,projectId:P2,revision:1,questionText:'سؤال فیزیک',sourceNumber:1}
+ ];
+ await page.route('**/api/v1/projects',route=>route.fulfill({
+  status:200,contentType:'application/json',
+  body:JSON.stringify({projects:[{id:P,name:'زیست'},{id:P2,name:'فیزیک'}]})
+ }));
+ await page.route('**/api/v1/bank/questions**',route=>{
+  const projectId=new URL(route.request().url()).searchParams.get('projectId');
+  return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
+   questions:projectId?rows.filter(row=>row.projectId===projectId):rows,nextCursor:null
+  })});
+ });
+ await page.goto('/review-console/composer-studio.html');
+ const bank=page.locator('#approvedList button');
+ await expect(bank).toHaveCount(2);
+ await expect(bank.nth(0)).toContainText('پروژه: زیست');
+ await expect(bank.nth(1)).toContainText('پروژه: فیزیک');
+ // Equal source numbers in different projects must be distinguishable.
+ await bank.nth(1).click();
+ await expect(page.locator('#selectedList .composer-selection')).toContainText('سؤال فیزیک');
+ await page.locator('#composerProject').selectOption(P2);
+ await expect(bank).toHaveCount(1);
+ await expect(bank.first()).toContainText('سؤال فیزیک');
+ await expect(bank.first()).not.toContainText('پروژه:');
+ await expect(page.locator('#selectedList .composer-selection')).toHaveCount(0);
+ await page.locator('#composerProject').selectOption('');
+ await expect(bank).toHaveCount(2);
+ await expect(bank.nth(1)).toContainText('پروژه: فیزیک');
+});
+
 test('approved bank pagination keeps selection, deduplicates rows, and resets cursor on filter edits',async({page})=>{
  const seen=[];
  const row=(id,text)=>({id,projectId:P,revision:1,questionText:text,answerText:'پاسخ',sourceNumber:1});
