@@ -28,7 +28,12 @@ async function runComposeAction(fn){
 }
 function controls(){for(const id of ['previewExam','exportJsonl','exportHtml','printExam'])$(id).disabled=!state.selected.length||state.composeBusy}
 function render(){
- const available=$('approvedList');available.replaceChildren();
+ const available=$('approvedList');
+ // Keep keyboard focus on the same question when a same-filter refresh
+ // replaces or reorders bank rows. Never restore focus for a removed row.
+ const focusedBankId=available.contains(document.activeElement)&&document.activeElement.tagName==='BUTTON'
+  ?document.activeElement.dataset.questionId:null;
+ available.replaceChildren();
  available.setAttribute('aria-busy',String(state.bankLoading));
  const more=$('loadMoreBank');more.hidden=!state.nextCursor;more.disabled=state.bankLoading||!state.nextCursor;
  $('loadBank').disabled=!state.ready||state.bankLoading;
@@ -36,7 +41,7 @@ function render(){
  for(const [index,question] of state.bank.entries()){
   const selected=state.selected.some(x=>x.id===question.id);
   const row=e('button',(selected?'✓ ':'+ ')+'سؤال '+(question.sourceNumber||'?')+' · '+question.questionText.slice(0,100));
-  row.type='button';row.setAttribute('aria-pressed',String(selected));
+  row.type='button';row.dataset.questionId=question.id;row.setAttribute('aria-pressed',String(selected));
   row.addEventListener('click',()=>{
    if(selected)state.selected=state.selected.filter(x=>x.id!==question.id);
    else if(state.selected.length<100)state.selected.push(question);
@@ -45,6 +50,11 @@ function render(){
    // Rebuilding the list removes the clicked button; restore keyboard focus.
    available.querySelectorAll('button')[index]?.focus();
   });available.append(row);
+ }
+ if(focusedBankId&&document.activeElement===document.body){
+  const matching=Array.from(available.querySelectorAll('button'))
+   .find(button=>button.dataset.questionId===focusedBankId);
+  matching?.focus();
  }
  // A bank refresh changes available rows, not the selected question controls.
  // Keep those DOM nodes and their keyboard focus until selection/order/text changes.
