@@ -885,6 +885,49 @@ test('selected-question mobile actions provide 44px touch targets without overfl
  }
 });
 
+test('long Persian selected-question labels wrap at narrow widths and simulated 200% zoom',async({page})=>{
+ const projectName='پروژه'.repeat(50);
+ const questionText='سؤال'.repeat(45);
+ const row={id:q1,projectId:P,revision:1,questionText,sourceNumber:1};
+ await page.route('**/api/v1/projects',route=>route.fulfill({
+  status:200,contentType:'application/json',
+  body:JSON.stringify({projects:[{id:P,name:projectName}]})
+ }));
+ await page.route('**/api/v1/bank/questions**',route=>route.fulfill({
+  status:200,contentType:'application/json',body:JSON.stringify({questions:[row],nextCursor:null})
+ }));
+ await page.setViewportSize({width:320,height:720});
+ await page.goto('/review-console/composer-studio.html');
+ await page.locator('#approvedList button').first().click();
+ const selected=page.locator('#selectedList .composer-selection');
+ await expect(selected).toHaveCount(1);
+ await expect(selected).toContainText(projectName);
+ for(const width of [320,375]){
+  await page.setViewportSize({width,height:720});
+  for(const zoom of [1,2]){
+   // CSS zoom approximates the reduced layout space at 200% browser zoom.
+   await page.evaluate(value=>{document.documentElement.style.zoom=String(value)},zoom);
+   const metrics=await selected.evaluate(el=>{
+    const label=el.querySelector('span');
+    const actions=el.querySelector('.bank-actions');
+    const list=el.parentElement;
+    return {
+     wrapping:getComputedStyle(label).overflowWrap,
+     rowWidth:el.clientWidth,rowScrollWidth:el.scrollWidth,
+     labelWidth:label.clientWidth,labelScrollWidth:label.scrollWidth,
+     actionsWidth:actions.clientWidth,actionsScrollWidth:actions.scrollWidth,
+     listWidth:list.clientWidth,listScrollWidth:list.scrollWidth
+    };
+   });
+   expect(metrics.wrapping).toBe('anywhere');
+   expect(metrics.rowScrollWidth).toBeLessThanOrEqual(metrics.rowWidth+1);
+   expect(metrics.labelScrollWidth).toBeLessThanOrEqual(metrics.labelWidth+1);
+   expect(metrics.actionsScrollWidth).toBeLessThanOrEqual(metrics.actionsWidth+1);
+   expect(metrics.listScrollWidth).toBeLessThanOrEqual(metrics.listWidth+1);
+  }
+ }
+});
+
 test('selected-question actions identify their target to screen readers after reordering',async({page})=>{
  await mock(page);
  await page.goto('/review-console/composer-studio.html');
