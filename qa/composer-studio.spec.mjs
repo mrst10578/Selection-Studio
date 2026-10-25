@@ -547,3 +547,35 @@ test('failed same-filter refresh preserves bank rows, selection, and pagination 
  expect(firstPageCalls).toBe(2);
  expect(continuations).toBe(1);
 });
+
+test('malformed successful bank response keeps previous rows and cursor usable',async({page})=>{
+ const valid=(id,label)=>({id,projectId:P,revision:1,questionText:label,answerText:'پاسخ',sourceNumber:1});
+ let firstPageCalls=0,continuations=0;
+ await page.route('**/api/v1/projects',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({projects:[{id:P,name:'زیست'}]})}));
+ await page.route('**/api/v1/bank/questions**',route=>{
+  const cursor=new URL(route.request().url()).searchParams.get('cursor');
+  if(cursor==='page-2'){
+   continuations++;
+   return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({questions:[valid(q2,'سؤال دوم')],nextCursor:null})});
+  }
+  firstPageCalls++;
+  // HTTP 200 is not enough: a row without questionText must not poison the UI.
+  if(firstPageCalls===2)return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({questions:[{id:q2,projectId:P,revision:1}],nextCursor:null})});
+  return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({questions:[valid(q1,'سؤال اول')],nextCursor:'page-2'})});
+ });
+ await page.goto('/review-console/composer-studio.html');
+ const bank=page.locator('#approvedList button'),more=page.locator('#loadMoreBank');
+ await expect(bank).toHaveCount(1);
+ await bank.first().click();
+ await page.locator('#loadBank').click();
+ await expect(page.locator('#composerNotice')).toContainText('پاسخ بانک سؤال نامعتبر است');
+ await expect(bank).toHaveCount(1);
+ await expect(bank.first()).toContainText('سؤال اول');
+ await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
+ await expect(more).toBeVisible();
+ await more.click();
+ await expect(bank).toHaveCount(2);
+ await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
+ expect(firstPageCalls).toBe(2);
+ expect(continuations).toBe(1);
+});
