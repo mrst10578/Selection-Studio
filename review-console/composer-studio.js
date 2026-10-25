@@ -100,7 +100,8 @@ async function loadBank(append=false){
   bank:state.bank,nextCursor:state.nextCursor,seenBankCursors:new Set(state.seenBankCursors)
  }:null;
  state.bankLoading=true;state.bankFilterKey=key;
- if(!append){state.bank=[];state.nextCursor=null;state.seenBankCursors.clear()}
+ // Keep same-filter results visible during refresh; only clear them when filters change.
+ if(!append){if(!previousSearch)state.bank=[];state.nextCursor=null;state.seenBankCursors.clear()}
  notice(append?'در حال بارگذاری سؤال‌های بیشتر…':'در حال جست‌وجوی سؤال‌های تأییدشده…');
  render();
  const qs=new URLSearchParams();
