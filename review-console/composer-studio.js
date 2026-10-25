@@ -1,6 +1,6 @@
 import {exportExamHTML,exportExamJSONL} from '../engine/test-composer.js';
 const $=id=>document.getElementById(id);
-const state={bank:[],selected:[],nextCursor:null,bankFilterKey:'',bankRequestSeq:0,bankLoading:false,ready:false,composeBusy:false};
+const state={bank:[],selected:[],nextCursor:null,bankFilterKey:'',bankRequestSeq:0,seenBankCursors:new Set(),bankLoading:false,ready:false,composeBusy:false};
 const notice=(s,error=false)=>{$('composerNotice').textContent=s;$('composerNotice').dataset.state=error?'error':'ok'};
 const e=(tag,text)=>{const node=document.createElement(tag);node.textContent=text||'';return node};
 async function api(path,options={}){
@@ -82,7 +82,7 @@ function render(){
 }
 const currentBankFilter=()=>JSON.stringify([$('composerProject').value,$('composerQuery').value.trim()]);
 function invalidateBankSearch(){
- ++state.bankRequestSeq;state.bank=[];state.nextCursor=null;state.bankFilterKey='';state.bankLoading=false;
+ ++state.bankRequestSeq;state.bank=[];state.nextCursor=null;state.bankFilterKey='';state.bankLoading=false;state.seenBankCursors.clear();
  render();
 }
 async function loadBank(append=false){
@@ -96,7 +96,7 @@ async function loadBank(append=false){
  const focusFromSearch=!append&&document.activeElement===$('loadBank');
  const previousCount=state.bank.length;
  state.bankLoading=true;state.bankFilterKey=key;
- if(!append){state.bank=[];state.nextCursor=null}
+ if(!append){state.bank=[];state.nextCursor=null;state.seenBankCursors.clear()}
  notice(append?'در حال بارگذاری سؤال‌های بیشتر…':'در حال جست‌وجوی سؤال‌های تأییدشده…');
  render();
  const qs=new URLSearchParams();
@@ -124,7 +124,11 @@ async function loadBank(append=false){
   return true;
  });
  state.bank=append?[...state.bank,...uniqueIncoming]:uniqueIncoming;
- state.nextCursor=typeof result.nextCursor==='string'&&result.nextCursor?result.nextCursor:null;
+ // A broken API cursor must not trap the operator in endless pagination.
+ if(append)state.seenBankCursors.add(cursor);
+ const returnedCursor=typeof result.nextCursor==='string'&&result.nextCursor?result.nextCursor:null;
+ const repeatedCursor=returnedCursor!==null&&state.seenBankCursors.has(returnedCursor);
+ state.nextCursor=repeatedCursor?null:returnedCursor;
  // Selected questions survive pagination and text filters, but not project switches.
  state.selected=state.selected.filter(x=>!project||x.projectId===project);
  state.bankLoading=false;render();
@@ -137,7 +141,8 @@ async function loadBank(append=false){
   const more=$('loadMoreBank');
   (firstNew||(!more.hidden?more:$('loadBank'))).focus();
  }
- notice(state.bank.length+' سؤال تأییدشده در فهرست است.'+(state.nextCursor?' برای موارد قدیمی‌تر «نمایش سؤال‌های بیشتر» را بزن.':'')+' پیش از خروجی دوباره در سرور بررسی می‌شوند.');
+ if(repeatedCursor)notice('نشانگر صفحه‌بندی تکراری دریافت شد؛ بارگذاری بیشتر متوقف شد. برای تلاش مجدد جست‌وجو را بازخوانی کن.',true);
+ else notice(state.bank.length+' سؤال تأییدشده در فهرست است.'+(state.nextCursor?' برای موارد قدیمی‌تر «نمایش سؤال‌های بیشتر» را بزن.':'')+' پیش از خروجی دوباره در سرور بررسی می‌شوند.');
 }
 async function manifest(){
  if(!state.selected.length)throw Error('سؤالی انتخاب نشده است');
