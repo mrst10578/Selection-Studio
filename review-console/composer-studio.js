@@ -95,6 +95,10 @@ async function loadBank(append=false){
  // A keyboard-triggered refresh disables its own button; recover focus after the results arrive.
  const focusFromSearch=!append&&document.activeElement===$('loadBank');
  const previousCount=state.bank.length;
+ // A same-filter refresh must not discard visible results if the network fails.
+ const previousSearch=!append&&state.bankFilterKey===key?{
+  bank:state.bank,nextCursor:state.nextCursor,seenBankCursors:new Set(state.seenBankCursors)
+ }:null;
  state.bankLoading=true;state.bankFilterKey=key;
  if(!append){state.bank=[];state.nextCursor=null;state.seenBankCursors.clear()}
  notice(append?'در حال بارگذاری سؤال‌های بیشتر…':'در حال جست‌وجوی سؤال‌های تأییدشده…');
@@ -110,6 +114,10 @@ async function loadBank(append=false){
   // questions and selections, but require a fresh search for a new cursor.
   const invalidCursor=append&&error?.status===400&&error?.message==='INVALID_CURSOR';
   if(invalidCursor){state.nextCursor=null;state.seenBankCursors.clear()}
+  if(previousSearch){
+   state.bank=previousSearch.bank;state.nextCursor=previousSearch.nextCursor;
+   state.seenBankCursors=previousSearch.seenBankCursors;
+  }
   state.bankLoading=false;render();
   // Failed requests must also restore the keyboard trigger without stealing moved focus.
   if((focusFromSearch||focusFromMore)&&
