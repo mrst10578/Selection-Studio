@@ -489,3 +489,34 @@ test('failed print validation closes its popup, restores keyboard focus, and all
  expect(attempts).toBe(2);
  await expect(button).toBeEnabled();
 });
+
+test('failed same-filter refresh preserves bank rows, selection, and pagination for retry',async({page})=>{
+ const row=(id,label)=>({id,projectId:P,revision:1,questionText:label,answerText:'پاسخ',sourceNumber:1});
+ let firstPageCalls=0,continuations=0;
+ await page.route('**/api/v1/projects',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({projects:[{id:P,name:'زیست'}]})}));
+ await page.route('**/api/v1/bank/questions**',route=>{
+  const cursor=new URL(route.request().url()).searchParams.get('cursor');
+  if(cursor==='page-2'){
+   continuations++;
+   return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({questions:[row(q2,'سؤال دوم')],nextCursor:null})});
+  }
+  firstPageCalls++;
+  if(firstPageCalls===2)return route.fulfill({status:503,contentType:'application/json',body:'{"error":"BANK_REFRESH_UNAVAILABLE"}'});
+  return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({questions:[row(q1,'سؤال اول')],nextCursor:'page-2'})});
+ });
+ await page.goto('/review-console/composer-studio.html');
+ const bank=page.locator('#approvedList button'),more=page.locator('#loadMoreBank');
+ await expect(bank).toHaveCount(1);
+ await bank.first().click();
+ await expect(more).toBeVisible();
+ await page.locator('#loadBank').click();
+ await expect(page.locator('#composerNotice')).toContainText('BANK_REFRESH_UNAVAILABLE');
+ await expect(bank).toHaveCount(1);
+ await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
+ await expect(more).toBeVisible();
+ await more.click();
+ await expect(bank).toHaveCount(2);
+ await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
+ expect(firstPageCalls).toBe(2);
+ expect(continuations).toBe(1);
+});
