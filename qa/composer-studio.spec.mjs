@@ -864,16 +864,16 @@ test('selected-question actions identify their target to screen readers after re
  await bank.nth(1).click();
  await expect(selected).toHaveCount(2);
  // The visible labels remain short, but accessible names identify each target.
- const firstRemove=selected.nth(0).getByRole('button',{name:/^حذف، سؤال ۱/});
- const secondRemove=selected.nth(1).getByRole('button',{name:/^حذف، سؤال ۲/});
+ const firstRemove=selected.nth(0).getByRole('button',{name:/^حذف، سؤال 1/});
+ const secondRemove=selected.nth(1).getByRole('button',{name:/^حذف، سؤال 2/});
  await expect(firstRemove).toHaveAccessibleName(/پروژه زیست، مقدار ۲ چند است/);
  await expect(secondRemove).toHaveAccessibleName(/پروژه زیست، نتیجه x\^2 چیست/);
  await expect(firstRemove).toHaveText('حذف');
- const moveUp=selected.nth(1).getByRole('button',{name:/^بالا، سؤال ۲/});
+ const moveUp=selected.nth(1).getByRole('button',{name:/^بالا، سؤال 2/});
  await expect(moveUp).toHaveAccessibleName(/نتیجه x\^2 چیست/);
  await moveUp.focus();
  await page.keyboard.press('Enter');
  await expect(selected.nth(0)).toContainText('نتیجه x^2 چیست');
- await expect(selected.nth(0).getByRole('button',{name:/^حذف، سؤال ۱/})).toHaveAccessibleName(/نتیجه x\^2 چیست/);
- await expect(selected.nth(1).getByRole('button',{name:/^حذف، سؤال ۲/})).toHaveAccessibleName(/مقدار ۲ چند است/);
+ await expect(selected.nth(0).getByRole('button',{name:/^حذف، سؤال 1/})).toHaveAccessibleName(/نتیجه x\^2 چیست/);
+ await expect(selected.nth(1).getByRole('button',{name:/^حذف، سؤال 2/})).toHaveAccessibleName(/مقدار ۲ چند است/);
 });
