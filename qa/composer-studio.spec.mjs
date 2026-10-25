@@ -855,6 +855,36 @@ test('filtered bank rejects a cross-project API row without replacing valid resu
  expect(filteredRequests).toBe(2);
 });
 
+test('selected-question mobile actions provide 44px touch targets without overflow',async({page})=>{
+ await mock(page);
+ await page.setViewportSize({width:320,height:720});
+ await page.goto('/review-console/composer-studio.html');
+ await page.locator('#approvedList button').first().click();
+ const actions=page.locator('#selectedList .composer-selection .bank-actions');
+ await expect(actions.locator('button')).toHaveCount(3);
+ for(const width of [320,375]){
+  await page.setViewportSize({width,height:720});
+  const metrics=await actions.evaluate(el=>{
+   const parent=el.getBoundingClientRect();
+   return {
+    clientWidth:el.clientWidth,scrollWidth:el.scrollWidth,
+    buttons:[...el.querySelectorAll('button')].map(button=>{
+     const rect=button.getBoundingClientRect();
+     return {width:rect.width,height:rect.height,left:rect.left,right:rect.right,
+      withinRow:rect.left>=parent.left-1&&rect.right<=parent.right+1};
+    })
+   };
+  });
+  expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth+1);
+  expect(metrics.buttons).toHaveLength(3);
+  for(const button of metrics.buttons){
+   expect(button.width).toBeGreaterThanOrEqual(44);
+   expect(button.height).toBeGreaterThanOrEqual(44);
+   expect(button.withinRow).toBe(true);
+  }
+ }
+});
+
 test('selected-question actions identify their target to screen readers after reordering',async({page})=>{
  await mock(page);
  await page.goto('/review-console/composer-studio.html');
