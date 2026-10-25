@@ -41,6 +41,8 @@ test.describe('ZH-79 / ZH-80 operator draft bank',()=>{
   await page.goto('/review-console/bank-studio.html');
   await page.locator('#questionText').fill('پاسخ نیازمند بازبینی است');
   await page.locator('#saveDraft').click();
+  // Wait for the first save to finish before editing the next revision.
+  await expect(page.locator('#notice')).toContainText('پیش‌نویس در D1');
   await page.locator('#questionText').fill('متن ویرایش‌شده، هنوز ذخیره نشده');
   await page.locator('#saveDraft').click();
   await expect(page.locator('#notice')).toContainText('تداخل نسخه');
@@ -83,6 +85,8 @@ test('revoking a reviewer works before invitations and never registers duplicate
  await page.locator('#reviewerEmail').fill('reviewer@example.test');
  await page.locator('#assignReviewer').click();
  await expect.poll(()=>verbs.filter(v=>v.method==='POST').length).toBe(2);
+ // A request reaching the route is not the same as its UI handler finishing.
+ await expect(page.locator('#reviewerEmail')).toHaveValue('');
  await expect(page.locator('#notice')).toContainText('دسترسی بازبین مستقل');
  await page.locator('#reviewerEmail').fill('reviewer@example.test');
  await page.locator('#revokeReviewer').click();
