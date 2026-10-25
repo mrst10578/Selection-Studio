@@ -328,6 +328,43 @@ test('failed pagination keeps existing questions and restores keyboard focus',as
  await expect(more).toBeFocused();
 });
 
+test('invalid server cursor stops pagination, keeps selection, and allows a fresh search',async({page})=>{
+ const row=(id,label)=>({id,projectId:P,revision:1,questionText:label,answerText:'پاسخ',sourceNumber:1});
+ let rejected=0,firstPages=0;
+ await page.route('**/api/v1/projects',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({projects:[{id:P,name:'زیست'}]})}));
+ await page.route('**/api/v1/bank/questions**',route=>{
+  const cursor=new URL(route.request().url()).searchParams.get('cursor');
+  if(!cursor){
+   firstPages++;
+   return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({questions:[row(q1,'سؤال اول')],nextCursor:'stale-cursor'})});
+  }
+  if(rejected++===0)return route.fulfill({status:400,contentType:'application/json',body:'{"error":"INVALID_CURSOR"}'});
+  return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({questions:[row(q2,'سؤال دوم')],nextCursor:null})});
+ });
+ await page.goto('/review-console/composer-studio.html');
+ const bank=page.locator('#approvedList button'),more=page.locator('#loadMoreBank'),search=page.locator('#loadBank');
+ await expect(bank).toHaveCount(1);
+ await bank.first().click();
+ await more.focus();
+ await page.keyboard.press('Enter');
+ await expect(page.locator('#composerNotice')).toContainText('نشانگر صفحه‌بندی نامعتبر یا منقضی');
+ await expect(page.locator('#composerNotice')).toHaveAttribute('data-state','error');
+ await expect(bank).toHaveCount(1);
+ await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
+ await expect(more).toBeHidden();
+ await expect(search).toBeFocused();
+ expect(rejected).toBe(1);
+ // Refresh starts from page one; the existing selection is not silently discarded.
+ await search.click();
+ await expect(more).toBeVisible();
+ await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
+ expect(firstPages).toBe(2);
+ await more.click();
+ await expect(bank).toHaveCount(2);
+ await expect(more).toBeHidden();
+ expect(rejected).toBe(2);
+});
+
 test('compose export is single-flight while the server validates, then restores keyboard focus',async({page})=>{
  await mock(page);
  let releaseRequest,requests=0;
