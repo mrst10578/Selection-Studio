@@ -1,6 +1,6 @@
 import {exportExamHTML,exportExamJSONL} from '../engine/test-composer.js';
 const $=id=>document.getElementById(id);
-const state={bank:[],selected:[],nextCursor:null,bankFilterKey:'',bankRequestSeq:0,seenBankCursors:new Set(),bankLoading:false,ready:false,composeBusy:false};
+const state={bank:[],selected:[],nextCursor:null,bankFilterKey:'',bankRequestSeq:0,seenBankCursors:new Set(),bankLoading:false,bankLoadError:false,ready:false,composeBusy:false};
 const notice=(s,error=false)=>{$('composerNotice').textContent=s;$('composerNotice').dataset.state=error?'error':'ok'};
 const e=(tag,text)=>{const node=document.createElement(tag);node.textContent=text||'';return node};
 async function api(path,options={}){
@@ -26,7 +26,7 @@ function render(){
  available.setAttribute('aria-busy',String(state.bankLoading));
  const more=$('loadMoreBank');more.hidden=!state.nextCursor;more.disabled=state.bankLoading||!state.nextCursor;
  $('loadBank').disabled=!state.ready||state.bankLoading;
- if(!state.bank.length)available.append(e('p',state.bankLoading?'در حال دریافت سؤال‌ها…':'سؤال تأییدشده‌ای با این جست‌وجو پیدا نشد.'));
+ if(!state.bank.length)available.append(e('p',state.bankLoading?'در حال دریافت سؤال‌ها…':state.bankLoadError?'دریافت سؤال‌ها ناموفق بود؛ برای تلاش دوباره «جست‌وجو و بازخوانی» را بزن.':'سؤال تأییدشده‌ای با این جست‌وجو پیدا نشد.'));
  for(const [index,question] of state.bank.entries()){
   const selected=state.selected.some(x=>x.id===question.id);
   const row=e('button',(selected?'✓ ':'+ ')+'سؤال '+(question.sourceNumber||'?')+' · '+question.questionText.slice(0,100));
@@ -82,7 +82,7 @@ function render(){
 }
 const currentBankFilter=()=>JSON.stringify([$('composerProject').value,$('composerQuery').value.trim()]);
 function invalidateBankSearch(){
- ++state.bankRequestSeq;state.bank=[];state.nextCursor=null;state.bankFilterKey='';state.bankLoading=false;state.seenBankCursors.clear();
+ ++state.bankRequestSeq;state.bank=[];state.nextCursor=null;state.bankFilterKey='';state.bankLoading=false;state.bankLoadError=false;state.seenBankCursors.clear();
  render();
 }
 async function loadBank(append=false){
@@ -99,7 +99,7 @@ async function loadBank(append=false){
  const previousSearch=!append&&state.bankFilterKey===key?{
   bank:state.bank,nextCursor:state.nextCursor,seenBankCursors:new Set(state.seenBankCursors)
  }:null;
- state.bankLoading=true;state.bankFilterKey=key;
+ state.bankLoading=true;state.bankLoadError=false;state.bankFilterKey=key;
  // Keep same-filter results visible during refresh; only clear them when filters change.
  if(!append){if(!previousSearch)state.bank=[];state.nextCursor=null;state.seenBankCursors.clear()}
  notice(append?'در حال بارگذاری سؤال‌های بیشتر…':'در حال جست‌وجوی سؤال‌های تأییدشده…');
@@ -127,6 +127,7 @@ async function loadBank(append=false){
    state.bank=previousSearch.bank;state.nextCursor=previousSearch.nextCursor;
    state.seenBankCursors=previousSearch.seenBankCursors;
   }
+  state.bankLoadError=!append&&!state.bank.length;
   state.bankLoading=false;render();
   // Failed requests must also restore the keyboard trigger without stealing moved focus.
   if((focusFromSearch||focusFromMore)&&
