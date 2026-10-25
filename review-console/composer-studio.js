@@ -72,8 +72,12 @@ function render(){
   const projectLabel=$('composerProject').value?'':'پروژه: '+(projectNames.get(question.projectId)||'نامشخص')+' · ';
   row.append(e('span',(i+1)+'. '+projectLabel+question.questionText.slice(0,110)));
   const buttons=e('div','');buttons.className='bank-actions';
+  // Repeated "بالا", "پایین" and "حذف" controls need a unique accessible
+  // name so screen-reader users know which selected question will change.
+  const actionContext='سؤال '+(i+1)+'، پروژه '+(projectNames.get(question.projectId)||'نامشخص')+
+   '، '+question.questionText.slice(0,80);
   for(const [label,move] of [['بالا',-1],['پایین',1]]){
-   const button=e('button',label);button.type='button';button.disabled=i+move<0||i+move>=state.selected.length;
+   const button=e('button',label);button.type='button';button.setAttribute('aria-label',label+'، '+actionContext);button.disabled=i+move<0||i+move>=state.selected.length;
    button.addEventListener('click',()=>{
     const target=i+move;
     const copy=[...state.selected];[copy[i],copy[target]]=[copy[target],copy[i]];state.selected=copy;render();
@@ -84,7 +88,7 @@ function render(){
     (preferred&&!preferred.disabled?preferred:fallback)?.focus();
    });buttons.append(button);
   }
-  const remove=e('button','حذف');remove.type='button';
+  const remove=e('button','حذف');remove.type='button';remove.setAttribute('aria-label','حذف، '+actionContext);
   remove.addEventListener('click',()=>{
    state.selected=state.selected.filter(x=>x.id!==question.id);render();
    // A removed button no longer exists: focus the next removal action, then the previous one.
