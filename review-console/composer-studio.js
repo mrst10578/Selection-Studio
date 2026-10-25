@@ -108,7 +108,15 @@ async function loadBank(append=false){
  if(project)qs.set('projectId',project);if(query)qs.set('q',query);
  if(cursor)qs.set('cursor',cursor);
  let result;
- try{result=await api('/api/v1/bank/questions?'+qs)}
+ try{
+  result=await api('/api/v1/bank/questions?'+qs);
+  // Reject malformed successful responses before replacing the visible bank.
+  // Otherwise one broken row can crash render() and discard the previous results.
+  if(!Array.isArray(result?.questions)||!result.questions.every(q=>
+   q&&typeof q.id==='string'&&q.id.trim()&&typeof q.projectId==='string'&&
+   typeof q.questionText==='string'&&Number.isSafeInteger(q.revision)))
+   throw Error('پاسخ بانک سؤال نامعتبر است');
+ }
  catch(error){
   if(seq!==state.bankRequestSeq)return;
   // A server-rejected continuation cannot succeed on retry. Keep the existing
