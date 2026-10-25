@@ -87,8 +87,12 @@ function render(){
 }
 const currentBankFilter=()=>JSON.stringify([$('composerProject').value,$('composerQuery').value.trim()]);
 function invalidateBankSearch(){
+ // Rebuild only when visible bank state actually needs clearing. Repeated
+ // keystrokes after the first edit must not replace selection buttons or
+ // the empty bank placeholder, which disrupts focus and wastes DOM work.
+ const needsRender=Boolean(state.bank.length||state.nextCursor||state.bankLoading||state.bankLoadError);
  ++state.bankRequestSeq;state.bank=[];state.nextCursor=null;state.bankFilterKey='';state.bankLoading=false;state.bankLoadError=false;state.seenBankCursors.clear();
- render();
+ if(needsRender)render();
 }
 async function loadBank(append=false){
  const project=$('composerProject').value,query=$('composerQuery').value.trim(),key=currentBankFilter();
