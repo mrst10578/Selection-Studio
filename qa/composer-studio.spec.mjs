@@ -607,3 +607,35 @@ test('initial bank failures show retry guidance instead of a false empty result'
  await expect(list).not.toContainText('دریافت سؤال‌ها ناموفق بود');
  expect(requests).toBe(3);
 });
+
+test('bank search accepts Enter without submitting IME composition',async({page})=>{
+ let requests=0;
+ const queries=[];
+ const row={id:q1,projectId:P,revision:1,questionText:'سؤال آزمون',sourceNumber:1};
+ await page.route('**/api/v1/projects',route=>route.fulfill({
+  status:200,contentType:'application/json',body:JSON.stringify({projects:[{id:P,name:'زیست'}]})
+ }));
+ await page.route('**/api/v1/bank/questions**',route=>{
+  requests++;
+  const q=new URL(route.request().url()).searchParams.get('q');
+  queries.push(q);
+  return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
+   questions:q==='آزمون'?[row]:[],nextCursor:null
+  })});
+ });
+ await page.goto('/review-console/composer-studio.html');
+ await expect(page.locator('#loadBank')).toBeEnabled();
+ await expect.poll(()=>requests).toBe(1);
+ const search=page.locator('#composerQuery');
+ await search.fill('آزمون');
+ await expect(page.locator('#approvedList button')).toHaveCount(0);
+ // Enter used to select an IME candidate must not send a premature search.
+ await search.dispatchEvent('keydown',{key:'Enter',isComposing:true,bubbles:true});
+ expect(requests).toBe(1);
+ await search.press('Enter');
+ await expect(page.locator('#approvedList button')).toHaveCount(1);
+ await expect(page.locator('#approvedList')).toContainText('سؤال آزمون');
+ await expect(search).toBeFocused();
+ expect(requests).toBe(2);
+ expect(queries).toEqual([null,'آزمون']);
+});
