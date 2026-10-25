@@ -8,15 +8,21 @@ const dbq=(db,stmt,...args)=>db.prepare(stmt).bind(...args);
 const normalize=s=>String(s||'').normalize('NFKC').replace(/[۰-۹]/g,c=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(c))).replace(/[٠-٩]/g,c=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(c))).replace(/[\u0640\u064b-\u065f\u0670]/g,'').replace(/[يى]/g,'ی').replace(/ك/g,'ک').trim().toLowerCase();
 // Cursor is a read-only position, not an authorization token. Every page still
 // rechecks ownership, source evidence and current independent reviewer approval.
-const cursorEncode=row=>btoa(JSON.stringify([row.updated_at,row.id])).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
-function cursorDecode(raw){
+const cursorEncode=(row,scope)=>btoa(JSON.stringify([row.updated_at,row.id,scope])).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+// Bind continuation positions to the normalized search context. A cursor is not an auth token.
+async function cursorScope(projectId,q,subject){
+ const data=new TextEncoder().encode(JSON.stringify([projectId,q,subject]));
+ const digest=new Uint8Array(await crypto.subtle.digest('SHA-256',data));
+ return Array.from(digest.slice(0,16),b=>b.toString(16).padStart(2,'0')).join('');
+}
+function cursorDecode(raw,scope){
  if(!/^[A-Za-z0-9_-]{1,180}$/.test(raw||''))return null;
  try{
   const text=atob(raw.replace(/-/g,'+').replace(/_/g,'/')+'='.repeat((4-raw.length%4)%4));
   const value=JSON.parse(text);
   // D1 CURRENT_TIMESTAMP uses canonical UTC YYYY-MM-DD HH:MM:SS. Reject
   // impossible or noncanonical dates instead of silently returning empty pages.
-  if(!Array.isArray(value)||value.length!==2||typeof value[0]!=='string'||
+  if(!Array.isArray(value)||value.length!==3||value[2]!==scope||typeof value[0]!=='string'||
    !/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value[0])||typeof value[1]!=='string'||!id.test(value[1]))return null;
   const timestamp=new Date(value[0].replace(' ','T')+'Z');
   if(!Number.isFinite(timestamp.getTime())||timestamp.toISOString().slice(0,19).replace('T',' ')!==value[0])return null;
@@ -50,7 +56,7 @@ async function validApproved(db,actor,scope,questionIds=null,search=null){
  const more=matches.length>100||(rows.results||[]).length>300;
  const last=matches.length>100?matches[99].row:lastScanned;
  return {questions:matches.slice(0,100).map(x=>x.item),scanned:result.length,limited:more,
-  nextCursor:more&&last?cursorEncode(last):null};
+  nextCursor:more&&last?cursorEncode(last,search.scope):null};
 }
 async function input(request){
  if(!request.headers.get('content-type')?.toLowerCase().startsWith('application/json'))throw Error('JSON_REQUIRED');
@@ -83,9 +89,10 @@ export async function handleApprovedBankApi(request,env,actor,url){
    const q=normalize(url.searchParams.get('q')||'').slice(0,100);
    const subject=normalize(url.searchParams.get('subject')||'').slice(0,80);
    const rawCursor=url.searchParams.get('cursor');
-   const cursor=rawCursor===null?null:cursorDecode(rawCursor);
+   const scope=await cursorScope(pid,q,subject);
+   const cursor=rawCursor===null?null:cursorDecode(rawCursor,scope);
    if(rawCursor!==null&&!cursor)return j({error:'INVALID_CURSOR'},400);
-   return j(await validApproved(env.SECURITY_DB,actor,pid||null,null,{q,subject,cursor}));
+   return j(await validApproved(env.SECURITY_DB,actor,pid||null,null,{q,subject,cursor,scope}));
   }
   if(path==='/api/v1/bank/exams/compose'&&method==='POST'){
    const data=await input(request);
