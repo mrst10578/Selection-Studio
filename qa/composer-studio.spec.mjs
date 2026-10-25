@@ -344,3 +344,45 @@ test('print requests only one dialog after a slow compose response, even with lo
  expect(spy.html).toContain('مقدار ۲');
  await expect(page.locator('#printExam')).toBeEnabled();
 });
+
+test('failed print validation closes its popup, restores keyboard focus, and allows retry',async({page})=>{
+ await mock(page);
+ let attempts=0;
+ await page.route('**/api/v1/bank/exams/compose',route=>{
+  attempts++;
+  if(attempts===1)return route.fulfill({
+   status:503,contentType:'application/json',body:'{"error":"PRINT_VALIDATION_UNAVAILABLE"}'
+  });
+  const payload=route.request().postDataJSON();
+  return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
+   status:'draft_export_only',manifest:{title:payload.title,publishable:false,
+    answersIncluded:payload.includeAnswers,items:[{index:1,id:q1,revision:2,question:'مقدار ۲ چند است؟'}]}
+  })});
+ });
+ await page.goto('/review-console/composer-studio.html');
+ await page.locator('#approvedList button').first().click();
+ await page.evaluate(()=>{
+  window.__printRetrySpy={opened:0,closed:0,printed:0};
+  window.open=()=>{
+   window.__printRetrySpy.opened++;
+   // A popup can move focus off the originating document before validation fails.
+   document.activeElement?.blur();
+   return {closed:false,focus(){},close(){this.closed=true;window.__printRetrySpy.closed++},
+    document:{open(){},write(){},close(){}},
+    addEventListener(type,callback){if(type==='load')setTimeout(callback,0)},
+    print(){window.__printRetrySpy.printed++}};
+  };
+ });
+ const button=page.locator('#printExam');
+ await button.focus();
+ await page.keyboard.press('Enter');
+ await expect(page.locator('#composerNotice')).toContainText('PRINT_VALIDATION_UNAVAILABLE');
+ await expect.poll(()=>page.evaluate(()=>window.__printRetrySpy)).toMatchObject({opened:1,closed:1,printed:0});
+ await expect(button).toBeEnabled();
+ await expect(button).toBeFocused();
+ // A transient validation failure must not strand the operator or prevent another attempt.
+ await page.keyboard.press('Enter');
+ await expect.poll(()=>page.evaluate(()=>window.__printRetrySpy)).toMatchObject({opened:2,closed:1,printed:1});
+ expect(attempts).toBe(2);
+ await expect(button).toBeEnabled();
+});
