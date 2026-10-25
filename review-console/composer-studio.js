@@ -106,11 +106,19 @@ async function loadBank(append=false){
  try{result=await api('/api/v1/bank/questions?'+qs)}
  catch(error){
   if(seq!==state.bankRequestSeq)return;
+  // A server-rejected continuation cannot succeed on retry. Keep the existing
+  // questions and selections, but require a fresh search for a new cursor.
+  const invalidCursor=append&&error?.status===400&&error?.message==='INVALID_CURSOR';
+  if(invalidCursor){state.nextCursor=null;state.seenBankCursors.clear()}
   state.bankLoading=false;render();
   // Failed requests must also restore the keyboard trigger without stealing moved focus.
   if((focusFromSearch||focusFromMore)&&
      (document.activeElement===document.body||document.activeElement===$('loadBank')||document.activeElement===$('loadMoreBank'))){
    (focusFromMore&&!$('loadMoreBank').hidden?$('loadMoreBank'):$('loadBank')).focus();
+  }
+  if(invalidCursor){
+   notice('نشانگر صفحه‌بندی نامعتبر یا منقضی شده است؛ برای ادامه «جست‌وجو و بازخوانی» را بزن. سؤال‌های انتخاب‌شده حفظ شدند.',true);
+   return;
   }
   throw error;
  }
