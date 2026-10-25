@@ -627,6 +627,13 @@ test('bank search accepts Enter without submitting IME composition',async({page}
  await expect(page.locator('#loadBank')).toBeEnabled();
  await expect.poll(()=>requests).toBe(1);
  const search=page.locator('#composerQuery');
+ const hint=page.locator('#composerSearchHint');
+ await expect(search).toHaveAttribute('aria-describedby','composerSearchHint');
+ await expect(hint).toBeVisible();
+ await expect(hint).toContainText('Enter');
+ // The static help text must not trigger duplicate live announcements while typing.
+ await expect(hint).not.toHaveAttribute('role','status');
+ await expect(hint).not.toHaveAttribute('aria-live','polite');
  await search.fill('آزمون');
  await expect(page.locator('#approvedList button')).toHaveCount(0);
  // Enter used to select an IME candidate must not send a premature search.
