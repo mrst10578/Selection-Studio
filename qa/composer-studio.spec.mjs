@@ -75,6 +75,29 @@ test('approved bank pagination keeps selection, deduplicates rows, and resets cu
  expect(seen.at(-1)).toEqual({query:'دیگر',cursor:null});
 });
 
+test('duplicate question IDs inside each API page appear only once in the bank',async({page})=>{
+ const row=(id,text)=>({id,projectId:P,revision:1,questionText:text,answerText:'پاسخ',sourceNumber:1});
+ await page.route('**/api/v1/projects',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({projects:[{id:P,name:'زیست'}]})}));
+ await page.route('**/api/v1/bank/questions**',route=>{
+  const append=new URL(route.request().url()).searchParams.has('cursor');
+  const data=append?
+   {questions:[row(q2,'سؤال دوم'),row(q2,'نسخه تکراری سؤال دوم')],nextCursor:null}:
+   {questions:[row(q1,'سؤال اول'),row(q1,'نسخه تکراری سؤال اول')],nextCursor:'page-2'};
+  return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(data)});
+ });
+ await page.goto('/review-console/composer-studio.html');
+ const bank=page.locator('#approvedList button');
+ await expect(bank).toHaveCount(1);
+ await expect(page.locator('#approvedList')).not.toContainText('نسخه تکراری');
+ await bank.first().click();
+ await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
+ await page.locator('#loadMoreBank').click();
+ await expect(bank).toHaveCount(2);
+ await expect(bank.nth(1)).toContainText('سؤال دوم');
+ await expect(page.locator('#approvedList')).not.toContainText('نسخه تکراری');
+ await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
+});
+
 test('keyboard selection toggle retains focus after the bank list re-renders',async({page})=>{
  await mock(page);
  await page.goto('/review-console/composer-studio.html');
