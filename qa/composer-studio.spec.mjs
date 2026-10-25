@@ -727,3 +727,23 @@ test('typing repeatedly after a filter edit does not rebuild unchanged bank or s
  await expect(selected).toHaveCount(1);
  expect(requests).toBe(2);
 });
+
+test('selected question controls retain DOM identity and focus across same-filter bank refresh',async({page})=>{
+ await mock(page);
+ await page.goto('/review-console/composer-studio.html');
+ await page.locator('#approvedList button').first().click();
+ const row=page.locator('#selectedList .composer-selection').first();
+ const remove=row.getByRole('button',{name:'حذف'});
+ await remove.focus();
+ await expect(remove).toBeFocused();
+ await row.evaluate(el=>{window.__selectedRowBeforeRefresh=el;});
+ // Programmatic activation avoids moving focus to the search button.
+ // A bank-only refresh must not replace the selected question's controls.
+ const response=page.waitForResponse(r=>r.url().includes('/api/v1/bank/questions')&&r.status()===200);
+ await page.evaluate(()=>document.getElementById('loadBank').click());
+ await response;
+ await expect(page.locator('#loadBank')).toBeEnabled();
+ expect(await row.evaluate(el=>el===window.__selectedRowBeforeRefresh)).toBe(true);
+ await expect(remove).toBeFocused();
+ await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
+});
