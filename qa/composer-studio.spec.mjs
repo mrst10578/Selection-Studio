@@ -867,13 +867,13 @@ test('selected-question actions identify their target to screen readers after re
  const firstRemove=selected.nth(0).getByRole('button',{name:/^حذف، سؤال ۱/});
  const secondRemove=selected.nth(1).getByRole('button',{name:/^حذف، سؤال ۲/});
  await expect(firstRemove).toHaveAccessibleName(/پروژه زیست، مقدار ۲ چند است/);
- await expect(secondRemove).toHaveAccessibleName(/پروژه زیست، نتیجه x\\^2 چیست/);
+ await expect(secondRemove).toHaveAccessibleName(/پروژه زیست، نتیجه x\^2 چیست/);
  await expect(firstRemove).toHaveText('حذف');
  const moveUp=selected.nth(1).getByRole('button',{name:/^بالا، سؤال ۲/});
- await expect(moveUp).toHaveAccessibleName(/نتیجه x\\^2 چیست/);
+ await expect(moveUp).toHaveAccessibleName(/نتیجه x\^2 چیست/);
  await moveUp.focus();
  await page.keyboard.press('Enter');
  await expect(selected.nth(0)).toContainText('نتیجه x^2 چیست');
- await expect(selected.nth(0).getByRole('button',{name:/^حذف، سؤال ۱/})).toHaveAccessibleName(/نتیجه x\\^2 چیست/);
+ await expect(selected.nth(0).getByRole('button',{name:/^حذف، سؤال ۱/})).toHaveAccessibleName(/نتیجه x\^2 چیست/);
  await expect(selected.nth(1).getByRole('button',{name:/^حذف، سؤال ۲/})).toHaveAccessibleName(/مقدار ۲ چند است/);
 });
