@@ -675,3 +675,55 @@ test('bank search accepts Enter without submitting IME composition',async({page}
  expect(requests).toBe(2);
  expect(queries).toEqual([null,'آزمون']);
 });
+
+test('typing repeatedly after a filter edit does not rebuild unchanged bank or selected rows',async({page})=>{
+ let requests=0;
+ page.on('request',request=>{
+  if(new URL(request.url()).pathname==='/api/v1/bank/questions')requests++;
+ });
+ await mock(page);
+ await page.goto('/review-console/composer-studio.html');
+ const bank=page.locator('#approvedList button'),selected=page.locator('#selectedList .composer-selection');
+ await expect(bank).toHaveCount(2);
+ await bank.first().click();
+ await expect(selected).toHaveCount(1);
+ const search=page.locator('#composerQuery');
+ // The first edit must invalidate the old results and pagination.
+ await search.fill('الف');
+ await expect(bank).toHaveCount(0);
+ await expect(selected).toHaveCount(1);
+ await page.evaluate(()=>{
+  const approved=document.getElementById('approvedList');
+  const selectedList=document.getElementById('selectedList');
+  const snapshot={
+   selectedRow:selectedList.querySelector('.composer-selection'),
+   emptyRow:approved.firstChild,
+   mutations:0
+  };
+  const observer=new MutationObserver(records=>{snapshot.mutations+=records.length});
+  for(const node of [approved,selectedList])
+   observer.observe(node,{childList:true,subtree:true,characterData:true});
+  window.__bankDomSnapshot={snapshot,observer};
+ });
+ // No bank data changed since the first edit. These inputs must not recreate
+ // the selected question's controls or the empty-result placeholder.
+ await search.fill('الفب');
+ await search.fill('الفبا');
+ const observed=await page.evaluate(()=>{
+  const {snapshot,observer}=window.__bankDomSnapshot;
+  const mutations=snapshot.mutations+observer.takeRecords().length;
+  observer.disconnect();
+  delete window.__bankDomSnapshot;
+  return {
+   mutations,
+   selectionPreserved:snapshot.selectedRow===document.querySelector('#selectedList .composer-selection'),
+   placeholderPreserved:snapshot.emptyRow===document.getElementById('approvedList').firstChild
+  };
+ });
+ expect(observed).toEqual({mutations:0,selectionPreserved:true,placeholderPreserved:true});
+ expect(requests).toBe(1); // Typing alone must not fetch.
+ await search.press('Enter');
+ await expect(bank).toHaveCount(2);
+ await expect(selected).toHaveCount(1);
+ expect(requests).toBe(2);
+});
