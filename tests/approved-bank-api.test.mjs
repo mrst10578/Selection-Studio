@@ -287,10 +287,29 @@ test('approved-bank cursor pages every verified question without skipping older 
  assert.ok(rare.data.nextCursor,'a zero-match page must still allow continuing the scan');
  const old=await x.call('/questions?q='+encodeURIComponent('سؤال تأیید شده')+'&cursor='+encodeURIComponent(rare.data.nextCursor));
  assert.deepEqual(old.data.questions.map(q=>q.id),[qid]);
+ // Reusing a continuation position with different filters must fail instead of
+ // silently skipping the beginning of a different result set.
+ const token=encodeURIComponent(rare.data.nextCursor);
+ const originalQuery=encodeURIComponent('سؤال تأیید شده');
+ for(const path of [
+  '/questions?cursor='+token,
+  '/questions?q='+originalQuery+'&subject=bio&cursor='+token,
+  '/questions?q='+originalQuery+'&projectId='+pid+'&cursor='+token,
+  '/questions?q=newer&cursor='+token
+ ]){
+  const result=await x.call(path);
+  assert.equal(result.status,400,'cursor must be bound to search filters: '+path);
+  assert.equal(result.data.error,'INVALID_CURSOR');
+ }
+ const normalized=await x.call('/questions?q='+encodeURIComponent('سُؤال تأیید شده')+'&cursor='+token);
+ assert.deepEqual(normalized.data.questions.map(q=>q.id),[qid],
+  'equivalent normalized Persian query should accept the same cursor');
  for(const bad of ['-1','1.5','garbage','%20']){
   assert.equal((await x.call('/questions?cursor='+bad)).status,400,'invalid cursor '+bad);
  }
- const encodeCursor=timestamp=>Buffer.from(JSON.stringify([timestamp,qid])).toString('base64url');
+ const defaultScope=Buffer.from(await crypto.subtle.digest('SHA-256',
+  new TextEncoder().encode(JSON.stringify(['','',''])))).subarray(0,16).toString('hex');
+ const encodeCursor=timestamp=>Buffer.from(JSON.stringify([timestamp,qid,defaultScope])).toString('base64url');
  for(const malformedTimestamp of ['2026-13-25 08:20:00','2026-02-30 08:20:00','2026-10-25T08:20:00Z','2026-10-25 25:20:00','2026-10-25 08:99:00','2026-10-25 08:20:00 ']){
   const result=await x.call('/questions?cursor='+encodeCursor(malformedTimestamp));
   assert.equal(result.status,400,'reject malformed timestamp '+malformedTimestamp);
