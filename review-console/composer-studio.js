@@ -1,7 +1,12 @@
 import {exportExamHTML,exportExamJSONL} from '../engine/test-composer.js';
 const $=id=>document.getElementById(id);
 const state={bank:[],selected:[],nextCursor:null,bankFilterKey:'',bankRequestSeq:0,seenBankCursors:new Set(),bankLoading:false,bankLoadError:false,ready:false,composeBusy:false};
-const notice=(s,error=false)=>{$('composerNotice').textContent=s;$('composerNotice').dataset.state=error?'error':'ok'};
+const notice=(s,error=false)=>{
+ const node=$('composerNotice'),status=error?'error':'ok';
+ // A live region must not re-announce identical guidance on every keystroke.
+ if(node.textContent!==s)node.textContent=s;
+ if(node.dataset.state!==status)node.dataset.state=status;
+};
 const e=(tag,text)=>{const node=document.createElement(tag);node.textContent=text||'';return node};
 async function api(path,options={}){
  const res=await fetch(path,{credentials:'same-origin',cache:'no-store',...options});
