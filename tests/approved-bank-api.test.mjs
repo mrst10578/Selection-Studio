@@ -290,6 +290,13 @@ test('approved-bank cursor pages every verified question without skipping older 
  for(const bad of ['-1','1.5','garbage','%20']){
   assert.equal((await x.call('/questions?cursor='+bad)).status,400,'invalid cursor '+bad);
  }
+ const encodeCursor=timestamp=>Buffer.from(JSON.stringify([timestamp,qid])).toString('base64url');
+ for(const malformedTimestamp of ['2026-13-25 08:20:00','2026-02-30 08:20:00','2026-10-25T08:20:00Z','2026-10-25 25:20:00','2026-10-25 08:99:00','2026-10-25 08:20:00 ']){
+  const result=await x.call('/questions?cursor='+encodeCursor(malformedTimestamp));
+  assert.equal(result.status,400,'reject malformed timestamp '+malformedTimestamp);
+  assert.equal(result.data.error,'INVALID_CURSOR');
+ }
+ assert.equal((await x.call('/questions?cursor='+encodeCursor('2024-02-29 08:20:00'))).status,200,'valid leap-day cursor is accepted');
  x.d.prepare("UPDATE bank_review_events SET decision='reject' WHERE question_id=?").run(qid);
  assert.deepEqual((await x.call('/questions?q='+encodeURIComponent('سؤال تأیید شده')+'&cursor='+encodeURIComponent(rare.data.nextCursor))).data.questions,[],
   'pagination must never bypass a later reviewer rejection');
