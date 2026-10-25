@@ -172,6 +172,8 @@ $('exportHtml').addEventListener('click',()=>void runComposeAction(async()=>{
 }));
 $('printExam').addEventListener('click',()=>{
  if(state.composeBusy)return;
+ // Capture the keyboard trigger before opening a popup can move focus away.
+ const printTrigger=document.activeElement===$('printExam')?$('printExam'):null;
  const windowRef=window.open('','_blank');
  if(!windowRef){notice('مرورگر پنجره چاپ را مسدود کرده است. از خروجی HTML استفاده کن.',true);return}
  void runComposeAction(async()=>{
@@ -188,7 +190,14 @@ $('printExam').addEventListener('click',()=>{
    windowRef.addEventListener('load',printOnce,{once:true});
    setTimeout(printOnce,500);
    notice('پنجره چاپ باز شد؛ برای ساخت PDF گزینه ذخیره PDF را انتخاب کن.');
-  }catch(err){windowRef.close();throw err}
+  }catch(err){
+   windowRef.close();
+   // Once a failed popup closes, return keyboard focus only if the operator did not move it.
+   setTimeout(()=>{
+    if(printTrigger&&document.activeElement===document.body&&!printTrigger.disabled)printTrigger.focus();
+   },0);
+   throw err;
+  }
  });
 });
 void safe(async()=>{
