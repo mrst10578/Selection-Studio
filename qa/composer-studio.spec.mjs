@@ -98,6 +98,49 @@ test('duplicate question IDs inside each API page appear only once in the bank',
  await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
 });
 
+test('repeated pagination cursors stop safely, preserve selection, and reset on search',async({page})=>{
+ const row=(id,text)=>({id,projectId:P,revision:1,questionText:text,answerText:'پاسخ',sourceNumber:1});
+ const requests=[];
+ await page.route('**/api/v1/projects',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({projects:[{id:P,name:'زیست'}]})}));
+ await page.route('**/api/v1/bank/questions**',route=>{
+  const params=new URL(route.request().url()).searchParams;
+  const cursor=params.get('cursor'),immediate=params.get('q')==='فوری';
+  requests.push({cursor,immediate});
+  const data=!cursor?{questions:[row(q1,'سؤال اول')],nextCursor:'cursor-a'}:
+   cursor==='cursor-a'?{questions:[row(q2,'سؤال دوم')],nextCursor:immediate?'cursor-a':'cursor-b'}:
+   {questions:[row('87654321-1234-1234-1234-123456789014','سؤال سوم')],nextCursor:'cursor-a'};
+  return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(data)});
+ });
+ await page.goto('/review-console/composer-studio.html');
+ const bank=page.locator('#approvedList button'),more=page.locator('#loadMoreBank');
+ await expect(bank).toHaveCount(1);
+ await bank.first().click();
+ await more.click();
+ await expect(bank).toHaveCount(2);
+ await more.click();
+ await expect(bank).toHaveCount(3);
+ await expect(more).toBeHidden();
+ await expect(page.locator('#composerNotice')).toContainText('نشانگر صفحه‌بندی تکراری');
+ await expect(page.locator('#composerNotice')).toHaveAttribute('data-state','error');
+ await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
+ expect(requests.map(x=>x.cursor)).toEqual([null,'cursor-a','cursor-b']);
+ // A fresh search resets the cursor history, and an immediately repeated cursor is also rejected.
+ await page.locator('#composerQuery').fill('فوری');
+ await page.locator('#loadBank').click();
+ await expect(bank).toHaveCount(1);
+ await expect(more).toBeVisible();
+ await more.click();
+ await expect(bank).toHaveCount(2);
+ await expect(more).toBeHidden();
+ await expect(page.locator('#composerNotice')).toContainText('نشانگر صفحه‌بندی تکراری');
+ await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
+ expect(requests).toEqual([
+  {cursor:null,immediate:false},{cursor:'cursor-a',immediate:false},
+  {cursor:'cursor-b',immediate:false},{cursor:null,immediate:true},
+  {cursor:'cursor-a',immediate:true}
+ ]);
+});
+
 test('keyboard selection toggle retains focus after the bank list re-renders',async({page})=>{
  await mock(page);
  await page.goto('/review-console/composer-studio.html');
