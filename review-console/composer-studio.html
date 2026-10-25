@@ -17,7 +17,8 @@
 <aside class="bank-panel bank-sidebar" aria-label="جست‌وجوی سؤال‌های بررسی‌شده">
  <h2>جست‌وجوی بانک تأییدشده</h2>
  <label for="composerProject">پروژه</label><select id="composerProject" disabled><option value="">در حال بررسی ورود</option></select>
- <label for="composerQuery">جست‌وجوی متن</label><input id="composerQuery" placeholder="بخشی از متن سؤال" maxlength="100">
+ <label for="composerQuery">جست‌وجوی متن</label><input id="composerQuery" placeholder="بخشی از متن سؤال" maxlength="100" aria-describedby="composerSearchHint">
+ <p id="composerSearchHint" class="bank-help">برای جست‌وجو Enter را بزن یا دکمه «جست‌وجو و بازخوانی» را انتخاب کن.</p>
  <button type="button" id="loadBank" disabled>جست‌وجو و بازخوانی</button>
  <div id="approvedList" class="bank-list"></div>
  <button type="button" id="loadMoreBank" aria-controls="approvedList" hidden disabled>نمایش سؤال‌های بیشتر</button>
