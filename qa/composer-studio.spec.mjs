@@ -66,7 +66,17 @@ test('all-project bank labels each question with its project and keeps filtered 
  await expect(bank.nth(1)).toContainText('پروژه: فیزیک');
  // Equal source numbers in different projects must be distinguishable.
  await bank.nth(1).click();
- await expect(page.locator('#selectedList .composer-selection')).toContainText('سؤال فیزیک');
+ const selected=page.locator('#selectedList .composer-selection');
+ await expect(selected).toHaveCount(1);
+ await expect(selected.first()).toContainText('پروژه: فیزیک');
+ await expect(selected.first()).toContainText('سؤال فیزیک');
+ await bank.nth(0).click();
+ await expect(selected).toHaveCount(2);
+ await expect(selected.nth(1)).toContainText('پروژه: زیست');
+ // Reordering must keep the project name attached to its question.
+ await selected.nth(1).getByRole('button',{name:'بالا'}).click();
+ await expect(selected.nth(0)).toContainText('پروژه: زیست');
+ await expect(selected.nth(1)).toContainText('پروژه: فیزیک');
  await page.locator('#composerProject').selectOption(P2);
  await expect(bank).toHaveCount(1);
  await expect(bank.first()).toContainText('سؤال فیزیک');
