@@ -186,6 +186,13 @@ function download(text,name,type){
  a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);
 }
 $('loadBank').addEventListener('click',()=>void safe(()=>loadBank()));
+$('composerQuery').addEventListener('keydown',event=>{
+ // Search with Enter without requiring a pointer; do not submit during IME composition.
+ if(event.key!=='Enter'||event.isComposing||event.repeat||!state.ready||state.bankLoading)return;
+ event.preventDefault();
+ void safe(()=>loadBank());
+});
+
 $('loadMoreBank').addEventListener('click',()=>void safe(()=>loadBank(true)));
 $('composerQuery').addEventListener('input',()=>{invalidateBankSearch();notice('عبارت جست‌وجو تغییر کرد؛ برای دریافت نتایج جدید «جست‌وجو و بازخوانی» را بزن.');});
 $('composerProject').addEventListener('change',()=>{state.selected=[];invalidateBankSearch();void safe(()=>loadBank())});
