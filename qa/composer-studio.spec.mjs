@@ -747,3 +747,32 @@ test('selected question controls retain DOM identity and focus across same-filte
  await expect(remove).toBeFocused();
  await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
 });
+
+
+test('bank refresh preserves keyboard focus on the same question after row reordering',async({page})=>{
+ let loads=0;
+ const rows=[
+  {id:q1,projectId:P,revision:1,questionText:'سؤال اول',sourceNumber:1},
+  {id:q2,projectId:P,revision:1,questionText:'سؤال دوم',sourceNumber:2}
+ ];
+ await page.route('**/api/v1/projects',route=>route.fulfill({
+  status:200,contentType:'application/json',body:JSON.stringify({projects:[{id:P,name:'زیست'}]})
+ }));
+ await page.route('**/api/v1/bank/questions**',route=>{
+  const questions=loads++===0?rows:[...rows].reverse();
+  return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({questions})});
+ });
+ await page.goto('/review-console/composer-studio.html');
+ const bank=page.locator('#approvedList button');
+ await expect(bank).toHaveCount(2);
+ await bank.first().focus();
+ await expect(bank.first()).toBeFocused();
+ const response=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/v1/bank/questions'&&r.status()===200);
+ // Trigger refresh without changing focus to the search button.
+ await page.evaluate(()=>document.getElementById('loadBank').click());
+ await response;
+ await expect(bank.first()).toContainText('سؤال دوم');
+ await expect(bank.nth(1)).toHaveAttribute('data-question-id',q1);
+ await expect(bank.nth(1)).toBeFocused();
+ expect(loads).toBe(2);
+});
