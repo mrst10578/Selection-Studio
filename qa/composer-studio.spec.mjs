@@ -293,6 +293,35 @@ test('bank loading uses one concise live status and never announces the whole qu
  await expect(status).toContainText('1 سؤال تأییدشده');
 });
 
+test('rapid bank-query edits announce the search hint only once',async({page})=>{
+ await mock(page);
+ await page.goto('/review-console/composer-studio.html');
+ const status=page.locator('#composerNotice');
+ await expect(status).toContainText('سؤال تأییدشده');
+ await expect(status).toHaveAttribute('aria-live','polite');
+ const observed=await page.evaluate(async()=>{
+  const notice=document.getElementById('composerNotice');
+  const input=document.getElementById('composerQuery');
+  const updates=[];
+  const observer=new MutationObserver(records=>{
+   for(const record of records){
+    if(record.type==='childList'||record.type==='characterData')updates.push(notice.textContent);
+   }
+  });
+  observer.observe(notice,{childList:true,subtree:true,characterData:true});
+  for(const value of ['س','سو','سؤال']){
+   input.value=value;
+   input.dispatchEvent(new Event('input',{bubbles:true}));
+  }
+  await Promise.resolve();
+  observer.disconnect();
+  return {updates,finalText:notice.textContent};
+ });
+ expect(observed.updates).toHaveLength(1);
+ expect(observed.finalText).toContain('عبارت جست‌وجو تغییر کرد');
+ await expect(status).toHaveAttribute('data-state','ok');
+});
+
 test('same-filter bank refresh keeps old results visible until the replacement arrives',async({page})=>{
  const row=(id,label)=>({id,projectId:P,revision:1,questionText:label,answerText:'پاسخ',sourceNumber:1});
  let requests=0,finishRefresh;
