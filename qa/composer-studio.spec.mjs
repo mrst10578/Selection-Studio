@@ -293,6 +293,33 @@ test('bank loading uses one concise live status and never announces the whole qu
  await expect(status).toContainText('1 سؤال تأییدشده');
 });
 
+test('same-filter bank refresh keeps old results visible until the replacement arrives',async({page})=>{
+ const row=(id,label)=>({id,projectId:P,revision:1,questionText:label,answerText:'پاسخ',sourceNumber:1});
+ let requests=0,finishRefresh;
+ await page.route('**/api/v1/projects',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({projects:[{id:P,name:'زیست'}]})}));
+ await page.route('**/api/v1/bank/questions**',route=>{
+  requests++;
+  if(requests===1)return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({questions:[row(q1,'سؤال قبلی')],nextCursor:'old-page'})});
+  finishRefresh=()=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({questions:[row(q2,'سؤال تازه')],nextCursor:null})});
+ });
+ await page.goto('/review-console/composer-studio.html');
+ const list=page.locator('#approvedList'),bank=list.locator('button');
+ await expect(bank).toHaveCount(1);
+ await bank.first().click();
+ await page.locator('#loadBank').click();
+ await expect.poll(()=>requests).toBe(2);
+ await expect(list).toHaveAttribute('aria-busy','true');
+ await expect(bank).toHaveCount(1);
+ await expect(bank.first()).toContainText('سؤال قبلی');
+ await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
+ await expect(page.locator('#loadMoreBank')).toBeHidden();
+ await finishRefresh();
+ await expect(list).toHaveAttribute('aria-busy','false');
+ await expect(bank).toHaveCount(1);
+ await expect(bank.first()).toContainText('سؤال تازه');
+ await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
+});
+
 test('failed bank request returns keyboard focus to the search control',async({page})=>{
  await mock(page);
  await page.goto('/review-console/composer-studio.html');
