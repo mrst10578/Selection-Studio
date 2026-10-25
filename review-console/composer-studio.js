@@ -1,6 +1,7 @@
 import {exportExamHTML,exportExamJSONL} from '../engine/test-composer.js';
 const $=id=>document.getElementById(id);
 const state={bank:[],selected:[],nextCursor:null,bankFilterKey:'',bankRequestSeq:0,seenBankCursors:new Set(),bankLoading:false,bankLoadError:false,ready:false,composeBusy:false};
+let renderedSelectedKey=null;
 const notice=(s,error=false)=>{
  const node=$('composerNotice'),status=error?'error':'ok';
  // A live region must not re-announce identical guidance on every keystroke.
@@ -45,6 +46,10 @@ function render(){
    available.querySelectorAll('button')[index]?.focus();
   });available.append(row);
  }
+ // A bank refresh changes available rows, not the selected question controls.
+ // Keep those DOM nodes and their keyboard focus until selection/order/text changes.
+ const selectedKey=JSON.stringify(state.selected.map(q=>[q.id,q.revision,q.questionText]));
+ if(selectedKey!==renderedSelectedKey){
  const list=$('selectedList');list.replaceChildren();
  if(!state.selected.length)list.append(e('p','هنوز سؤالی انتخاب نشده است.'));
  state.selected.forEach((question,i)=>{
@@ -79,6 +84,8 @@ function render(){
   });
   buttons.append(remove);row.append(buttons);list.append(row);
  });
+  renderedSelectedKey=selectedKey;
+ }
  const count=$('composerSelectionCount');
  const message=new Intl.NumberFormat('fa-IR').format(state.selected.length)+' سؤال انتخاب شده است.';
  // Announce changes only: unrelated re-renders must not repeat the screen-reader message.
