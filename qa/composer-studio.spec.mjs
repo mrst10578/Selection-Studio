@@ -462,7 +462,7 @@ test('failed pagination keeps existing questions and restores keyboard focus',as
  await expect(more).toBeVisible();
  await more.focus();
  await page.keyboard.press('Enter');
- await expect(page.locator('#composerNotice')).toContainText('PAGE_UNAVAILABLE');
+ await expect(page.locator('#composerNotice')).toContainText('دریافت سؤال‌های بیشتر موقتاً ناموفق بود');
  await expect(page.locator('#approvedList button')).toHaveCount(1);
  await expect(more).toBeEnabled();
  await expect(more).toBeFocused();
