@@ -960,7 +960,9 @@ test('selected-question list retains semantic and keyboard order when action but
  await bank.nth(0).click();
  await bank.nth(1).click();
  const list=page.getByRole('list',{name:'ترتیب سؤالات انتخاب‌شده'});
+ await expect(list).toHaveJSProperty('tagName','UL');
  const rows=list.getByRole('listitem');
+ await expect(rows.first()).toHaveJSProperty('tagName','LI');
  await expect(rows).toHaveCount(2);
  await expect(rows.nth(0)).toContainText('مقدار ۲ چند است');
  await expect(rows.nth(1)).toContainText('نتیجه x^2 چیست');
