@@ -1011,3 +1011,26 @@ test('keyboard reordering announces the moved question and its new position',asy
  await expect(notice).toHaveText('سؤال «نتیجه x^2 چیست؟» به جایگاه ۲ منتقل شد.');
  await expect(rows.nth(1)).toContainText('نتیجه x^2 چیست');
 });
+
+test('selected-question removal announces the removed question and preserves keyboard focus',async({page})=>{
+ await mock(page);
+ await page.goto('/review-console/composer-studio.html');
+ const bank=page.locator('#approvedList button');
+ await bank.first().click();
+ await bank.nth(1).click();
+ const rows=page.locator('#selectedList .composer-selection');
+ await expect(rows).toHaveCount(2);
+ await rows.nth(0).getByRole('button',{name:/^حذف، سؤال 1/}).focus();
+ await page.keyboard.press('Enter');
+ const notice=page.locator('#composerNotice');
+ await expect(notice).toHaveAttribute('aria-live','polite');
+ await expect(notice).toHaveText('سؤال «مقدار ۲ چند است؟» از آزمون حذف شد.');
+ await expect(rows).toHaveCount(1);
+ await expect(page.locator('#composerSelectionCount')).toHaveText('۱ سؤال انتخاب شده است.');
+ await expect(rows.first().getByRole('button',{name:/^حذف، سؤال 1/})).toBeFocused();
+ await page.keyboard.press('Enter');
+ await expect(notice).toHaveText('سؤال «نتیجه x^2 چیست؟» از آزمون حذف شد.');
+ await expect(rows).toHaveCount(0);
+ await expect(page.locator('#composerSelectionCount')).toHaveText('۰ سؤال انتخاب شده است.');
+ await expect(bank.nth(1)).toBeFocused();
+});
