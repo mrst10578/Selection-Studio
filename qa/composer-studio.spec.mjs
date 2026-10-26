@@ -1003,12 +1003,12 @@ test('keyboard reordering announces the moved question and its new position',asy
  const notice=page.locator('#composerNotice');
  await expect(notice).toHaveAttribute('role','status');
  await expect(notice).toHaveAttribute('aria-live','polite');
- await expect(notice).toHaveText('سؤال «نتیجه x^2 چیست؟» به جایگاه ۱ منتقل شد.');
+ await expect(notice).toHaveText('سؤال «نتیجه x^2 چیست؟» (شماره منبع ۲) به جایگاه ۱ منتقل شد.');
  await expect(rows.nth(0)).toContainText('نتیجه x^2 چیست');
  await expect(page.locator('#composerSelectionCount')).toHaveText('۲ سؤال انتخاب شده است.');
  await rows.nth(0).getByRole('button',{name:/^پایین، سؤال 1/}).focus();
  await page.keyboard.press('Enter');
- await expect(notice).toHaveText('سؤال «نتیجه x^2 چیست؟» به جایگاه ۲ منتقل شد.');
+ await expect(notice).toHaveText('سؤال «نتیجه x^2 چیست؟» (شماره منبع ۲) به جایگاه ۲ منتقل شد.');
  await expect(rows.nth(1)).toContainText('نتیجه x^2 چیست');
 });
 
@@ -1055,4 +1055,28 @@ test('rapid removal of identically worded questions keeps each announcement dist
  await expect(rows).toHaveCount(0);
  await expect(page.locator('#composerSelectionCount')).toHaveText('۰ سؤال انتخاب شده است.');
  await expect(bank.nth(1)).toBeFocused();
+});
+
+test('rapid reordering of identical questions announces their distinct source numbers',async({page})=>{
+ await mock(page,{identicalText:true});
+ await page.goto('/review-console/composer-studio.html');
+ const bank=page.locator('#approvedList button');
+ await expect(bank).toHaveCount(2);
+ await bank.nth(0).click();
+ await bank.nth(1).click();
+ const rows=page.locator('#selectedList .composer-selection');
+ const notice=page.locator('#composerNotice');
+ await rows.nth(1).getByRole('button',{name:/^بالا، سؤال 2/}).focus();
+ await page.keyboard.press('Enter');
+ const firstAnnouncement=await notice.textContent();
+ expect(firstAnnouncement).toBe('سؤال «مقدار ۲ چند است؟» (شماره منبع ۲) به جایگاه ۱ منتقل شد.');
+ await expect(rows.nth(0)).toContainText('مقدار ۲ چند است؟');
+ await rows.nth(1).getByRole('button',{name:/^بالا، سؤال 2/}).focus();
+ await page.keyboard.press('Enter');
+ const secondAnnouncement=await notice.textContent();
+ expect(secondAnnouncement).toBe('سؤال «مقدار ۲ چند است؟» (شماره منبع ۱) به جایگاه ۱ منتقل شد.');
+ expect(secondAnnouncement).not.toBe(firstAnnouncement);
+ await expect(rows.nth(0)).toContainText('مقدار ۲ چند است؟');
+ await expect(rows.nth(0).getByRole('button',{name:/^پایین، سؤال 1/})).toBeFocused();
+ await expect(page.locator('#composerSelectionCount')).toHaveText('۲ سؤال انتخاب شده است.');
 });
