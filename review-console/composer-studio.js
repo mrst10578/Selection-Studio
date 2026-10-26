@@ -30,21 +30,19 @@ const notice=(s,error=false)=>{
 const e=(tag,text)=>{const node=document.createElement(tag);node.textContent=text||'';return node};
 async function api(path,options={}){
  const res=await fetch(path,{credentials:'same-origin',cache:'no-store',...options});
- // Access may redirect an API request to its HTML login page, which ends in
- // HTTP 200. Require the known same-origin login URL *and* a changed final URL.
- // Some intercepted/embedded responses do not reliably set Response.redirected;
- // an unrelated HTML response at the original API URL must remain a parse error.
- if(res.status===200&&res.headers.get('content-type')?.toLowerCase().includes('text/html')){
-  let accessLogin=false;
-  try{
-   const finalUrl=new URL(res.url);
-   const requestedUrl=new URL(path,location.href);
-   accessLogin=finalUrl.origin===location.origin&&finalUrl.href!==requestedUrl.href&&
-    (finalUrl.pathname==='/cdn-cgi/access/login'||finalUrl.pathname.startsWith('/cdn-cgi/access/login/'));
-  }catch{}
-  if(accessLogin){
-   const err=Error('نشست ورود منقضی شده است');err.status=401;throw err;
-  }
+ // Access can redirect an API request to its login URL. The landing page
+ // may return HTML 200 or another status (including a missing mocked page).
+ // Detect the *final known same-origin login URL*, never arbitrary HTML or
+ // a 401/403 response from the original API endpoint.
+ let accessLogin=false;
+ try{
+  const finalUrl=new URL(res.url);
+  const requestedUrl=new URL(path,location.href);
+  accessLogin=finalUrl.origin===location.origin&&finalUrl.href!==requestedUrl.href&&
+   (finalUrl.pathname==='/cdn-cgi/access/login'||finalUrl.pathname.startsWith('/cdn-cgi/access/login/'));
+ }catch{}
+ if(accessLogin){
+  const err=Error('نشست ورود منقضی شده است');err.status=401;throw err;
  }
  let data;try{data=await res.json()}catch{
   // Access/session gateways may return an HTML login/denial page instead of JSON.
