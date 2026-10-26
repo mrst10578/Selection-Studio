@@ -231,6 +231,14 @@ async function loadBank(append=false){
    notice('نشانگر صفحه‌بندی نامعتبر یا منقضی شده است؛ برای ادامه «جست‌وجو و بازخوانی» را بزن. سؤال‌های انتخاب‌شده حفظ شدند.',true);
    return;
   }
+  // A transient same-filter failure keeps the last known-good bank and
+  // must not invalidate an already server-validated exam preview.
+  if(previousSearch&&(error instanceof TypeError||(error?.status>=500&&error.status<600))){
+   notice('بازخوانی بانک موقتاً ناموفق بود؛ '+
+    (state.bank.length?'نتایج قبلی و سؤال‌های انتخاب‌شده حفظ شدند.':'سؤال‌های انتخاب‌شده حفظ شدند.')+
+    ' دوباره تلاش کن.',true);
+   return;
+  }
   throw error;
  }
  if(seq!==state.bankRequestSeq||key!==currentBankFilter())return;
