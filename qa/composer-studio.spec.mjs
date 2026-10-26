@@ -1234,3 +1234,37 @@ test('bank refresh distinguishes unchecked selected questions from known stale r
  await expect(notice).not.toContainText('در نتایج فعلی نیست');
  await expect(page.locator('#composerSelectionCount')).toHaveText('۲ سؤال انتخاب شده است.');
 });
+
+test('revoked or deleted selected question gives safe recovery guidance after server 409',async({page})=>{
+ let approved=true,composeAttempts=0;
+ const row={id:q1,projectId:P,revision:1,questionText:'سؤال حذف‌شده',sourceNumber:1};
+ await page.route('**/api/v1/projects',route=>route.fulfill({
+  status:200,contentType:'application/json',body:JSON.stringify({projects:[{id:P,name:'زیست'}]})
+ }));
+ await page.route('**/api/v1/bank/questions**',route=>route.fulfill({
+  status:200,contentType:'application/json',body:JSON.stringify({questions:approved?[row]:[],nextCursor:null})
+ }));
+ await page.route('**/api/v1/bank/exams/compose',route=>{
+  composeAttempts++;
+  return route.fulfill({status:409,contentType:'application/json',body:'{"error":"UNAPPROVED_OR_STALE_QUESTION"}'});
+ });
+ await page.goto('/review-console/composer-studio.html');
+ await page.locator('#approvedList button').first().click();
+ approved=false;
+ await page.locator('#loadBank').click();
+ await expect(page.locator('#approvedList button')).toHaveCount(0);
+ await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
+ // Missing from the current result alone is not proof of deletion.
+ await expect(page.locator('#composerNotice')).toContainText('نسخه آن در این بازخوانی بررسی نشد');
+ await expect(page.locator('#composerNotice')).not.toContainText('تأییدش لغو شده');
+ await page.locator('#previewExam').click();
+ const notice=page.locator('#composerNotice');
+ await expect(notice).toContainText('اگر سؤالی از بانک حذف شده یا تأییدش لغو شده است');
+ await expect(notice).toContainText('آن را از آزمون حذف کن');
+ await expect(notice).toHaveAttribute('data-state','error');
+ await expect(page.locator('#examPreviewDialog')).not.toBeVisible();
+ expect(composeAttempts).toBe(1);
+ await page.locator('#selectedList .composer-selection').getByRole('button',{name:/^حذف/}).click();
+ await expect(page.locator('#selectedList .composer-selection')).toHaveCount(0);
+ await expect(page.locator('#previewExam')).toBeDisabled();
+});
