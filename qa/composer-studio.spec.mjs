@@ -468,6 +468,40 @@ test('failed pagination keeps existing questions and restores keyboard focus',as
  await expect(more).toBeFocused();
 });
 
+test('bank pagination authentication failures preserve selection and hide gateway details',async({page})=>{
+ const row={id:q1,projectId:P,revision:1,questionText:'سؤال موجود',answerText:'پاسخ',sourceNumber:1};
+ let deniedStatus=401,deniedRequests=0;
+ await page.route('**/api/v1/projects',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({projects:[{id:P,name:'زیست'}]})}));
+ await page.route('**/api/v1/bank/questions**',route=>{
+  const cursor=new URL(route.request().url()).searchParams.get('cursor');
+  if(!cursor)return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({questions:[row],nextCursor:'page-2'})});
+  deniedRequests++;
+  return route.fulfill(deniedStatus===401?
+   {status:401,contentType:'application/json',body:'{"error":"INTERNAL_SESSION_TOKEN"}'}:
+   {status:403,contentType:'text/html',body:'<html><body>PRIVATE_ACCESS_POLICY</body></html>'});
+ });
+ await page.goto('/review-console/composer-studio.html');
+ const bank=page.locator('#approvedList button'),more=page.locator('#loadMoreBank'),notice=page.locator('#composerNotice');
+ await expect(bank).toHaveCount(1);
+ await bank.first().click();
+ for(const [status,guidance] of [[401,'نشست ورود منقضی شده است'],[403,'این حساب اجازه دسترسی به این بخش را ندارد']]){
+  deniedStatus=status;
+  await more.focus();
+  await page.keyboard.press('Enter');
+  await expect(notice).toContainText(guidance);
+  await expect(notice).toHaveAttribute('data-state','error');
+  await expect(notice).not.toContainText('INTERNAL_SESSION_TOKEN');
+  await expect(notice).not.toContainText('PRIVATE_ACCESS_POLICY');
+  await expect(notice).not.toContainText('موقتاً ناموفق');
+  await expect(bank).toHaveCount(1);
+  await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
+  await expect(more).toBeVisible();
+  await expect(more).toBeEnabled();
+  await expect(more).toBeFocused();
+ }
+ expect(deniedRequests).toBe(2);
+});
+
 test('invalid server cursor stops pagination, keeps selection, and allows a fresh search',async({page})=>{
  const row=(id,label)=>({id,projectId:P,revision:1,questionText:label,answerText:'پاسخ',sourceNumber:1});
  let rejected=0,firstPages=0;
