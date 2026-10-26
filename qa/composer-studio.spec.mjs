@@ -1527,3 +1527,40 @@ test('bank revision change invalidates an already-open preview and fingerprint',
  await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
  await expect(bank.first()).toHaveAttribute('aria-pressed','true');
 });
+
+test('403 compose authorization stays distinct from retryable 5xx and never exports',async({page})=>{
+ await mock(page);
+ let deniedRequests=0,downloaded=false;
+ await page.route('**/api/v1/bank/exams/compose',route=>{
+  deniedRequests++;
+  return route.fulfill({
+   status:403,contentType:'application/json',body:'{"error":"COMPOSE_ACCESS_DENIED_INTERNAL"}'
+  });
+ });
+ page.on('download',()=>{downloaded=true;});
+ await page.goto('/review-console/composer-studio.html');
+ await page.locator('#approvedList button').first().click();
+ const notice=page.locator('#composerNotice');
+ const preview=page.locator('#previewExam');
+ await preview.focus();
+ await page.keyboard.press('Enter');
+ await expect(notice).toContainText('این حساب اجازه ساخت خروجی آزمون را ندارد');
+ await expect(notice).toContainText('با مدیر سامانه هماهنگ کن');
+ await expect(notice).toHaveAttribute('data-state','error');
+ await expect(notice).not.toContainText('موقتاً ناموفق');
+ await expect(notice).not.toContainText('دوباره تلاش کن');
+ await expect(notice).not.toContainText('COMPOSE_ACCESS_DENIED_INTERNAL');
+ await expect(page.locator('#examPreviewDialog')).not.toBeVisible();
+ await expect(page.locator('#examFingerprint')).toHaveText('شناسه نسخه خروجی پس از ساخت نمایش داده می‌شود.');
+ await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
+ await expect(preview).toBeEnabled();
+ await expect(preview).toBeFocused();
+ const exportButton=page.locator('#exportJsonl');
+ await exportButton.focus();
+ await page.keyboard.press('Enter');
+ await expect(notice).toContainText('این حساب اجازه ساخت خروجی آزمون را ندارد');
+ await expect(exportButton).toBeEnabled();
+ await expect(exportButton).toBeFocused();
+ expect(deniedRequests).toBe(2);
+ expect(downloaded).toBe(false);
+});
