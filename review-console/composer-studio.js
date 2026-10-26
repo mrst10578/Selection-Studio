@@ -88,6 +88,10 @@ function render(){
     const preferred=movedButtons?.[move===-1?0:1];
     const fallback=movedButtons?.[move===-1?1:0];
     (preferred&&!preferred.disabled?preferred:fallback)?.focus();
+    // Reordering leaves the selection count unchanged; announce the new position
+    // through the existing polite live region without exposing answer content.
+    notice('سؤال «'+question.questionText.slice(0,60)+'» به جایگاه '+
+     new Intl.NumberFormat('fa-IR').format(target+1)+' منتقل شد.');
    });buttons.append(button);
   }
   const remove=e('button','حذف');remove.type='button';remove.setAttribute('aria-label','حذف، '+actionContext);
