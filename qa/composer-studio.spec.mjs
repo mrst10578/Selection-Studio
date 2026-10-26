@@ -1268,3 +1268,33 @@ test('revoked or deleted selected question gives safe recovery guidance after se
  await expect(page.locator('#selectedList .composer-selection')).toHaveCount(0);
  await expect(page.locator('#previewExam')).toBeDisabled();
 });
+
+test('stale fingerprint is cleared before rejected revalidation',async({page})=>{
+ await mock(page);
+ const fingerprint='a'.repeat(64);
+ let requests=0;
+ await page.route('**/api/v1/bank/exams/compose',route=>{
+  requests++;
+  if(requests>1)return route.fulfill({
+   status:409,contentType:'application/json',body:'{"error":"UNAPPROVED_OR_STALE_QUESTION"}'
+  });
+  const payload=route.request().postDataJSON();
+  return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
+   status:'draft_export_only',manifestHash:fingerprint,
+   manifest:{title:payload.title,publishable:false,answersIncluded:false,
+    items:[{index:1,id:q1,revision:2,question:'مقدار ۲ چند است؟'}]}
+  })});
+ });
+ await page.goto('/review-console/composer-studio.html');
+ await page.locator('#approvedList button').first().click();
+ await page.locator('#previewExam').click();
+ await expect(page.locator('#examPreviewDialog')).toBeVisible();
+ await expect(page.locator('#examFingerprint')).toContainText(fingerprint);
+ await page.locator('#closeExamPreview').click();
+ await page.locator('#previewExam').click();
+ await expect(page.locator('#composerNotice')).toContainText('تأییدشان منقضی شده');
+ await expect(page.locator('#examFingerprint')).toHaveText('شناسه نسخه خروجی پس از ساخت نمایش داده می‌شود.');
+ await expect(page.locator('#examPreviewDialog')).not.toBeVisible();
+ await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
+ expect(requests).toBe(2);
+});
