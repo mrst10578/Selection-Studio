@@ -37,6 +37,10 @@ async function safe(fn,context='general'){
  try{await fn()}catch(error){
   if(error?.status===409){
    notice('سؤال‌ها تغییر کرده‌اند یا تأییدشان منقضی شده است؛ بانک را بازخوانی کن و سؤال‌های تغییرکرده را حذف و دوباره انتخاب کن. اگر سؤالی از بانک حذف شده یا تأییدش لغو شده است، آن را از آزمون حذف کن؛ انتخاب مجددش ممکن نیست.',true);
+  }else if(context==='compose'&&error?.status===403){
+   // Authorization failures are not transient. Never encourage blind retries
+   // or reveal internal access-policy error codes to an operator.
+   notice('این حساب اجازه ساخت خروجی آزمون را ندارد؛ برای بررسی دسترسی با مدیر سامانه هماهنگ کن. سؤال‌های انتخاب‌شده حفظ شدند.',true);
   }else if(context==='compose'&&(error instanceof TypeError||(error?.status>=500&&error.status<600))){
    // Keep transient validation failures distinct from 409 and access errors.
    // Never expose backend error codes to an operator who can simply retry.
