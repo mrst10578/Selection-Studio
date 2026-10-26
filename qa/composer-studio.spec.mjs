@@ -1301,3 +1301,80 @@ test('stale fingerprint is cleared before rejected revalidation',async({page})=>
  await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
  expect(requests).toBe(2);
 });
+
+
+test('export fingerprint clears immediately when title, answers, order or selection changes',async({page})=>{
+ await mock(page);
+ const fingerprint='c'.repeat(64);
+ await page.route('**/api/v1/bank/exams/compose',route=>{
+  const payload=route.request().postDataJSON();
+  return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
+   status:'draft_export_only',manifestHash:fingerprint,
+   manifest:{title:payload.title,publishable:false,answersIncluded:payload.includeAnswers,
+    items:payload.questionIds.map((id,i)=>({index:i+1,id,revision:payload.sourceRevisions[i],question:'سؤال نمونه'}))}
+  })});
+ });
+ await page.goto('/review-console/composer-studio.html');
+ const bank=page.locator('#approvedList button');
+ await bank.first().click();
+ await bank.nth(1).click();
+ const fingerprintLabel=page.locator('#examFingerprint');
+ const placeholder='شناسه نسخه خروجی پس از ساخت نمایش داده می‌شود.';
+ const preview=async()=>{
+  await page.locator('#previewExam').focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#examPreviewDialog')).toBeVisible();
+  await expect(fingerprintLabel).toContainText(fingerprint);
+  await page.locator('#closeExamPreview').click();
+  await expect(page.locator('#examPreviewDialog')).not.toBeVisible();
+ };
+ await preview();
+ await page.locator('#examTitle').fill('آزمون ویرایش‌شده');
+ await expect(fingerprintLabel).toHaveText(placeholder);
+ await preview();
+ await page.locator('#includeExamAnswers').check();
+ await expect(fingerprintLabel).toHaveText(placeholder);
+ await preview();
+ const selected=page.locator('#selectedList .composer-selection');
+ await selected.nth(1).getByRole('button',{name:/^بالا/}).click();
+ await expect(fingerprintLabel).toHaveText(placeholder);
+ await preview();
+ await selected.first().getByRole('button',{name:/^حذف/}).click();
+ await expect(fingerprintLabel).toHaveText(placeholder);
+ await expect(selected).toHaveCount(1);
+});
+
+test('editing a draft during server validation rejects the superseded response',async({page})=>{
+ await mock(page);
+ const fingerprint='d'.repeat(64);
+ let releaseResponse,requests=0;
+ await page.route('**/api/v1/bank/exams/compose',async route=>{
+  requests++;
+  if(requests===2)await new Promise(resolve=>{releaseResponse=resolve;});
+  const payload=route.request().postDataJSON();
+  await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
+   status:'draft_export_only',manifestHash:fingerprint,
+   manifest:{title:payload.title,publishable:false,answersIncluded:false,
+    items:[{index:1,id:q1,revision:2,question:'مقدار ۲ چند است؟'}]}
+  })});
+ });
+ await page.goto('/review-console/composer-studio.html');
+ await page.locator('#approvedList button').first().click();
+ const previewButton=page.locator('#previewExam'),dialog=page.locator('#examPreviewDialog');
+ await previewButton.focus();
+ await page.keyboard.press('Enter');
+ await expect(dialog).toBeVisible();
+ await expect(page.locator('#examFingerprint')).toContainText(fingerprint);
+ await page.locator('#closeExamPreview').click();
+ await page.locator('#examTitle').fill('نسخه دوم');
+ await previewButton.focus();
+ await page.keyboard.press('Enter');
+ await expect.poll(()=>typeof releaseResponse).toBe('function');
+ await page.locator('#examTitle').fill('نسخه سوم');
+ releaseResponse();
+ await expect(page.locator('#composerNotice')).toContainText('آزمون هنگام ساخت خروجی تغییر کرد');
+ await expect(page.locator('#examFingerprint')).toHaveText('شناسه نسخه خروجی پس از ساخت نمایش داده می‌شود.');
+ await expect(dialog).not.toBeVisible();
+ await expect(previewButton).toBeEnabled();
+ expect(requests).toBe(2);
+});
