@@ -950,3 +950,38 @@ test('selected-question actions identify their target to screen readers after re
  await expect(selected.nth(0).getByRole('button',{name:/^حذف، سؤال 1/})).toHaveAccessibleName(/نتیجه x\^2 چیست/);
  await expect(selected.nth(1).getByRole('button',{name:/^حذف، سؤال 2/})).toHaveAccessibleName(/مقدار ۲ چند است/);
 });
+
+test('selected-question list retains semantic and keyboard order when action buttons wrap',async({page})=>{
+ await mock(page);
+ await page.setViewportSize({width:320,height:720});
+ await page.goto('/review-console/composer-studio.html');
+ const bank=page.locator('#approvedList button');
+ await expect(bank).toHaveCount(2);
+ await bank.nth(0).click();
+ await bank.nth(1).click();
+ const list=page.getByRole('list',{name:'ترتیب سؤالات انتخاب‌شده'});
+ const rows=list.getByRole('listitem');
+ await expect(rows).toHaveCount(2);
+ await expect(rows.nth(0)).toContainText('مقدار ۲ چند است');
+ await expect(rows.nth(1)).toContainText('نتیجه x^2 چیست');
+ // Force a multi-row action group at simulated high zoom; visual wrapping
+ // must not reorder the DOM or keyboard tab sequence.
+ await page.evaluate(()=>{document.documentElement.style.zoom='2'});
+ const actions=rows.nth(0).locator('.bank-actions');
+ await actions.evaluate(el=>{el.style.maxWidth='110px'});
+ const tops=await actions.locator('button').evaluateAll(buttons=>
+  buttons.map(button=>Math.round(button.getBoundingClientRect().top)));
+ expect(new Set(tops).size).toBeGreaterThan(1);
+ await rows.nth(0).getByRole('button',{name:/^پایین، سؤال 1/}).focus();
+ await page.keyboard.press('Tab');
+ await expect(rows.nth(0).getByRole('button',{name:/^حذف، سؤال 1/})).toBeFocused();
+ await page.keyboard.press('Tab');
+ await expect(rows.nth(1).getByRole('button',{name:/^بالا، سؤال 2/})).toBeFocused();
+ await page.keyboard.press('Tab');
+ await expect(rows.nth(1).getByRole('button',{name:/^حذف، سؤال 2/})).toBeFocused();
+ // Reordering via keyboard must update list reading order and retain focus.
+ await rows.nth(1).getByRole('button',{name:/^بالا، سؤال 2/}).focus();
+ await page.keyboard.press('Enter');
+ await expect(rows.nth(0)).toContainText('نتیجه x^2 چیست');
+ await expect(rows.nth(0).getByRole('button',{name:/^پایین، سؤال 1/})).toBeFocused();
+});
