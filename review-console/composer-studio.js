@@ -4,6 +4,9 @@ const state={bank:[],selected:[],nextCursor:null,bankFilterKey:'',bankRequestSeq
 let renderedSelectedKey=null;
 // Use the already-authorized project list to identify questions in cross-project search.
 const projectNames=new Map();
+// A stable, human-readable selection order distinguishes questions without exposing IDs.
+const selectionOrder=new WeakMap();
+let nextSelectionOrder=0;
 const notice=(s,error=false)=>{
  const node=$('composerNotice'),status=error?'error':'ok';
  // A live region must not re-announce identical guidance on every keystroke.
@@ -48,7 +51,7 @@ function render(){
   row.type='button';row.dataset.questionId=question.id;row.setAttribute('aria-pressed',String(selected));
   row.addEventListener('click',()=>{
    if(selected)state.selected=state.selected.filter(x=>x.id!==question.id);
-   else if(state.selected.length<100)state.selected.push(question);
+   else if(state.selected.length<100){state.selected.push(question);selectionOrder.set(question,++nextSelectionOrder)}
    else{notice('هر آزمون حداکثر ۱۰۰ سؤال دارد',true);return}
    render();
    // Rebuilding the list removes the clicked button; restore keyboard focus.
@@ -90,12 +93,15 @@ function render(){
     (preferred&&!preferred.disabled?preferred:fallback)?.focus();
     // Reordering leaves the selection count unchanged; announce the new position
     // through the existing polite live region without exposing answer content.
-    // Distinguish same-text questions moved into the same slot in quick succession.
-    // Source numbers identify the question without revealing answer content.
-    const sourceLabel=Number.isSafeInteger(question.sourceNumber)&&question.sourceNumber>0
-     ?' (شماره منبع '+new Intl.NumberFormat('fa-IR').format(question.sourceNumber)+')':'';
-    notice('سؤال «'+question.questionText.slice(0,60)+'»'+sourceLabel+' به جایگاه '+
-     new Intl.NumberFormat('fa-IR').format(target+1)+' منتقل شد.');
+    // A source number is not unique when missing or repeated in the selection.
+    // Fall back to stable selection order; never expose internal question IDs.
+    const number=new Intl.NumberFormat('fa-IR');
+    const uniqueSource=Number.isSafeInteger(question.sourceNumber)&&question.sourceNumber>0&&
+     !state.selected.some(other=>other.id!==question.id&&other.sourceNumber===question.sourceNumber);
+    const identityLabel=uniqueSource?' (شماره منبع '+number.format(question.sourceNumber)+')':
+     ' (انتخاب شماره '+number.format(selectionOrder.get(question))+')';
+    notice('سؤال «'+question.questionText.slice(0,60)+'»'+identityLabel+' به جایگاه '+
+     number.format(target+1)+' منتقل شد.');
    });buttons.append(button);
   }
   const remove=e('button','حذف');remove.type='button';remove.setAttribute('aria-label','حذف، '+actionContext);
