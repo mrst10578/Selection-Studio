@@ -70,6 +70,12 @@ async function safe(fn,context='general'){
    // Keep transient validation failures distinct from 409 and access errors.
    // Never expose backend error codes to an operator who can simply retry.
    notice('اعتبارسنجی آزمون موقتاً ناموفق بود؛ سؤال‌های انتخاب‌شده حفظ شدند. دوباره تلاش کن.',true);
+  }else if(error?.status===401){
+   // Bank/session requests must not expose raw authentication error codes.
+   notice('نشست ورود منقضی شده است؛ دوباره وارد حساب اپراتور شو. سؤال‌های انتخاب‌شده حفظ شدند.',true);
+  }else if(error?.status===403){
+   // A role denial is not a transient outage and must not leak policy details.
+   notice('این حساب اجازه دسترسی به این بخش را ندارد؛ برای بررسی مجوز با مدیر سامانه هماهنگ کن. سؤال‌های انتخاب‌شده حفظ شدند.',true);
   }else notice(error?.message||'خطا در ساخت آزمون',true);
  }
 }
