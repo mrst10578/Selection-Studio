@@ -67,7 +67,7 @@ function render(){
  const list=$('selectedList');list.replaceChildren();
  if(!state.selected.length)list.append(e('p','هنوز سؤالی انتخاب نشده است.'));
  state.selected.forEach((question,i)=>{
-  const row=e('div','');row.className='bank-result composer-selection';
+  const row=e('div','');row.className='bank-result composer-selection';row.setAttribute('role','listitem');
   // Cross-project selections need the same source context as search results.
   const projectLabel=$('composerProject').value?'':'پروژه: '+(projectNames.get(question.projectId)||'نامشخص')+' · ';
   row.append(e('span',(i+1)+'. '+projectLabel+question.questionText.slice(0,110)));
