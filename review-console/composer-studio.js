@@ -35,9 +35,10 @@ function controls(){for(const id of ['previewExam','exportJsonl','exportHtml','p
 // Never silently upgrade a selected revision: the server must revalidate the exact snapshot.
 const staleSelectionCount=()=>state.selected.filter(selected=>
  state.bank.some(current=>current.id===selected.id&&current.revision!==selected.revision)).length;
-function warnOnStaleSelection(){
+function warnOnStaleSelection(unchecked=0){
  const count=staleSelectionCount();
- if(count)notice(new Intl.NumberFormat('fa-IR').format(count)+' سؤال انتخاب‌شده نسخه متفاوتی در بانک دارد؛ برای انتخاب نسخه جدید، آن را حذف و دوباره انتخاب کن.',true);
+ if(count)notice(new Intl.NumberFormat('fa-IR').format(count)+' سؤال انتخاب‌شده نسخه متفاوتی در بانک دارد؛ برای انتخاب نسخه جدید، آن را حذف و دوباره انتخاب کن.'+
+  (unchecked?' '+new Intl.NumberFormat('fa-IR').format(unchecked)+' سؤال انتخاب‌شده در نتایج فعلی نیست و نسخه آن در این بازخوانی بررسی نشد.':''),true);
  return count;
 }
 function render(){
@@ -237,8 +238,15 @@ async function loadBank(append=false){
   const more=$('loadMoreBank');
   (firstNew||(!more.hidden?more:$('loadBank'))).focus();
  }
+ // The loaded bank is only a page/filter subset. Absence is not evidence that a
+ // selected revision is current, stale, or unapproved; compose validates it server-side.
+ const visibleIds=new Set(state.bank.map(question=>question.id));
+ const unchecked=state.selected.filter(question=>!visibleIds.has(question.id)).length;
  if(repeatedCursor)notice('نشانگر صفحه‌بندی تکراری دریافت شد؛ بارگذاری بیشتر متوقف شد. برای تلاش مجدد جست‌وجو را بازخوانی کن.',true);
- else if(!warnOnStaleSelection())notice(state.bank.length+' سؤال تأییدشده در فهرست است.'+(state.nextCursor?' برای موارد قدیمی‌تر «نمایش سؤال‌های بیشتر» را بزن.':'')+' پیش از خروجی دوباره در سرور بررسی می‌شوند.');
+ else if(!warnOnStaleSelection(unchecked))notice(state.bank.length+' سؤال تأییدشده در فهرست است.'+
+  (state.nextCursor?' برای موارد قدیمی‌تر «نمایش سؤال‌های بیشتر» را بزن.':'')+
+  (unchecked?' '+new Intl.NumberFormat('fa-IR').format(unchecked)+' سؤال انتخاب‌شده در نتایج فعلی نیست و نسخه آن در این بازخوانی بررسی نشد.':'')+
+  ' پیش از خروجی دوباره در سرور بررسی می‌شوند.');
 }
 async function manifest(){
  if(!state.selected.length)throw Error('سؤالی انتخاب نشده است');
