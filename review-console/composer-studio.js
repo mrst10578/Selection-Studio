@@ -306,7 +306,10 @@ async function loadBank(append=false){
  if(append)state.seenBankCursors.add(cursor);
  const returnedCursor=typeof result.nextCursor==='string'&&result.nextCursor?result.nextCursor:null;
  const repeatedCursor=returnedCursor!==null&&state.seenBankCursors.has(returnedCursor);
- state.nextCursor=repeatedCursor?null:returnedCursor;
+ // A continuation containing no new IDs must not keep offering fresh cursors
+ // indefinitely (e.g. a gateway replaying already-seen bank rows).
+ const noProgressPage=append&&uniqueIncoming.length===0&&returnedCursor!==null;
+ state.nextCursor=repeatedCursor||noProgressPage?null:returnedCursor;
  // Selected questions survive pagination and text filters, but not project switches.
  state.selected=state.selected.filter(x=>!project||x.projectId===project);
  state.bankLoading=false;render();
@@ -324,6 +327,7 @@ async function loadBank(append=false){
  const visibleIds=new Set(state.bank.map(question=>question.id));
  const unchecked=state.selected.filter(question=>!visibleIds.has(question.id)).length;
  if(repeatedCursor)notice('نشانگر صفحه‌بندی تکراری دریافت شد؛ بارگذاری بیشتر متوقف شد. برای تلاش مجدد جست‌وجو را بازخوانی کن.',true);
+ else if(noProgressPage)notice('صفحه بعدی سؤال تازه‌ای نداشت؛ بارگذاری بیشتر متوقف شد. برای بررسی مجدد «جست‌وجو و بازخوانی» را بزن. سؤال‌های انتخاب‌شده حفظ شدند.',true);
  else if(!warnOnStaleSelection(unchecked))notice(state.bank.length+' سؤال تأییدشده در فهرست است.'+
   (state.nextCursor?' برای موارد قدیمی‌تر «نمایش سؤال‌های بیشتر» را بزن.':'')+
   (unchecked?' '+new Intl.NumberFormat('fa-IR').format(unchecked)+' سؤال انتخاب‌شده در نتایج فعلی نیست و نسخه آن در این بازخوانی بررسی نشد.':'')+
