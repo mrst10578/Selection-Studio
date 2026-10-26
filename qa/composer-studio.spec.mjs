@@ -142,6 +142,41 @@ test('duplicate question IDs inside each API page appear only once in the bank',
  await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
 });
 
+test('bank pagination stops when a fresh cursor repeats only existing questions',async({page})=>{
+ const row={id:q1,projectId:P,revision:1,questionText:'سؤال تأییدشده',answerText:'پاسخ',sourceNumber:1};
+ const cursors=[];
+ await page.route('**/api/v1/projects',route=>route.fulfill({
+  status:200,contentType:'application/json',body:JSON.stringify({projects:[{id:P,name:'زیست'}]})
+ }));
+ await page.route('**/api/v1/bank/questions**',route=>{
+  const cursor=new URL(route.request().url()).searchParams.get('cursor');
+  cursors.push(cursor);
+  // The gateway supplies a new cursor, but no new question IDs.
+  // Following it would waste requests and could continue forever.
+  const nextCursor=cursor==='cursor-a'?'cursor-b':'cursor-a';
+  return route.fulfill({status:200,contentType:'application/json',
+   body:JSON.stringify({questions:[row],nextCursor})});
+ });
+ await page.goto('/review-console/composer-studio.html');
+ const bank=page.locator('#approvedList button'),more=page.locator('#loadMoreBank');
+ const search=page.locator('#loadBank'),notice=page.locator('#composerNotice');
+ await expect(bank).toHaveCount(1);
+ await bank.first().click();
+ await more.focus();
+ await page.keyboard.press('Enter');
+ await expect(more).toBeHidden();
+ await expect(search).toBeFocused();
+ await expect(notice).toContainText('صفحه بعدی سؤال تازه‌ای نداشت');
+ await expect(notice).toHaveAttribute('data-state','error');
+ await expect(bank).toHaveCount(1);
+ await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
+ expect(cursors).toEqual([null,'cursor-a']); // Never request cursor-b.
+ // An explicit refresh can start over; no automatic request loop is introduced.
+ await search.click();
+ await expect(more).toBeVisible();
+ expect(cursors).toEqual([null,'cursor-a',null]);
+});
+
 test('repeated pagination cursors stop safely, preserve selection, and reset on search',async({page})=>{
  const row=(id,text)=>({id,projectId:P,revision:1,questionText:text,answerText:'پاسخ',sourceNumber:1});
  const requests=[];
