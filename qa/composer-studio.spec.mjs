@@ -1378,3 +1378,47 @@ test('editing a draft during server validation rejects the superseded response',
  await expect(previewButton).toBeEnabled();
  expect(requests).toBe(2);
 });
+
+
+test('bank revision change invalidates an already-open preview and fingerprint',async({page})=>{
+ let revision=2,bankRequests=0,releaseRefresh;
+ const fingerprint='e'.repeat(64);
+ await page.route('**/api/v1/projects',route=>route.fulfill({
+  status:200,contentType:'application/json',body:JSON.stringify({projects:[{id:P,name:'زیست'}]})
+ }));
+ await page.route('**/api/v1/bank/questions**',async route=>{
+  bankRequests++;
+  if(bankRequests===2)await new Promise(resolve=>{releaseRefresh=resolve;});
+  await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
+   questions:[{id:q1,projectId:P,revision,questionText:'سؤال نسخه‌دار',sourceNumber:1}],nextCursor:null
+  })});
+ });
+ await page.route('**/api/v1/bank/exams/compose',route=>{
+  const payload=route.request().postDataJSON();
+  return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
+   status:'draft_export_only',manifestHash:fingerprint,
+   manifest:{title:payload.title,publishable:false,answersIncluded:false,
+    items:[{index:1,id:q1,revision:payload.sourceRevisions[0],question:'سؤال نسخه‌دار'}]}
+  })});
+ });
+ await page.goto('/review-console/composer-studio.html');
+ const bank=page.locator('#approvedList button');
+ await expect(bank).toHaveCount(1);
+ await bank.first().click();
+ // The refresh is pending while the operator opens a preview of the old revision.
+ await page.locator('#loadBank').click();
+ await expect.poll(()=>typeof releaseRefresh).toBe('function');
+ await page.locator('#previewExam').focus();
+ await page.keyboard.press('Enter');
+ const dialog=page.locator('#examPreviewDialog'),fingerprintLabel=page.locator('#examFingerprint');
+ await expect(dialog).toBeVisible();
+ await expect(fingerprintLabel).toContainText(fingerprint);
+ revision=3;
+ releaseRefresh();
+ await expect(dialog).not.toBeVisible();
+ await expect(fingerprintLabel).toHaveText('شناسه نسخه خروجی پس از ساخت نمایش داده می‌شود.');
+ await expect(page.locator('#composerNotice')).toContainText('پیش‌نمایش قبلی بسته شد چون نسخه سؤال تغییر کرده است.');
+ await expect(page.locator('#composerNotice')).toHaveAttribute('data-state','error');
+ await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
+ await expect(bank.first()).toHaveAttribute('aria-pressed','true');
+});
