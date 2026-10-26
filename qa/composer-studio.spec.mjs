@@ -546,9 +546,40 @@ test('failed compose validation re-enables export actions for retry',async({page
  const exportButton=page.locator('#exportJsonl');
  await exportButton.focus();
  await page.keyboard.press('Enter');
- await expect(page.locator('#composerNotice')).toContainText('COMPOSE_TEMPORARILY_UNAVAILABLE');
+ await expect(page.locator('#composerNotice')).toContainText('اعتبارسنجی آزمون موقتاً ناموفق بود');
  await expect(exportButton).toBeEnabled();
  await expect(exportButton).toBeFocused();
+});
+
+test('network failure during exam validation gives a retryable Persian notice without losing selection',async({page})=>{
+ await mock(page);
+ let attempts=0;
+ await page.route('**/api/v1/bank/exams/compose',route=>{
+  attempts++;
+  if(attempts===1)return route.abort('failed');
+  const payload=route.request().postDataJSON();
+  return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
+   status:'draft_export_only',
+   manifest:{title:payload.title,publishable:false,answersIncluded:false,
+    items:[{index:1,id:q1,revision:2,question:'مقدار ۲ چند است؟'}]}
+  })});
+ });
+ await page.goto('/review-console/composer-studio.html');
+ await page.locator('#approvedList button').first().click();
+ const preview=page.locator('#previewExam'),notice=page.locator('#composerNotice');
+ await preview.focus();
+ await page.keyboard.press('Enter');
+ await expect(notice).toContainText('اعتبارسنجی آزمون موقتاً ناموفق بود');
+ await expect(notice).toContainText('دوباره تلاش کن');
+ await expect(notice).not.toContainText('Failed to fetch');
+ await expect(notice).toHaveAttribute('data-state','error');
+ await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
+ await expect(page.locator('#examPreviewDialog')).not.toBeVisible();
+ await expect(preview).toBeEnabled();
+ await expect(preview).toBeFocused();
+ await page.keyboard.press('Enter');
+ await expect(page.locator('#examPreviewDialog')).toBeVisible();
+ expect(attempts).toBe(2);
 });
 
 test('print requests only one dialog after a slow compose response, even with load and fallback',async({page})=>{
@@ -619,7 +650,7 @@ test('failed print validation closes its popup, restores keyboard focus, and all
  const button=page.locator('#printExam');
  await button.focus();
  await page.keyboard.press('Enter');
- await expect(page.locator('#composerNotice')).toContainText('PRINT_VALIDATION_UNAVAILABLE');
+ await expect(page.locator('#composerNotice')).toContainText('اعتبارسنجی آزمون موقتاً ناموفق بود');
  await expect.poll(()=>page.evaluate(()=>window.__printRetrySpy)).toMatchObject({opened:1,closed:1,printed:0});
  await expect(button).toBeEnabled();
  await expect(button).toBeFocused();
