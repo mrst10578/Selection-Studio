@@ -90,7 +90,11 @@ function render(){
     (preferred&&!preferred.disabled?preferred:fallback)?.focus();
     // Reordering leaves the selection count unchanged; announce the new position
     // through the existing polite live region without exposing answer content.
-    notice('سؤال «'+question.questionText.slice(0,60)+'» به جایگاه '+
+    // Distinguish same-text questions moved into the same slot in quick succession.
+    // Source numbers identify the question without revealing answer content.
+    const sourceLabel=Number.isSafeInteger(question.sourceNumber)&&question.sourceNumber>0
+     ?' (شماره منبع '+new Intl.NumberFormat('fa-IR').format(question.sourceNumber)+')':'';
+    notice('سؤال «'+question.questionText.slice(0,60)+'»'+sourceLabel+' به جایگاه '+
      new Intl.NumberFormat('fa-IR').format(target+1)+' منتقل شد.');
    });buttons.append(button);
   }
