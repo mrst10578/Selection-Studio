@@ -30,7 +30,14 @@ const notice=(s,error=false)=>{
 const e=(tag,text)=>{const node=document.createElement(tag);node.textContent=text||'';return node};
 async function api(path,options={}){
  const res=await fetch(path,{credentials:'same-origin',cache:'no-store',...options});
- let data;try{data=await res.json()}catch{throw Error('پاسخ API نامعتبر است')}
+ let data;try{data=await res.json()}catch{
+  // Access/session gateways may return an HTML login/denial page instead of JSON.
+  // Preserve the HTTP status so compose errors remain distinct from outages.
+  if(res.status===401||res.status===403){
+   const err=Error('ورود یا مجوز حساب نیاز به بررسی دارد');err.status=res.status;throw err;
+  }
+  throw Error('پاسخ API نامعتبر است');
+ }
  if(!res.ok){const err=Error(data?.error||'اتصال برقرار نشد');err.status=res.status;throw err}return data;
 }
 async function safe(fn,context='general'){
