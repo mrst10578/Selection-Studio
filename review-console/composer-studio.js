@@ -19,7 +19,7 @@ async function api(path,options={}){
  let data;try{data=await res.json()}catch{throw Error('پاسخ API نامعتبر است')}
  if(!res.ok){const err=Error(data?.error||'اتصال برقرار نشد');err.status=res.status;throw err}return data;
 }
-async function safe(fn){try{await fn()}catch(error){notice(error?.status===409?'سؤال‌ها تغییر کرده‌اند یا تأییدشان منقضی شده است؛ بانک را دوباره بررسی کن.':error.message||'خطا در ساخت آزمون',true)}}
+async function safe(fn){try{await fn()}catch(error){notice(error?.status===409?'سؤال‌ها تغییر کرده‌اند یا تأییدشان منقضی شده است؛ بانک را بازخوانی کن و سؤال‌های تغییرکرده را حذف و دوباره انتخاب کن.':error.message||'خطا در ساخت آزمون',true)}}
 async function runComposeAction(fn){
  if(state.composeBusy)return;
  const trigger=document.activeElement;
@@ -32,6 +32,14 @@ async function runComposeAction(fn){
  }
 }
 function controls(){for(const id of ['previewExam','exportJsonl','exportHtml','printExam'])$(id).disabled=!state.selected.length||state.composeBusy}
+// Never silently upgrade a selected revision: the server must revalidate the exact snapshot.
+const staleSelectionCount=()=>state.selected.filter(selected=>
+ state.bank.some(current=>current.id===selected.id&&current.revision!==selected.revision)).length;
+function warnOnStaleSelection(){
+ const count=staleSelectionCount();
+ if(count)notice(new Intl.NumberFormat('fa-IR').format(count)+' سؤال انتخاب‌شده نسخه متفاوتی در بانک دارد؛ برای انتخاب نسخه جدید، آن را حذف و دوباره انتخاب کن.',true);
+ return count;
+}
 function render(){
  const available=$('approvedList');
  // Keep keyboard focus on the same question when a same-filter refresh
@@ -53,7 +61,9 @@ function render(){
    if(selected)state.selected=state.selected.filter(x=>x.id!==question.id);
    else if(state.selected.length<100){state.selected.push(question);selectionOrder.set(question,++nextSelectionOrder)}
    else{notice('هر آزمون حداکثر ۱۰۰ سؤال دارد',true);return}
+   const hadStaleWarning=$('composerNotice').textContent.includes('نسخه متفاوتی در بانک دارد');
    render();
+   if(!warnOnStaleSelection()&&hadStaleWarning)notice('انتخاب سؤال‌ها با نسخه فعلی بانک هماهنگ شد.');
    // Rebuilding the list removes the clicked button; restore keyboard focus.
    available.querySelectorAll('button')[index]?.focus();
   });available.append(row);
@@ -228,7 +238,7 @@ async function loadBank(append=false){
   (firstNew||(!more.hidden?more:$('loadBank'))).focus();
  }
  if(repeatedCursor)notice('نشانگر صفحه‌بندی تکراری دریافت شد؛ بارگذاری بیشتر متوقف شد. برای تلاش مجدد جست‌وجو را بازخوانی کن.',true);
- else notice(state.bank.length+' سؤال تأییدشده در فهرست است.'+(state.nextCursor?' برای موارد قدیمی‌تر «نمایش سؤال‌های بیشتر» را بزن.':'')+' پیش از خروجی دوباره در سرور بررسی می‌شوند.');
+ else if(!warnOnStaleSelection())notice(state.bank.length+' سؤال تأییدشده در فهرست است.'+(state.nextCursor?' برای موارد قدیمی‌تر «نمایش سؤال‌های بیشتر» را بزن.':'')+' پیش از خروجی دوباره در سرور بررسی می‌شوند.');
 }
 async function manifest(){
  if(!state.selected.length)throw Error('سؤالی انتخاب نشده است');
