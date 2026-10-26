@@ -1104,3 +1104,38 @@ for(const [caseName,sourceNumbers] of [['duplicate',[1,1]],['missing',[null,null
   await expect(page.locator('#composerSelectionCount')).toHaveText('۲ سؤال انتخاب شده است.');
  });
 }
+
+test('selection order survives refresh and changes only after reselect',async({page})=>{
+ // The refreshed bank contains new JS objects for the same IDs, while selected
+ // questions keep their original objects until explicitly deselected.
+ await mock(page,{identicalText:true,sourceNumbers:[null,null]});
+ await page.goto('/review-console/composer-studio.html');
+ const bank=page.locator('#approvedList button');
+ const rows=page.locator('#selectedList .composer-selection');
+ const notice=page.locator('#composerNotice');
+ await expect(bank).toHaveCount(2);
+ await bank.nth(0).click();
+ await bank.nth(1).click();
+ await page.locator('#loadBank').click();
+ await expect(bank).toHaveCount(2);
+ await expect(rows).toHaveCount(2);
+ await expect(bank.nth(0)).toHaveAttribute('aria-pressed','true');
+ // Refresh alone must not reassign the original selection ordinal.
+ await rows.nth(1).getByRole('button',{name:/^بالا، سؤال 2/}).click();
+ await expect(notice).toHaveText('سؤال «مقدار ۲ چند است؟» (انتخاب شماره ۲) به جایگاه ۱ منتقل شد.');
+ // Deselect through the refreshed bank, then reselect: this is a new selection.
+ await bank.nth(0).click();
+ await expect(rows).toHaveCount(1);
+ await expect(bank.nth(0)).toHaveAttribute('aria-pressed','false');
+ await bank.nth(0).click();
+ await expect(rows).toHaveCount(2);
+ await expect(bank.nth(0)).toHaveAttribute('aria-pressed','true');
+ await rows.nth(1).getByRole('button',{name:/^بالا، سؤال 2/}).click();
+ await expect(notice).toHaveText('سؤال «مقدار ۲ چند است؟» (انتخاب شماره ۳) به جایگاه ۱ منتقل شد.');
+ // The other question must retain its ordinal even after the refresh and toggle.
+ await rows.nth(1).getByRole('button',{name:/^بالا، سؤال 2/}).click();
+ await expect(notice).toHaveText('سؤال «مقدار ۲ چند است؟» (انتخاب شماره ۲) به جایگاه ۱ منتقل شد.');
+ await expect(rows).toHaveCount(2);
+ await expect(page.locator('#composerSelectionCount')).toHaveText('۲ سؤال انتخاب شده است.');
+ await expect(rows.nth(0).getByRole('button',{name:/^پایین، سؤال 1/})).toBeFocused();
+});
