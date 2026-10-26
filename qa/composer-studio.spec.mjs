@@ -1139,3 +1139,54 @@ test('selection order survives refresh and changes only after reselect',async({p
  await expect(page.locator('#composerSelectionCount')).toHaveText('۲ سؤال انتخاب شده است.');
  await expect(rows.nth(0).getByRole('button',{name:/^پایین، سؤال 1/})).toBeFocused();
 });
+
+test('refresh warns about stale selected revisions and requires deliberate reselect',async({page})=>{
+ let revision=2;
+ const composeRequests=[];
+ await page.route('**/api/v1/projects',route=>route.fulfill({
+  status:200,contentType:'application/json',
+  body:JSON.stringify({projects:[{id:P,name:'زیست'}]})
+ }));
+ await page.route('**/api/v1/bank/questions**',route=>route.fulfill({
+  status:200,contentType:'application/json',
+  body:JSON.stringify({questions:[{
+   id:q1,projectId:P,revision,questionText:'سؤال با نسخه جدید',answerText:'پاسخ',sourceNumber:1
+  }],nextCursor:null})
+ }));
+ await page.route('**/api/v1/bank/exams/compose',route=>{
+  const payload=route.request().postDataJSON();
+  composeRequests.push(payload);
+  if(payload.sourceRevisions[0]!==revision)return route.fulfill({
+   status:409,contentType:'application/json',body:'{"error":"UNAPPROVED_OR_STALE_QUESTION"}'
+  });
+  return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
+   status:'draft_export_only',
+   manifest:{title:payload.title,publishable:false,items:[{index:1,question:'سؤال با نسخه جدید'}]}
+  })});
+ });
+ await page.goto('/review-console/composer-studio.html');
+ const bank=page.locator('#approvedList button'),notice=page.locator('#composerNotice');
+ await expect(bank).toHaveCount(1);
+ await bank.first().click();
+ revision=3;
+ await page.locator('#loadBank').click();
+ await expect(notice).toHaveText('۱ سؤال انتخاب‌شده نسخه متفاوتی در بانک دارد؛ برای انتخاب نسخه جدید، آن را حذف و دوباره انتخاب کن.');
+ await expect(notice).toHaveAttribute('data-state','error');
+ await expect(bank.first()).toHaveAttribute('aria-pressed','true');
+ await expect(page.locator('#composerSelectionCount')).toHaveText('۱ سؤال انتخاب شده است.');
+ // A refresh must not silently overwrite the selected revision or bypass server validation.
+ await page.locator('#previewExam').click();
+ await expect(notice).toContainText('بانک را بازخوانی کن و سؤال‌های تغییرکرده را حذف و دوباره انتخاب کن.');
+ await expect(page.locator('#examPreviewDialog')).not.toBeVisible();
+ expect(composeRequests[0].sourceRevisions).toEqual([2]);
+ // Refresh again, then explicitly deselect/reselect the current approved revision.
+ await page.locator('#loadBank').click();
+ await expect(notice).toContainText('نسخه متفاوتی در بانک دارد');
+ await bank.first().click();
+ await expect(notice).toHaveText('انتخاب سؤال‌ها با نسخه فعلی بانک هماهنگ شد.');
+ await bank.first().click();
+ await expect(page.locator('#composerSelectionCount')).toHaveText('۱ سؤال انتخاب شده است.');
+ await page.locator('#previewExam').click();
+ await expect(page.locator('#examPreviewDialog')).toBeVisible();
+ expect(composeRequests[1].sourceRevisions).toEqual([3]);
+});
