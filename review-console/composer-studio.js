@@ -99,7 +99,8 @@ function render(){
    state.selected=state.selected.filter(x=>x.id!==question.id);render();
    // Confirm deletion independently of the changing selection-count live region.
    // Keep the message concise and never include the answer text.
-   notice('سؤال «'+question.questionText.slice(0,60)+'» از آزمون حذف شد.');
+   notice('سؤال «'+question.questionText.slice(0,60)+'» از آزمون حذف شد. '+
+     new Intl.NumberFormat('fa-IR').format(state.selected.length)+' سؤال باقی ماند.');
    // A removed button no longer exists: focus the next removal action, then the previous one.
    const remaining=list.querySelectorAll('.composer-selection');
    if(remaining.length){
