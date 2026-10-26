@@ -411,10 +411,33 @@ $('printExam').addEventListener('click',()=>{
   }
  });
 });
-void safe(async()=>{
- const session=await api('/api/session');if(session.role!=='operator')throw Error('ورود به حساب اپراتور لازم است');
- const projects=await api('/api/v1/projects');
- const select=$('composerProject');select.replaceChildren(new Option('همه پروژه‌های خودم',''));
- for(const p of projects.projects||[]){select.add(new Option(p.name,p.id));projectNames.set(p.id,p.name)}
- select.disabled=false;state.ready=true;await loadBank();
-});
+// Bootstrap access errors should be recoverable after the operator signs in
+// or an administrator grants access, without losing the draft or reloading.
+let bootstrapBusy=false;
+async function bootstrap(){
+ if(bootstrapBusy||state.ready)return;
+ bootstrapBusy=true;
+ const retry=$('retryComposerBootstrap');
+ const retryWasFocused=document.activeElement===retry;
+ retry.hidden=true;retry.disabled=true;
+ notice('در حال بررسی ورود و دسترسی…');
+ try{
+  await safe(async()=>{
+   const session=await api('/api/session');if(session.role!=='operator')throw Error('ورود به حساب اپراتور لازم است');
+   const projects=await api('/api/v1/projects');
+   const select=$('composerProject');select.replaceChildren(new Option('همه پروژه‌های خودم',''));
+   for(const p of projects.projects||[]){select.add(new Option(p.name,p.id));projectNames.set(p.id,p.name)}
+   select.disabled=false;state.ready=true;await loadBank();
+  });
+ }finally{
+  bootstrapBusy=false;
+  // Failed session/project initialization can be retried manually; never
+  // bypass the API authorization checks or start background polling.
+  retry.hidden=state.ready;retry.disabled=false;
+  if(retryWasFocused&&document.activeElement===document.body){
+   (state.ready?$('composerProject'):retry).focus();
+  }
+ }
+}
+$('retryComposerBootstrap').addEventListener('click',()=>void bootstrap());
+void bootstrap();
