@@ -29,9 +29,9 @@
  <p id="examFingerprint" class="bank-help" aria-live="polite">شناسه نسخه خروجی پس از ساخت نمایش داده می‌شود.</p>
  <label for="examTitle">عنوان آزمون</label><input id="examTitle" maxlength="140" value="آزمون جدید">
  <label class="bank-confirm"><input id="includeExamAnswers" type="checkbox"><span>پاسخ‌ها هم در خروجی بیایند</span></label>
- <h2>ترتیب سؤالات انتخاب‌شده</h2>
+ <h2 id="composerSelectedHeading">ترتیب سؤالات انتخاب‌شده</h2>
  <p id="composerSelectionCount" class="bank-help" role="status" aria-live="polite" aria-atomic="true">۰ سؤال انتخاب شده است.</p>
- <div id="selectedList" class="bank-list"></div>
+ <div id="selectedList" class="bank-list" role="list" aria-labelledby="composerSelectedHeading"></div>
  <div class="bank-actions">
   <button id="previewExam" type="button" disabled>پیش‌نمایش</button>
   <button id="exportJsonl" type="button" disabled>خروجی JSONL</button>
