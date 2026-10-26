@@ -393,6 +393,46 @@ test('same-filter bank refresh keeps old results visible until the replacement a
  await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
 });
 
+test('transient same-filter refresh failure keeps the last bank and open validated preview',async({page})=>{
+ let requests=0;
+ const hash='a'.repeat(64);
+ const row={id:q1,projectId:P,revision:2,questionText:'سؤال تأییدشده',answerText:'پاسخ',sourceNumber:1};
+ await mock(page);
+ await page.route('**/api/v1/bank/questions**',route=>{
+  requests++;
+  return route.fulfill(requests===1?
+   {status:200,contentType:'application/json',body:JSON.stringify({questions:[row],nextCursor:null})}:
+   {status:503,contentType:'application/json',body:'{"error":"SERVICE_UNAVAILABLE"}'});
+ });
+ await page.route('**/api/v1/bank/exams/compose',route=>route.fulfill({
+  status:200,contentType:'application/json',body:JSON.stringify({
+   status:'draft_export_only',manifestHash:hash,
+   manifest:{title:'آزمون',publishable:false,answersIncluded:false,
+    items:[{index:1,id:q1,revision:2,question:'سؤال تأییدشده'}]}
+  })
+ }));
+ await page.goto('/review-console/composer-studio.html');
+ const bank=page.locator('#approvedList button'),selected=page.locator('#selectedList .composer-selection');
+ await expect(bank).toHaveCount(1);
+ await bank.first().click();
+ await page.locator('#previewExam').click();
+ await expect(page.locator('#examPreviewDialog')).toBeVisible();
+ await expect(page.locator('#examFingerprint')).toContainText(hash);
+ // Refresh from the open modal without changing the draft or closing its snapshot.
+ await page.evaluate(()=>document.getElementById('loadBank').click());
+ await expect.poll(()=>requests).toBe(2);
+ await expect(page.locator('#composerNotice')).toHaveText(
+  'بازخوانی بانک موقتاً ناموفق بود؛ نتایج قبلی و سؤال‌های انتخاب‌شده حفظ شدند. دوباره تلاش کن.');
+ await expect(page.locator('#composerNotice')).toHaveAttribute('data-state','error');
+ await expect(bank).toHaveCount(1);
+ await expect(bank.first()).toContainText('سؤال تأییدشده');
+ await expect(selected).toHaveCount(1);
+ await expect(page.locator('#composerSelectionCount')).toHaveText('۱ سؤال انتخاب شده است.');
+ await expect(page.locator('#examPreviewDialog')).toBeVisible();
+ await expect(page.locator('#examFingerprint')).toContainText(hash);
+ await expect(page.locator('#loadBank')).toBeEnabled();
+});
+
 test('failed bank request returns keyboard focus to the search control',async({page})=>{
  await mock(page);
  await page.goto('/review-console/composer-studio.html');
