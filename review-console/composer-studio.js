@@ -2,6 +2,14 @@ import {exportExamHTML,exportExamJSONL} from '../engine/test-composer.js';
 const $=id=>document.getElementById(id);
 const state={bank:[],selected:[],nextCursor:null,bankFilterKey:'',bankRequestSeq:0,seenBankCursors:new Set(),bankLoading:false,bankLoadError:false,ready:false,composeBusy:false};
 let renderedSelectedKey=null;
+const fingerprintPlaceholder='شناسه نسخه خروجی پس از ساخت نمایش داده می‌شود.';
+let compositionVersion=0;
+// A fingerprint describes one exact title, answer policy and ordered selection.
+function invalidateFingerprint(){
+ ++compositionVersion;
+ const label=$('examFingerprint');
+ if(label.textContent!==fingerprintPlaceholder)label.textContent=fingerprintPlaceholder;
+}
 // Use the already-authorized project list to identify questions in cross-project search.
 const projectNames=new Map();
 // A stable, human-readable selection order distinguishes questions without exposing IDs.
@@ -78,6 +86,7 @@ function render(){
  // Keep those DOM nodes and their keyboard focus until selection/order/text changes.
  const selectedKey=JSON.stringify(state.selected.map(q=>[q.id,q.revision,q.questionText]));
  if(selectedKey!==renderedSelectedKey){
+ invalidateFingerprint();
  const list=$('selectedList');list.replaceChildren();
  if(!state.selected.length){
   const empty=e('li','هنوز سؤالی انتخاب نشده است.');empty.setAttribute('role','presentation');list.append(empty);
@@ -250,12 +259,16 @@ async function loadBank(append=false){
 }
 async function manifest(){
  if(!state.selected.length)throw Error('سؤالی انتخاب نشده است');
+ const requestedVersion=compositionVersion;
  // A previous successful fingerprint must never appear valid after a failed revalidation.
- $('examFingerprint').textContent='شناسه نسخه خروجی پس از ساخت نمایش داده می‌شود.';
+ $('examFingerprint').textContent=fingerprintPlaceholder;
  const data=await api('/api/v1/bank/exams/compose',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
   title:$('examTitle').value,includeAnswers:$('includeExamAnswers').checked,
   questionIds:state.selected.map(x=>x.id),sourceRevisions:state.selected.map(x=>x.revision)
  })});
+ // An operator may edit the draft while the network request is in flight.
+ // Never display, preview or export a response for a superseded draft.
+ if(requestedVersion!==compositionVersion)throw Error('آزمون هنگام ساخت خروجی تغییر کرد؛ برای نسخه جدید دوباره پیش‌نمایش یا خروجی بگیر.');
  if(data.status!=='draft_export_only'||data.manifest?.publishable!==false)throw Error('سرور خروجی امن برنگرداند');
  if(data.manifestHash!==undefined&&!/^[a-f0-9]{64}$/i.test(data.manifestHash))throw Error('شناسه نسخه خروجی نامعتبر است');
  $('examFingerprint').textContent=data.manifestHash?'اثر انگشت نسخه ثبت‌شده: '+data.manifestHash:'خروجی آزمایشی فاقد شناسه سرور';
@@ -265,6 +278,8 @@ function download(text,name,type){
  const url=URL.createObjectURL(new Blob([text],{type})),a=document.createElement('a');
  a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);
 }
+$('examTitle').addEventListener('input',invalidateFingerprint);
+$('includeExamAnswers').addEventListener('change',invalidateFingerprint);
 $('loadBank').addEventListener('click',()=>void safe(()=>loadBank()));
 $('composerQuery').addEventListener('keydown',event=>{
  // Search with Enter without requiring a pointer; do not submit during IME composition.
