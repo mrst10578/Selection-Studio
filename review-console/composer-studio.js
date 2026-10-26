@@ -250,6 +250,8 @@ async function loadBank(append=false){
 }
 async function manifest(){
  if(!state.selected.length)throw Error('سؤالی انتخاب نشده است');
+ // A previous successful fingerprint must never appear valid after a failed revalidation.
+ $('examFingerprint').textContent='شناسه نسخه خروجی پس از ساخت نمایش داده می‌شود.';
  const data=await api('/api/v1/bank/exams/compose',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
   title:$('examTitle').value,includeAnswers:$('includeExamAnswers').checked,
   questionIds:state.selected.map(x=>x.id),sourceRevisions:state.selected.map(x=>x.revision)
