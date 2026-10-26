@@ -9,6 +9,12 @@ function invalidateFingerprint(){
  ++compositionVersion;
  const label=$('examFingerprint');
  if(label.textContent!==fingerprintPlaceholder)label.textContent=fingerprintPlaceholder;
+ // A visible modal preview is also tied to this exact draft snapshot.
+ const dialog=$('examPreviewDialog');
+ if(dialog?.open){
+  dialog.close();
+  notice('پیش‌نمایش قبلی پس از تغییر آزمون منقضی شد؛ دوباره پیش‌نمایش بگیر.',true);
+ }
 }
 // Use the already-authorized project list to identify questions in cross-project search.
 const projectNames=new Map();
@@ -45,8 +51,15 @@ const staleSelectionCount=()=>state.selected.filter(selected=>
  state.bank.some(current=>current.id===selected.id&&current.revision!==selected.revision)).length;
 function warnOnStaleSelection(unchecked=0){
  const count=staleSelectionCount();
- if(count)notice(new Intl.NumberFormat('fa-IR').format(count)+' سؤال انتخاب‌شده نسخه متفاوتی در بانک دارد؛ برای انتخاب نسخه جدید، آن را حذف و دوباره انتخاب کن.'+
-  (unchecked?' '+new Intl.NumberFormat('fa-IR').format(unchecked)+' سؤال انتخاب‌شده در نتایج فعلی نیست و نسخه آن در این بازخوانی بررسی نشد.':''),true);
+ if(count){
+  // A newly discovered server revision invalidates even an unchanged draft's
+  // previously validated fingerprint and any preview opened during refresh.
+  const previewWasOpen=$('examPreviewDialog').open;
+  invalidateFingerprint();
+  notice(new Intl.NumberFormat('fa-IR').format(count)+' سؤال انتخاب‌شده نسخه متفاوتی در بانک دارد؛ برای انتخاب نسخه جدید، آن را حذف و دوباره انتخاب کن.'+
+   (unchecked?' '+new Intl.NumberFormat('fa-IR').format(unchecked)+' سؤال انتخاب‌شده در نتایج فعلی نیست و نسخه آن در این بازخوانی بررسی نشد.':'')+
+   (previewWasOpen?' پیش‌نمایش قبلی بسته شد چون نسخه سؤال تغییر کرده است.':''),true);
+ }
  return count;
 }
 function render(){
