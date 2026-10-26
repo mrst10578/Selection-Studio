@@ -1,8 +1,8 @@
 import {test,expect} from '@playwright/test';
 const P='12345678-1234-1234-1234-123456789012',q1='87654321-1234-1234-1234-123456789012',q2='87654321-1234-1234-1234-123456789013';
-async function mock(page,{stale=false}={}){
+async function mock(page,{stale=false,identicalText=false}={}){
  const calls=[],rows=[{id:q1,projectId:P,revision:2,questionText:'مقدار ۲ چند است؟',answerText:'دو',sourceNumber:1},
-  {id:q2,projectId:P,revision:1,questionText:'نتیجه x^2 چیست؟',answerText:'مجذور x',sourceNumber:2}];
+  {id:q2,projectId:P,revision:1,questionText:identicalText?'مقدار ۲ چند است؟':'نتیجه x^2 چیست؟',answerText:'مجذور x',sourceNumber:2}];
  await page.route('**/api/v1/projects',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({projects:[{id:P,name:'زیست'}]})}));
  await page.route('**/api/v1/bank/**',route=>{
   const req=route.request(),u=new URL(req.url());
@@ -1024,12 +1024,34 @@ test('selected-question removal announces the removed question and preserves key
  await page.keyboard.press('Enter');
  const notice=page.locator('#composerNotice');
  await expect(notice).toHaveAttribute('aria-live','polite');
- await expect(notice).toHaveText('سؤال «مقدار ۲ چند است؟» از آزمون حذف شد.');
+ await expect(notice).toHaveText('سؤال «مقدار ۲ چند است؟» از آزمون حذف شد. ۱ سؤال باقی ماند.');
  await expect(rows).toHaveCount(1);
  await expect(page.locator('#composerSelectionCount')).toHaveText('۱ سؤال انتخاب شده است.');
  await expect(rows.first().getByRole('button',{name:/^حذف، سؤال 1/})).toBeFocused();
  await page.keyboard.press('Enter');
- await expect(notice).toHaveText('سؤال «نتیجه x^2 چیست؟» از آزمون حذف شد.');
+ await expect(notice).toHaveText('سؤال «نتیجه x^2 چیست؟» از آزمون حذف شد. ۰ سؤال باقی ماند.');
+ await expect(rows).toHaveCount(0);
+ await expect(page.locator('#composerSelectionCount')).toHaveText('۰ سؤال انتخاب شده است.');
+ await expect(bank.nth(1)).toBeFocused();
+});
+
+
+test('rapid removal of identically worded questions keeps each announcement distinct',async({page})=>{
+ await mock(page,{identicalText:true});
+ await page.goto('/review-console/composer-studio.html');
+ const bank=page.locator('#approvedList button');
+ await expect(bank).toHaveCount(2);
+ await bank.nth(0).click();
+ await bank.nth(1).click();
+ const rows=page.locator('#selectedList .composer-selection');
+ const notice=page.locator('#composerNotice');
+ await rows.first().getByRole('button',{name:/^حذف، سؤال 1/}).focus();
+ await page.keyboard.press('Enter');
+ await expect(notice).toHaveText('سؤال «مقدار ۲ چند است؟» از آزمون حذف شد. ۱ سؤال باقی ماند.');
+ await expect(rows).toHaveCount(1);
+ await expect(rows.first().getByRole('button',{name:/^حذف، سؤال 1/})).toBeFocused();
+ await page.keyboard.press('Enter');
+ await expect(notice).toHaveText('سؤال «مقدار ۲ چند است؟» از آزمون حذف شد. ۰ سؤال باقی ماند.');
  await expect(rows).toHaveCount(0);
  await expect(page.locator('#composerSelectionCount')).toHaveText('۰ سؤال انتخاب شده است.');
  await expect(bank.nth(1)).toBeFocused();
