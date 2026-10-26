@@ -1713,3 +1713,76 @@ test('ordinary HTML 200 without Access redirect is not classified as an expired 
  await expect(page.locator('#examPreviewDialog')).not.toBeVisible();
  await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
 });
+
+
+test.describe('operator bootstrap recovery',()=>{
+ test('bootstrap 401 offers a manual retry after sign-in without loading protected data early',async({page})=>{
+  let signedIn=false,sessionCalls=0,projectCalls=0,bankCalls=0;
+  await page.route('**/api/session',route=>{
+   sessionCalls++;
+   return route.fulfill({status:signedIn?200:401,contentType:'application/json',
+    body:signedIn?'{"role":"operator"}':'{"error":"INTERNAL_SESSION_TOKEN"}'});
+  });
+  await page.route('**/api/v1/projects',route=>{
+   projectCalls++;
+   return route.fulfill({status:200,contentType:'application/json',
+    body:JSON.stringify({projects:[{id:P,name:'زیست'}]})});
+  });
+  await page.route('**/api/v1/bank/questions**',route=>{
+   bankCalls++;
+   return route.fulfill({status:200,contentType:'application/json',
+    body:JSON.stringify({questions:[{id:q1,projectId:P,revision:1,questionText:'سؤال آزمایشی',sourceNumber:1}],nextCursor:null})});
+  });
+  await page.goto('/review-console/composer-studio.html');
+  const retry=page.locator('#retryComposerBootstrap'),notice=page.locator('#composerNotice');
+  await expect(notice).toContainText('نشست ورود منقضی شده است');
+  await expect(notice).not.toContainText('INTERNAL_SESSION_TOKEN');
+  await expect(retry).toBeVisible();
+  await expect(page.locator('#composerProject')).toBeDisabled();
+  await expect(page.locator('#loadBank')).toBeDisabled();
+  await expect(page.locator('#previewExam')).toBeDisabled();
+  expect(projectCalls).toBe(0);
+  expect(bankCalls).toBe(0);
+  signedIn=true;
+  await retry.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#approvedList button')).toHaveCount(1);
+  await expect(retry).toBeHidden();
+  await expect(page.locator('#composerProject')).toBeEnabled();
+  await expect(page.locator('#composerProject')).toBeFocused();
+  expect(sessionCalls).toBe(2);
+  expect(projectCalls).toBe(1);
+  expect(bankCalls).toBe(1);
+ });
+
+ test('bootstrap projects 403 keeps bank locked until an explicit authorized retry',async({page})=>{
+  let allowed=false,projectCalls=0,bankCalls=0;
+  await page.route('**/api/session',route=>route.fulfill({status:200,contentType:'application/json',body:'{"role":"operator"}'}));
+  await page.route('**/api/v1/projects',route=>{
+   projectCalls++;
+   return route.fulfill({status:allowed?200:403,contentType:'application/json',
+    body:allowed?JSON.stringify({projects:[{id:P,name:'زیست'}]}):'{"error":"INTERNAL_ACCESS_POLICY"}'});
+  });
+  await page.route('**/api/v1/bank/questions**',route=>{
+   bankCalls++;
+   return route.fulfill({status:200,contentType:'application/json',body:'{"questions":[],"nextCursor":null}'});
+  });
+  await page.goto('/review-console/composer-studio.html');
+  const retry=page.locator('#retryComposerBootstrap'),notice=page.locator('#composerNotice');
+  await expect(notice).toContainText('این حساب اجازه دسترسی به این بخش را ندارد');
+  await expect(notice).not.toContainText('INTERNAL_ACCESS_POLICY');
+  await expect(retry).toBeVisible();
+  await expect(page.locator('#composerProject')).toBeDisabled();
+  await expect(page.locator('#loadBank')).toBeDisabled();
+  expect(projectCalls).toBe(1);
+  expect(bankCalls).toBe(0);
+  allowed=true;
+  await retry.click();
+  await expect(retry).toBeHidden();
+  await expect(page.locator('#composerProject')).toBeEnabled();
+  await expect(page.locator('#loadBank')).toBeEnabled();
+  await expect(page.locator('#composerNotice')).toContainText('سؤال تأییدشده در فهرست است');
+  expect(projectCalls).toBe(2);
+  expect(bankCalls).toBe(1);
+ });
+});
