@@ -1636,3 +1636,48 @@ test('HTML Access denial keeps 401 and 403 distinct without exposing gateway con
  expect(requests).toBe(3);
  expect(downloads).toBe(0);
 });
+
+test('Access login redirect ending in HTML 200 asks for sign-in without exporting',async({page})=>{
+ await mock(page);
+ let redirects=0,downloads=0;
+ await page.route('**/api/v1/bank/exams/compose',route=>{
+  redirects++;
+  return route.fulfill({status:302,headers:{location:'/cdn-cgi/access/login/preview-app'}});
+ });
+ await page.route('**/cdn-cgi/access/login/**',route=>route.fulfill({
+  status:200,contentType:'text/html',
+  body:'<!doctype html><html><body>ACCESS_LOGIN_PRIVATE_DETAILS</body></html>'
+ }));
+ page.on('download',()=>downloads++);
+ await page.goto('/review-console/composer-studio.html');
+ await page.locator('#approvedList button').first().click();
+ const preview=page.locator('#previewExam'),notice=page.locator('#composerNotice');
+ await preview.focus();
+ await page.keyboard.press('Enter');
+ await expect(notice).toContainText('نشست ورود منقضی شده است');
+ await expect(notice).toContainText('دوباره وارد حساب اپراتور شو');
+ await expect(notice).not.toContainText('پاسخ API نامعتبر است');
+ await expect(notice).not.toContainText('ACCESS_LOGIN_PRIVATE_DETAILS');
+ await expect(notice).toHaveAttribute('data-state','error');
+ await expect(page.locator('#examPreviewDialog')).not.toBeVisible();
+ await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
+ await expect(preview).toBeFocused();
+ await expect(page.locator('#examFingerprint')).toHaveText('شناسه نسخه خروجی پس از ساخت نمایش داده می‌شود.');
+ expect(redirects).toBe(1);
+ expect(downloads).toBe(0);
+});
+
+test('ordinary HTML 200 without Access redirect is not classified as an expired session',async({page})=>{
+ await mock(page);
+ await page.route('**/api/v1/bank/exams/compose',route=>route.fulfill({
+  status:200,contentType:'text/html',body:'<!doctype html><html><body>Not an API response</body></html>'
+ }));
+ await page.goto('/review-console/composer-studio.html');
+ await page.locator('#approvedList button').first().click();
+ await page.locator('#previewExam').click();
+ const notice=page.locator('#composerNotice');
+ await expect(notice).toContainText('پاسخ API نامعتبر است');
+ await expect(notice).not.toContainText('نشست ورود منقضی شده است');
+ await expect(page.locator('#examPreviewDialog')).not.toBeVisible();
+ await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
+});
