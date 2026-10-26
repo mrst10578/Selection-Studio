@@ -650,7 +650,7 @@ test('failed same-filter refresh preserves bank rows, selection, and pagination 
  await bank.first().click();
  await expect(more).toBeVisible();
  await page.locator('#loadBank').click();
- await expect(page.locator('#composerNotice')).toContainText('BANK_REFRESH_UNAVAILABLE');
+ await expect(page.locator('#composerNotice')).toContainText('بازخوانی بانک موقتاً ناموفق بود؛ نتایج قبلی و سؤال‌های انتخاب‌شده حفظ شدند. دوباره تلاش کن.');
  await expect(bank).toHaveCount(1);
  await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
  await expect(more).toBeVisible();
