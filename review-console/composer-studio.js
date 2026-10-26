@@ -97,6 +97,9 @@ function render(){
   const remove=e('button','حذف');remove.type='button';remove.setAttribute('aria-label','حذف، '+actionContext);
   remove.addEventListener('click',()=>{
    state.selected=state.selected.filter(x=>x.id!==question.id);render();
+   // Confirm deletion independently of the changing selection-count live region.
+   // Keep the message concise and never include the answer text.
+   notice('سؤال «'+question.questionText.slice(0,60)+'» از آزمون حذف شد.');
    // A removed button no longer exists: focus the next removal action, then the previous one.
    const remaining=list.querySelectorAll('.composer-selection');
    if(remaining.length){
