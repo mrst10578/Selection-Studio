@@ -37,6 +37,10 @@ async function safe(fn,context='general'){
  try{await fn()}catch(error){
   if(error?.status===409){
    notice('سؤال‌ها تغییر کرده‌اند یا تأییدشان منقضی شده است؛ بانک را بازخوانی کن و سؤال‌های تغییرکرده را حذف و دوباره انتخاب کن. اگر سؤالی از بانک حذف شده یا تأییدش لغو شده است، آن را از آزمون حذف کن؛ انتخاب مجددش ممکن نیست.',true);
+  }else if(context==='compose'&&error?.status===401){
+   // An expired session is not a transient compose failure or a 403 role denial.
+   // Do not expose backend authentication codes or suggest retrying anonymously.
+   notice('نشست ورود منقضی شده است؛ دوباره وارد حساب اپراتور شو و سپس ساخت خروجی را تکرار کن. سؤال‌های انتخاب‌شده حفظ شدند.',true);
   }else if(context==='compose'&&error?.status===403){
    // Authorization failures are not transient. Never encourage blind retries
    // or reveal internal access-policy error codes to an operator.
