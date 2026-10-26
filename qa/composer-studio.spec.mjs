@@ -1190,3 +1190,47 @@ test('refresh warns about stale selected revisions and requires deliberate resel
  await expect(page.locator('#examPreviewDialog')).toBeVisible();
  expect(composeRequests[1].sourceRevisions).toEqual([3]);
 });
+
+test('bank refresh distinguishes unchecked selected questions from known stale revisions across pages',async({page})=>{
+ let phase=0;
+ const row=(id,revision,label)=>({id,projectId:P,revision,questionText:label,sourceNumber:1});
+ await page.route('**/api/v1/projects',route=>route.fulfill({
+  status:200,contentType:'application/json',body:JSON.stringify({projects:[{id:P,name:'زیست'}]})
+ }));
+ await page.route('**/api/v1/bank/questions**',route=>{
+  const cursor=new URL(route.request().url()).searchParams.get('cursor');
+  const data=phase===0?{questions:[row(q1,2,'سؤال اول'),row(q2,1,'سؤال دوم')],nextCursor:null}:
+   cursor?{questions:[row(q2,phase===1?1:2,'سؤال دوم')],nextCursor:null}:
+   {questions:[row(q1,phase===1?2:3,'سؤال اول')],nextCursor:'page-2'};
+  return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(data)});
+ });
+ await page.goto('/review-console/composer-studio.html');
+ const bank=page.locator('#approvedList button'),notice=page.locator('#composerNotice');
+ await expect(bank).toHaveCount(2);
+ await bank.nth(0).click();
+ await bank.nth(1).click();
+ phase=1;
+ await page.locator('#loadBank').click();
+ await expect(bank).toHaveCount(1);
+ await expect(notice).toContainText('۱ سؤال انتخاب‌شده در نتایج فعلی نیست و نسخه آن در این بازخوانی بررسی نشد.');
+ await expect(notice).not.toContainText('نسخه متفاوتی در بانک دارد');
+ await expect(notice).toHaveAttribute('data-state','ok');
+ await expect(page.locator('#composerSelectionCount')).toHaveText('۲ سؤال انتخاب شده است.');
+ await page.locator('#loadMoreBank').click();
+ await expect(bank).toHaveCount(2);
+ await expect(notice).not.toContainText('در نتایج فعلی نیست');
+ await expect(notice).not.toContainText('نسخه متفاوتی در بانک دارد');
+
+ phase=2;
+ await page.locator('#loadBank').click();
+ await expect(bank).toHaveCount(1);
+ await expect(notice).toContainText('۱ سؤال انتخاب‌شده نسخه متفاوتی در بانک دارد');
+ await expect(notice).toContainText('۱ سؤال انتخاب‌شده در نتایج فعلی نیست');
+ await expect(notice).toHaveAttribute('data-state','error');
+ await expect(bank.first()).toHaveAttribute('aria-pressed','true');
+ await page.locator('#loadMoreBank').click();
+ await expect(bank).toHaveCount(2);
+ await expect(notice).toContainText('۲ سؤال انتخاب‌شده نسخه متفاوتی در بانک دارد');
+ await expect(notice).not.toContainText('در نتایج فعلی نیست');
+ await expect(page.locator('#composerSelectionCount')).toHaveText('۲ سؤال انتخاب شده است.');
+});
