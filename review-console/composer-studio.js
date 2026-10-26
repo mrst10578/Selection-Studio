@@ -65,9 +65,11 @@ function render(){
  const selectedKey=JSON.stringify(state.selected.map(q=>[q.id,q.revision,q.questionText]));
  if(selectedKey!==renderedSelectedKey){
  const list=$('selectedList');list.replaceChildren();
- if(!state.selected.length)list.append(e('p','هنوز سؤالی انتخاب نشده است.'));
+ if(!state.selected.length){
+  const empty=e('li','هنوز سؤالی انتخاب نشده است.');empty.setAttribute('role','presentation');list.append(empty);
+ }
  state.selected.forEach((question,i)=>{
-  const row=e('div','');row.className='bank-result composer-selection';row.setAttribute('role','listitem');
+  const row=e('li','');row.className='bank-result composer-selection';
   // Cross-project selections need the same source context as search results.
   const projectLabel=$('composerProject').value?'':'پروژه: '+(projectNames.get(question.projectId)||'نامشخص')+' · ';
   row.append(e('span',(i+1)+'. '+projectLabel+question.questionText.slice(0,110)));
