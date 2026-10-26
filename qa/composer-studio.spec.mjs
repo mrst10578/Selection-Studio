@@ -1,8 +1,8 @@
 import {test,expect} from '@playwright/test';
 const P='12345678-1234-1234-1234-123456789012',q1='87654321-1234-1234-1234-123456789012',q2='87654321-1234-1234-1234-123456789013';
-async function mock(page,{stale=false,identicalText=false}={}){
- const calls=[],rows=[{id:q1,projectId:P,revision:2,questionText:'مقدار ۲ چند است؟',answerText:'دو',sourceNumber:1},
-  {id:q2,projectId:P,revision:1,questionText:identicalText?'مقدار ۲ چند است؟':'نتیجه x^2 چیست؟',answerText:'مجذور x',sourceNumber:2}];
+async function mock(page,{stale=false,identicalText=false,sourceNumbers=[1,2]}={}){
+ const calls=[],rows=[{id:q1,projectId:P,revision:2,questionText:'مقدار ۲ چند است؟',answerText:'دو',sourceNumber:sourceNumbers[0]},
+  {id:q2,projectId:P,revision:1,questionText:identicalText?'مقدار ۲ چند است؟':'نتیجه x^2 چیست؟',answerText:'مجذور x',sourceNumber:sourceNumbers[1]}];
  await page.route('**/api/v1/projects',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({projects:[{id:P,name:'زیست'}]})}));
  await page.route('**/api/v1/bank/**',route=>{
   const req=route.request(),u=new URL(req.url());
@@ -1080,3 +1080,27 @@ test('rapid reordering of identical questions announces their distinct source nu
  await expect(rows.nth(0).getByRole('button',{name:/^پایین، سؤال 1/})).toBeFocused();
  await expect(page.locator('#composerSelectionCount')).toHaveText('۲ سؤال انتخاب شده است.');
 });
+
+for(const [caseName,sourceNumbers] of [['duplicate',[1,1]],['missing',[null,null]]]){
+ test('rapid reordering with '+caseName+' source numbers announces stable selection order',async({page})=>{
+  await mock(page,{identicalText:true,sourceNumbers});
+  await page.goto('/review-console/composer-studio.html');
+  const bank=page.locator('#approvedList button');
+  await expect(bank).toHaveCount(2);
+  await bank.nth(0).click();
+  await bank.nth(1).click();
+  const rows=page.locator('#selectedList .composer-selection');
+  const notice=page.locator('#composerNotice');
+  await rows.nth(1).getByRole('button',{name:/^بالا، سؤال 2/}).focus();
+  await page.keyboard.press('Enter');
+  const firstAnnouncement=await notice.textContent();
+  expect(firstAnnouncement).toBe('سؤال «مقدار ۲ چند است؟» (انتخاب شماره ۲) به جایگاه ۱ منتقل شد.');
+  await rows.nth(1).getByRole('button',{name:/^بالا، سؤال 2/}).focus();
+  await page.keyboard.press('Enter');
+  const secondAnnouncement=await notice.textContent();
+  expect(secondAnnouncement).toBe('سؤال «مقدار ۲ چند است؟» (انتخاب شماره ۱) به جایگاه ۱ منتقل شد.');
+  expect(secondAnnouncement).not.toBe(firstAnnouncement);
+  await expect(rows.nth(0).getByRole('button',{name:/^پایین، سؤال 1/})).toBeFocused();
+  await expect(page.locator('#composerSelectionCount')).toHaveText('۲ سؤال انتخاب شده است.');
+ });
+}
