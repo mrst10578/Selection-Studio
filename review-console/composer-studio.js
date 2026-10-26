@@ -19,7 +19,7 @@ async function api(path,options={}){
  let data;try{data=await res.json()}catch{throw Error('پاسخ API نامعتبر است')}
  if(!res.ok){const err=Error(data?.error||'اتصال برقرار نشد');err.status=res.status;throw err}return data;
 }
-async function safe(fn){try{await fn()}catch(error){notice(error?.status===409?'سؤال‌ها تغییر کرده‌اند یا تأییدشان منقضی شده است؛ بانک را بازخوانی کن و سؤال‌های تغییرکرده را حذف و دوباره انتخاب کن.':error.message||'خطا در ساخت آزمون',true)}}
+async function safe(fn){try{await fn()}catch(error){notice(error?.status===409?'سؤال‌ها تغییر کرده‌اند یا تأییدشان منقضی شده است؛ بانک را بازخوانی کن و سؤال‌های تغییرکرده را حذف و دوباره انتخاب کن. اگر سؤالی از بانک حذف شده یا تأییدش لغو شده است، آن را از آزمون حذف کن؛ انتخاب مجددش ممکن نیست.':error.message||'خطا در ساخت آزمون',true)}}
 async function runComposeAction(fn){
  if(state.composeBusy)return;
  const trigger=document.activeElement;
