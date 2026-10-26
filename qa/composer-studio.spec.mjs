@@ -1601,3 +1601,38 @@ test('401 expired compose session asks for operator sign-in without exporting',a
  expect(deniedRequests).toBe(2);
  expect(downloaded).toBe(false);
 });
+
+
+test('HTML Access denial keeps 401 and 403 distinct without exposing gateway content',async({page})=>{
+ await mock(page);
+ let responseStatus=401,requests=0,downloads=0;
+ await page.route('**/api/v1/bank/exams/compose',route=>{
+  requests++;
+  return route.fulfill({status:responseStatus,contentType:'text/html',
+   body:'<!doctype html><html><body>ACCESS_GATEWAY_PRIVATE_DETAILS</body></html>'});
+ });
+ page.on('download',()=>downloads++);
+ await page.goto('/review-console/composer-studio.html');
+ await page.locator('#approvedList button').first().click();
+ const notice=page.locator('#composerNotice');
+ const preview=page.locator('#previewExam');
+ for(const status of [401,403]){
+  responseStatus=status;
+  await preview.focus();
+  await page.keyboard.press('Enter');
+  await expect(notice).toContainText(status===401?'نشست ورود منقضی شده است':'این حساب اجازه ساخت خروجی آزمون را ندارد');
+  await expect(notice).not.toContainText('پاسخ API نامعتبر است');
+  await expect(notice).not.toContainText('ACCESS_GATEWAY_PRIVATE_DETAILS');
+  await expect(notice).toHaveAttribute('data-state','error');
+  await expect(page.locator('#examPreviewDialog')).not.toBeVisible();
+  await expect(page.locator('#examFingerprint')).toHaveText('شناسه نسخه خروجی پس از ساخت نمایش داده می‌شود.');
+  await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
+  await expect(preview).toBeEnabled();
+  await expect(preview).toBeFocused();
+ }
+ const exportButton=page.locator('#exportJsonl');
+ await exportButton.click();
+ await expect(notice).toContainText('این حساب اجازه ساخت خروجی آزمون را ندارد');
+ expect(requests).toBe(3);
+ expect(downloads).toBe(0);
+});
