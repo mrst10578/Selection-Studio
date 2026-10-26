@@ -28,6 +28,8 @@ body.bank-studio{margin:0;background:#0a0e15;color:#edf4fa;font:500 14px/1.8 Tah
 .bank-download{display:block;margin-top:7px;color:#bde9d7;font-weight:700}
 .bank-result .bank-download:focus-visible{outline:2px solid #8bdecf;outline-offset:3px}
 
+/* Reset browser list spacing without removing native list semantics. */
+#selectedList{list-style:none;padding:0}
 /* Allow long unbroken Persian project names and question text to wrap at high zoom. */
 .composer-selection{display:grid;gap:6px;min-width:0;overflow-wrap:anywhere}
 .composer-selection .bank-actions{margin-top:0}
