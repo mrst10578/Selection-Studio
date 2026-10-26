@@ -1291,7 +1291,10 @@ test('stale fingerprint is cleared before rejected revalidation',async({page})=>
  await expect(page.locator('#examPreviewDialog')).toBeVisible();
  await expect(page.locator('#examFingerprint')).toContainText(fingerprint);
  await page.locator('#closeExamPreview').click();
- await page.locator('#previewExam').click();
+ await expect(page.locator('#examPreviewDialog')).not.toBeVisible();
+ // Keyboard activation avoids mobile viewport hit-target overlap after dialog close.
+ await page.locator('#previewExam').focus();
+ await page.keyboard.press('Enter');
  await expect(page.locator('#composerNotice')).toContainText('تأییدشان منقضی شده');
  await expect(page.locator('#examFingerprint')).toHaveText('شناسه نسخه خروجی پس از ساخت نمایش داده می‌شود.');
  await expect(page.locator('#examPreviewDialog')).not.toBeVisible();
