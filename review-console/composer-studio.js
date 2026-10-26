@@ -33,12 +33,22 @@ async function api(path,options={}){
  let data;try{data=await res.json()}catch{throw Error('پاسخ API نامعتبر است')}
  if(!res.ok){const err=Error(data?.error||'اتصال برقرار نشد');err.status=res.status;throw err}return data;
 }
-async function safe(fn){try{await fn()}catch(error){notice(error?.status===409?'سؤال‌ها تغییر کرده‌اند یا تأییدشان منقضی شده است؛ بانک را بازخوانی کن و سؤال‌های تغییرکرده را حذف و دوباره انتخاب کن. اگر سؤالی از بانک حذف شده یا تأییدش لغو شده است، آن را از آزمون حذف کن؛ انتخاب مجددش ممکن نیست.':error.message||'خطا در ساخت آزمون',true)}}
+async function safe(fn,context='general'){
+ try{await fn()}catch(error){
+  if(error?.status===409){
+   notice('سؤال‌ها تغییر کرده‌اند یا تأییدشان منقضی شده است؛ بانک را بازخوانی کن و سؤال‌های تغییرکرده را حذف و دوباره انتخاب کن. اگر سؤالی از بانک حذف شده یا تأییدش لغو شده است، آن را از آزمون حذف کن؛ انتخاب مجددش ممکن نیست.',true);
+  }else if(context==='compose'&&(error instanceof TypeError||(error?.status>=500&&error.status<600))){
+   // Keep transient validation failures distinct from 409 and access errors.
+   // Never expose backend error codes to an operator who can simply retry.
+   notice('اعتبارسنجی آزمون موقتاً ناموفق بود؛ سؤال‌های انتخاب‌شده حفظ شدند. دوباره تلاش کن.',true);
+  }else notice(error?.message||'خطا در ساخت آزمون',true);
+ }
+}
 async function runComposeAction(fn){
  if(state.composeBusy)return;
  const trigger=document.activeElement;
  state.composeBusy=true;controls();
- try{await safe(fn)}finally{
+ try{await safe(fn,'compose')}finally{
   state.composeBusy=false;controls();
   // Disabling a focused action can move focus to body; restore it only if untouched.
   if(['previewExam','exportJsonl','exportHtml','printExam'].includes(trigger?.id)&&
