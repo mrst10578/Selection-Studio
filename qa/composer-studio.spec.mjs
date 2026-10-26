@@ -442,7 +442,7 @@ test('failed bank request returns keyboard focus to the search control',async({p
  const search=page.locator('#loadBank');
  await search.focus();
  await page.keyboard.press('Enter');
- await expect(page.locator('#composerNotice')).toContainText('SERVICE_UNAVAILABLE');
+ await expect(page.locator('#composerNotice')).toContainText('جست‌وجوی بانک موقتاً ناموفق بود');
   await expect(page.locator('#composerNotice')).toHaveAttribute('role','status');
   await expect(page.locator('#composerNotice')).toHaveAttribute('aria-atomic','true');
  await expect(search).toBeEnabled();
@@ -694,6 +694,40 @@ test('malformed successful bank response keeps previous rows and cursor usable',
 });
 
 
+test('new-filter server failure never displays old results or raw error codes',async({page})=>{
+ const row=(id,label)=>({id,projectId:P,revision:1,questionText:label,answerText:'پاسخ',sourceNumber:1});
+ let filteredRequests=0;
+ await page.route('**/api/v1/projects',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({projects:[{id:P,name:'زیست'}]})}));
+ await page.route('**/api/v1/bank/questions**',route=>{
+  const query=new URL(route.request().url()).searchParams.get('q');
+  if(query==='جدید'){
+   filteredRequests++;
+   if(filteredRequests===1)return route.fulfill({status:503,contentType:'application/json',body:'{"error":"FILTER_SEARCH_UNAVAILABLE"}'});
+   return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({questions:[row(q2,'سؤال جدید')],nextCursor:null})});
+  }
+  return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({questions:[row(q1,'سؤال قدیمی')],nextCursor:null})});
+ });
+ await page.goto('/review-console/composer-studio.html');
+ const bank=page.locator('#approvedList'),selected=page.locator('#selectedList .composer-selection');
+ await expect(bank.getByRole('button')).toHaveCount(1);
+ await bank.getByRole('button').first().click();
+ await page.locator('#composerQuery').fill('جدید');
+ await expect(bank.getByRole('button')).toHaveCount(0);
+ await page.locator('#loadBank').click();
+ const notice=page.locator('#composerNotice');
+ await expect(notice).toContainText('جست‌وجوی بانک موقتاً ناموفق بود');
+ await expect(notice).not.toContainText('FILTER_SEARCH_UNAVAILABLE');
+ await expect(bank).toContainText('دریافت سؤال‌ها ناموفق بود');
+ await expect(bank).not.toContainText('سؤال قدیمی');
+ await expect(selected).toHaveCount(1);
+ await page.locator('#loadBank').click();
+ await expect(bank.getByRole('button')).toHaveCount(1);
+ await expect(bank).toContainText('سؤال جدید');
+ await expect(bank).not.toContainText('سؤال قدیمی');
+ await expect(selected).toHaveCount(1);
+ expect(filteredRequests).toBe(2);
+});
+
 test('initial bank failures show retry guidance instead of a false empty result',async({page})=>{
  const row={id:q1,projectId:P,revision:1,questionText:'سؤال بازیابی‌شده',answerText:'پاسخ',sourceNumber:1};
  let requests=0;
@@ -706,7 +740,7 @@ test('initial bank failures show retry guidance instead of a false empty result'
  });
  await page.goto('/review-console/composer-studio.html');
  const list=page.locator('#approvedList'),search=page.locator('#loadBank');
- await expect(page.locator('#composerNotice')).toContainText('SERVICE_UNAVAILABLE');
+ await expect(page.locator('#composerNotice')).toContainText('جست‌وجوی بانک موقتاً ناموفق بود');
  await expect(list).toContainText('دریافت سؤال‌ها ناموفق بود');
  await expect(list).not.toContainText('سؤال تأییدشده‌ای با این جست‌وجو پیدا نشد');
  await expect(search).toBeEnabled();
