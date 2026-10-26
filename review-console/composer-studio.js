@@ -30,6 +30,20 @@ const notice=(s,error=false)=>{
 const e=(tag,text)=>{const node=document.createElement(tag);node.textContent=text||'';return node};
 async function api(path,options={}){
  const res=await fetch(path,{credentials:'same-origin',cache:'no-store',...options});
+ // Access may redirect an API request to its HTML login page, which ends in
+ // HTTP 200. Trust only an actual redirect to the known same-origin login path;
+ // an unrelated HTML response must not be mistaken for an expired session.
+ if(res.status===200&&res.redirected&&res.headers.get('content-type')?.toLowerCase().includes('text/html')){
+  let accessLogin=false;
+  try{
+   const finalUrl=new URL(res.url);
+   accessLogin=finalUrl.origin===location.origin&&
+    (finalUrl.pathname==='/cdn-cgi/access/login'||finalUrl.pathname.startsWith('/cdn-cgi/access/login/'));
+  }catch{}
+  if(accessLogin){
+   const err=Error('نشست ورود منقضی شده است');err.status=401;throw err;
+  }
+ }
  let data;try{data=await res.json()}catch{
   // Access/session gateways may return an HTML login/denial page instead of JSON.
   // Preserve the HTTP status so compose errors remain distinct from outages.
