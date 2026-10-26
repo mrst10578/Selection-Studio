@@ -31,13 +31,15 @@ const e=(tag,text)=>{const node=document.createElement(tag);node.textContent=tex
 async function api(path,options={}){
  const res=await fetch(path,{credentials:'same-origin',cache:'no-store',...options});
  // Access may redirect an API request to its HTML login page, which ends in
- // HTTP 200. Trust only an actual redirect to the known same-origin login path;
- // an unrelated HTML response must not be mistaken for an expired session.
- if(res.status===200&&res.redirected&&res.headers.get('content-type')?.toLowerCase().includes('text/html')){
+ // HTTP 200. Require the known same-origin login URL *and* a changed final URL.
+ // Some intercepted/embedded responses do not reliably set Response.redirected;
+ // an unrelated HTML response at the original API URL must remain a parse error.
+ if(res.status===200&&res.headers.get('content-type')?.toLowerCase().includes('text/html')){
   let accessLogin=false;
   try{
    const finalUrl=new URL(res.url);
-   accessLogin=finalUrl.origin===location.origin&&
+   const requestedUrl=new URL(path,location.href);
+   accessLogin=finalUrl.origin===location.origin&&finalUrl.href!==requestedUrl.href&&
     (finalUrl.pathname==='/cdn-cgi/access/login'||finalUrl.pathname.startsWith('/cdn-cgi/access/login/'));
   }catch{}
   if(accessLogin){
