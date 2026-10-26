@@ -1650,6 +1650,21 @@ test('Access login redirect ending in HTML 200 asks for sign-in without exportin
  }));
  page.on('download',()=>downloads++);
  await page.goto('/review-console/composer-studio.html');
+ // Capture the final response URL and redirect flag from the intercepted 302.
+ page.on('console',msg=>{if(msg.text().startsWith('ACCESS_REDIRECT_PROBE'))console.log(msg.text());});
+ await page.evaluate(()=>{
+  const originalFetch=window.fetch.bind(window);
+  window.fetch=async (...args)=>{
+   const response=await originalFetch(...args);
+   if(String(args[0]).includes('/api/v1/bank/exams/compose')){
+    console.log('ACCESS_REDIRECT_PROBE '+JSON.stringify({
+     status:response.status,url:response.url,redirected:response.redirected,
+     contentType:response.headers.get('content-type')
+    }));
+   }
+   return response;
+  };
+ });
  await page.locator('#approvedList button').first().click();
  const preview=page.locator('#previewExam'),notice=page.locator('#composerNotice');
  await preview.focus();
