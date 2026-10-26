@@ -1564,3 +1564,40 @@ test('403 compose authorization stays distinct from retryable 5xx and never expo
  expect(deniedRequests).toBe(2);
  expect(downloaded).toBe(false);
 });
+
+test('401 expired compose session asks for operator sign-in without exporting',async({page})=>{
+ await mock(page);
+ let deniedRequests=0,downloaded=false;
+ await page.route('**/api/v1/bank/exams/compose',route=>{
+  deniedRequests++;
+  return route.fulfill({
+   status:401,contentType:'application/json',body:'{"error":"COMPOSE_SESSION_EXPIRED_INTERNAL"}'
+  });
+ });
+ page.on('download',()=>{downloaded=true;});
+ await page.goto('/review-console/composer-studio.html');
+ await page.locator('#approvedList button').first().click();
+ const notice=page.locator('#composerNotice');
+ const preview=page.locator('#previewExam');
+ await preview.focus();
+ await page.keyboard.press('Enter');
+ await expect(notice).toContainText('نشست ورود منقضی شده است');
+ await expect(notice).toContainText('دوباره وارد حساب اپراتور شو');
+ await expect(notice).toHaveAttribute('data-state','error');
+ await expect(notice).not.toContainText('COMPOSE_SESSION_EXPIRED_INTERNAL');
+ await expect(notice).not.toContainText('موقتاً ناموفق');
+ await expect(notice).not.toContainText('اجازه ساخت خروجی آزمون را ندارد');
+ await expect(page.locator('#examPreviewDialog')).not.toBeVisible();
+ await expect(page.locator('#examFingerprint')).toHaveText('شناسه نسخه خروجی پس از ساخت نمایش داده می‌شود.');
+ await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
+ await expect(preview).toBeEnabled();
+ await expect(preview).toBeFocused();
+ const exportButton=page.locator('#exportJsonl');
+ await exportButton.focus();
+ await page.keyboard.press('Enter');
+ await expect(notice).toContainText('دوباره وارد حساب اپراتور شو');
+ await expect(exportButton).toBeEnabled();
+ await expect(exportButton).toBeFocused();
+ expect(deniedRequests).toBe(2);
+ expect(downloaded).toBe(false);
+});
