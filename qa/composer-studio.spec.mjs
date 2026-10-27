@@ -1925,3 +1925,33 @@ test.describe('operator bootstrap recovery',()=>{
  });
 
 });
+
+test('malformed successful exam manifest blocks export and fingerprint, then permits retry',async({page})=>{
+ await mock(page);
+ let attempts=0,downloads=0;
+ page.on('download',()=>downloads++);
+ await page.route('**/api/v1/bank/exams/compose',route=>{
+  const payload=route.request().postDataJSON();
+  attempts++;
+  return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
+   status:'draft_export_only',manifestHash:'f'.repeat(64),
+   manifest:{title:payload.title,publishable:false,answersIncluded:false,
+    items:attempts===1?[{index:1,question:null}]:
+     [{index:1,id:q1,revision:2,question:'مقدار ۲ چند است؟'}]}
+  })});
+ });
+ await page.goto('/review-console/composer-studio.html');
+ await page.locator('#approvedList button').first().click();
+ const exportButton=page.locator('#exportJsonl'),notice=page.locator('#composerNotice');
+ await exportButton.click();
+ await expect(notice).toContainText('پاسخ آزمون ناقص است');
+ await expect(page.locator('#examFingerprint')).toHaveText('شناسه نسخه خروجی پس از ساخت نمایش داده می‌شود.');
+ await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
+ await expect(exportButton).toBeEnabled();
+ expect(downloads).toBe(0);
+ const downloadEvent=page.waitForEvent('download');
+ await exportButton.click();
+ expect((await downloadEvent).suggestedFilename()).toBe('examforge-exam.jsonl');
+ await expect(page.locator('#examFingerprint')).toContainText('f'.repeat(64));
+ expect(attempts).toBe(2);
+});
