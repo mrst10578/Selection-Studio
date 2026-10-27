@@ -344,10 +344,13 @@ async function loadBank(append=false){
 async function manifest(){
  if(!state.selected.length)throw Error('سؤالی انتخاب نشده است');
  const requestedVersion=compositionVersion;
+ // Capture the operator's exact draft options before awaiting the server.
+ const requestedTitle=$('examTitle').value;
+ const requestedAnswers=$('includeExamAnswers').checked;
  // A previous successful fingerprint must never appear valid after a failed revalidation.
  $('examFingerprint').textContent=fingerprintPlaceholder;
  const data=await api('/api/v1/bank/exams/compose',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-  title:$('examTitle').value,includeAnswers:$('includeExamAnswers').checked,
+  title:requestedTitle,includeAnswers:requestedAnswers,
   questionIds:state.selected.map(x=>x.id),sourceRevisions:state.selected.map(x=>x.revision)
  })});
  // An operator may edit the draft while the network request is in flight.
@@ -357,12 +360,14 @@ async function manifest(){
  // A successful HTTP response is not proof that the export payload is usable.
  // Validate before showing a fingerprint, previewing, printing or downloading.
  const exam=data.manifest;
- if(typeof exam.title!=='string'||!exam.title.trim()||!Array.isArray(exam.items)||
+ if(typeof exam.title!=='string'||!exam.title.trim()||exam.title!==requestedTitle.trim()||
+    exam.answersIncluded!==requestedAnswers||!Array.isArray(exam.items)||
     exam.items.length!==state.selected.length||!exam.items.every((item,index)=>
      item&&item.index===index+1&&item.id===state.selected[index].id&&
      Number.isSafeInteger(item.revision)&&item.revision===state.selected[index].revision&&
      typeof item.question==='string'&&item.question.trim()&&
-     (!('answer'in item)||typeof item.answer==='string')))
+     Object.prototype.hasOwnProperty.call(item,'answer')===requestedAnswers&&
+     (!requestedAnswers||(typeof item.answer==='string'&&item.answer.trim()))))
   throw Error('پاسخ آزمون ناقص است؛ هیچ پیش‌نمایش یا خروجی ساخته نشد. دوباره تلاش کن.');
  if(data.manifestHash!==undefined&&!/^[a-f0-9]{64}$/i.test(data.manifestHash))throw Error('شناسه نسخه خروجی نامعتبر است');
  $('examFingerprint').textContent=data.manifestHash?'اثر انگشت نسخه ثبت‌شده: '+data.manifestHash:'خروجی آزمایشی فاقد شناسه سرور';
