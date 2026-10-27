@@ -1402,7 +1402,7 @@ test('refresh warns about stale selected revisions and requires deliberate resel
   });
   return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
    status:'draft_export_only',
-   manifest:{title:payload.title,publishable:false,items:[{index:1,question:'سؤال با نسخه جدید'}]}
+   manifest:{title:payload.title,publishable:false,items:[{index:1,id:q1,revision:payload.sourceRevisions[0],question:'سؤال با نسخه جدید'}]}
   })});
  });
  await page.goto('/review-console/composer-studio.html');
@@ -1954,4 +1954,38 @@ test('malformed successful exam manifest blocks export and fingerprint, then per
  expect((await downloadEvent).suggestedFilename()).toBe('examforge-exam.jsonl');
  await expect(page.locator('#examFingerprint')).toContainText('f'.repeat(64));
  expect(attempts).toBe(2);
+});
+
+
+test('compose rejects mismatched question IDs and revisions before any download, then allows retry',async({page})=>{
+ await mock(page);
+ let attempts=0,downloads=0;
+ page.on('download',()=>downloads++);
+ await page.route('**/api/v1/bank/exams/compose',route=>{
+  const payload=route.request().postDataJSON();
+  attempts++;
+  const item={index:1,id:payload.questionIds[0],revision:payload.sourceRevisions[0],question:'مقدار ۲ چند است؟'};
+  if(attempts===1)item.id=q2;
+  if(attempts===2)item.revision++;
+  return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
+   status:'draft_export_only',manifestHash:'f'.repeat(64),
+   manifest:{title:payload.title,publishable:false,answersIncluded:payload.includeAnswers,items:[item]}
+  })});
+ });
+ await page.goto('/review-console/composer-studio.html');
+ await page.locator('#approvedList button').first().click();
+ const exportButton=page.locator('#exportJsonl'),notice=page.locator('#composerNotice');
+ for(let i=0;i<2;i++){
+  await exportButton.click();
+  await expect(notice).toContainText('پاسخ آزمون ناقص است');
+  await expect(page.locator('#examFingerprint')).toHaveText('شناسه نسخه خروجی پس از ساخت نمایش داده می‌شود.');
+  await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
+  await expect(exportButton).toBeEnabled();
+  expect(downloads).toBe(0);
+ }
+ const downloadEvent=page.waitForEvent('download');
+ await exportButton.click();
+ expect((await downloadEvent).suggestedFilename()).toBe('examforge-exam.jsonl');
+ await expect(page.locator('#examFingerprint')).toContainText('f'.repeat(64));
+ expect(attempts).toBe(3);
 });
