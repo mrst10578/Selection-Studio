@@ -1,6 +1,6 @@
 import {exportExamHTML,exportExamJSONL} from '../engine/test-composer.js';
 const $=id=>document.getElementById(id);
-const state={bank:[],selected:[],nextCursor:null,bankFilterKey:'',bankRequestSeq:0,seenBankCursors:new Set(),bankLoading:false,bankLoadError:false,ready:false,composeBusy:false};
+const state={bank:[],selected:[],nextCursor:null,bankFilterKey:'',bankRequestSeq:0,seenBankCursors:new Set(),emptyContinuationPages:0,bankLoading:false,bankLoadError:false,ready:false,composeBusy:false};
 let renderedSelectedKey=null;
 const fingerprintPlaceholder='شناسه نسخه خروجی پس از ساخت نمایش داده می‌شود.';
 let compositionVersion=0;
@@ -216,7 +216,7 @@ function invalidateBankSearch(){
  // keystrokes after the first edit must not replace selection buttons or
  // the empty bank placeholder, which disrupts focus and wastes DOM work.
  const needsRender=Boolean(state.bank.length||state.nextCursor||state.bankLoading||state.bankLoadError);
- ++state.bankRequestSeq;state.bank=[];state.nextCursor=null;state.bankFilterKey='';state.bankLoading=false;state.bankLoadError=false;state.seenBankCursors.clear();
+ ++state.bankRequestSeq;state.bank=[];state.nextCursor=null;state.bankFilterKey='';state.bankLoading=false;state.bankLoadError=false;state.seenBankCursors.clear();state.emptyContinuationPages=0;
  if(needsRender)render();
 }
 async function loadBank(append=false){
@@ -231,11 +231,11 @@ async function loadBank(append=false){
  const previousCount=state.bank.length;
  // A same-filter refresh must not discard visible results if the network fails.
  const previousSearch=!append&&state.bankFilterKey===key?{
-  bank:state.bank,nextCursor:state.nextCursor,seenBankCursors:new Set(state.seenBankCursors)
+  bank:state.bank,nextCursor:state.nextCursor,seenBankCursors:new Set(state.seenBankCursors),emptyContinuationPages:state.emptyContinuationPages
  }:null;
  state.bankLoading=true;state.bankLoadError=false;state.bankFilterKey=key;
  // Keep same-filter results visible during refresh; only clear them when filters change.
- if(!append){if(!previousSearch)state.bank=[];state.nextCursor=null;state.seenBankCursors.clear()}
+ if(!append){if(!previousSearch)state.bank=[];state.nextCursor=null;state.seenBankCursors.clear();state.emptyContinuationPages=0}
  notice(append?'در حال بارگذاری سؤال‌های بیشتر…':'در حال جست‌وجوی سؤال‌های تأییدشده…');
  render();
  const qs=new URLSearchParams();
@@ -263,7 +263,7 @@ async function loadBank(append=false){
   if(invalidCursor){state.nextCursor=null;state.seenBankCursors.clear()}
   if(previousSearch){
    state.bank=previousSearch.bank;state.nextCursor=previousSearch.nextCursor;
-   state.seenBankCursors=previousSearch.seenBankCursors;
+   state.seenBankCursors=previousSearch.seenBankCursors;state.emptyContinuationPages=previousSearch.emptyContinuationPages;
   }
   state.bankLoadError=!append&&!state.bank.length;
   state.bankLoading=false;render();
@@ -306,10 +306,13 @@ async function loadBank(append=false){
  if(append)state.seenBankCursors.add(cursor);
  const returnedCursor=typeof result.nextCursor==='string'&&result.nextCursor?result.nextCursor:null;
  const repeatedCursor=returnedCursor!==null&&state.seenBankCursors.has(returnedCursor);
- // A continuation containing no new IDs must not keep offering fresh cursors
- // indefinitely (e.g. a gateway replaying already-seen bank rows).
- const noProgressPage=append&&uniqueIncoming.length===0&&returnedCursor!==null;
- state.nextCursor=repeatedCursor||noProgressPage?null:returnedCursor;
+ // Duplicate-only pages indicate a broken gateway; a genuinely empty page
+ // may be a valid gap. Permit one manual continuation, never an endless chain.
+ const noProgressPage=append&&incoming.length>0&&uniqueIncoming.length===0&&returnedCursor!==null;
+ const emptyContinuation=append&&incoming.length===0&&returnedCursor!==null;
+ state.emptyContinuationPages=emptyContinuation?state.emptyContinuationPages+1:0;
+ const tooManyEmptyPages=state.emptyContinuationPages>=2;
+ state.nextCursor=repeatedCursor||noProgressPage||tooManyEmptyPages?null:returnedCursor;
  // Selected questions survive pagination and text filters, but not project switches.
  state.selected=state.selected.filter(x=>!project||x.projectId===project);
  state.bankLoading=false;render();
@@ -328,6 +331,8 @@ async function loadBank(append=false){
  const unchecked=state.selected.filter(question=>!visibleIds.has(question.id)).length;
  if(repeatedCursor)notice('نشانگر صفحه‌بندی تکراری دریافت شد؛ بارگذاری بیشتر متوقف شد. برای تلاش مجدد جست‌وجو را بازخوانی کن.',true);
  else if(noProgressPage)notice('صفحه بعدی سؤال تازه‌ای نداشت؛ بارگذاری بیشتر متوقف شد. برای بررسی مجدد «جست‌وجو و بازخوانی» را بزن. سؤال‌های انتخاب‌شده حفظ شدند.',true);
+ else if(tooManyEmptyPages)notice('دو صفحه پیاپی خالی بود؛ برای جلوگیری از درخواست‌های بی‌نتیجه بارگذاری متوقف شد. «جست‌وجو و بازخوانی» را بزن.',true);
+ else if(emptyContinuation)notice('این صفحه سؤال تازه‌ای نداشت؛ برای بررسی صفحه بعد «نمایش سؤال‌های بیشتر» را بزن.');
  else if(!warnOnStaleSelection(unchecked))notice(state.bank.length+' سؤال تأییدشده در فهرست است.'+
   (state.nextCursor?' برای موارد قدیمی‌تر «نمایش سؤال‌های بیشتر» را بزن.':'')+
   (unchecked?' '+new Intl.NumberFormat('fa-IR').format(unchecked)+' سؤال انتخاب‌شده در نتایج فعلی نیست و نسخه آن در این بازخوانی بررسی نشد.':'')+
