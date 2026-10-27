@@ -354,6 +354,14 @@ async function manifest(){
  // Never display, preview or export a response for a superseded draft.
  if(requestedVersion!==compositionVersion)throw Error('آزمون هنگام ساخت خروجی تغییر کرد؛ برای نسخه جدید دوباره پیش‌نمایش یا خروجی بگیر.');
  if(data.status!=='draft_export_only'||data.manifest?.publishable!==false)throw Error('سرور خروجی امن برنگرداند');
+ // A successful HTTP response is not proof that the export payload is usable.
+ // Validate before showing a fingerprint, previewing, printing or downloading.
+ const exam=data.manifest;
+ if(typeof exam.title!=='string'||!exam.title.trim()||!Array.isArray(exam.items)||
+    exam.items.length!==state.selected.length||!exam.items.every((item,index)=>
+     item&&item.index===index+1&&typeof item.question==='string'&&item.question.trim()&&
+     (!('answer'in item)||typeof item.answer==='string')))
+  throw Error('پاسخ آزمون ناقص است؛ هیچ پیش‌نمایش یا خروجی ساخته نشد. دوباره تلاش کن.');
  if(data.manifestHash!==undefined&&!/^[a-f0-9]{64}$/i.test(data.manifestHash))throw Error('شناسه نسخه خروجی نامعتبر است');
  $('examFingerprint').textContent=data.manifestHash?'اثر انگشت نسخه ثبت‌شده: '+data.manifestHash:'خروجی آزمایشی فاقد شناسه سرور';
  return data.manifestHash?{...data.manifest,fingerprint:data.manifestHash}:data.manifest;
