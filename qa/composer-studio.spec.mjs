@@ -103,9 +103,13 @@ test('approved bank pagination keeps selection, deduplicates rows, and resets cu
  await expect(page.locator('#approvedList button')).toHaveCount(1);
  await expect(page.locator('#loadMoreBank')).toBeVisible();
  await page.locator('#approvedList button').first().click();
+ // A selected row must stay pressed when pagination re-renders the bank.
+ await expect(page.locator('#approvedList button').first()).toHaveAttribute('aria-pressed','true');
  await page.locator('#loadMoreBank').focus();
  await page.keyboard.press('Enter');
  await expect(page.locator('#approvedList button')).toHaveCount(2);
+ await expect(page.locator('#approvedList button').first()).toHaveAttribute('aria-pressed','true');
+ await expect(page.locator('#approvedList button').nth(1)).toHaveAttribute('aria-pressed','false');
  await expect(page.locator('#approvedList button').nth(1)).toBeFocused();
  await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
  await expect(page.locator('#loadMoreBank')).toBeHidden();
@@ -115,6 +119,7 @@ test('approved bank pagination keeps selection, deduplicates rows, and resets cu
  await expect(page.locator('#loadMoreBank')).toBeHidden();
  await page.locator('#loadBank').click();
  await expect(page.locator('#approvedList button')).toHaveCount(1);
+ await expect(page.locator('#approvedList button').first()).toHaveAttribute('aria-pressed','false');
  await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
  expect(seen.at(-1)).toEqual({query:'دیگر',cursor:null});
 });
