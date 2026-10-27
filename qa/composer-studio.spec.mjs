@@ -1402,7 +1402,7 @@ test('refresh warns about stale selected revisions and requires deliberate resel
   });
   return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
    status:'draft_export_only',
-   manifest:{title:payload.title,publishable:false,items:[{index:1,id:q1,revision:payload.sourceRevisions[0],question:'سؤال با نسخه جدید'}]}
+   manifest:{title:payload.title,publishable:false,answersIncluded:false,items:[{index:1,id:q1,revision:payload.sourceRevisions[0],question:'سؤال با نسخه جدید'}]}
   })});
  });
  await page.goto('/review-console/composer-studio.html');
@@ -1552,7 +1552,7 @@ test('export fingerprint clears immediately when title, answers, order or select
   return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
    status:'draft_export_only',manifestHash:fingerprint,
    manifest:{title:payload.title,publishable:false,answersIncluded:payload.includeAnswers,
-    items:payload.questionIds.map((id,i)=>({index:i+1,id,revision:payload.sourceRevisions[i],question:'سؤال نمونه'}))}
+    items:payload.questionIds.map((id,i)=>({index:i+1,id,revision:payload.sourceRevisions[i],question:'سؤال نمونه',...(payload.includeAnswers?{answer:'پاسخ نمونه'}:{})}))}
   })});
  });
  await page.goto('/review-console/composer-studio.html');
@@ -1988,4 +1988,47 @@ test('compose rejects mismatched question IDs and revisions before any download,
  expect((await downloadEvent).suggestedFilename()).toBe('examforge-exam.jsonl');
  await expect(page.locator('#examFingerprint')).toContainText('f'.repeat(64));
  expect(attempts).toBe(3);
+});
+
+
+test('compose rejects mismatched title and answer policy, then exports only the corrected manifest',async({page})=>{
+ await mock(page);
+ let attempts=0,downloads=0;
+ page.on('download',()=>downloads++);
+ await page.route('**/api/v1/bank/exams/compose',route=>{
+  const payload=route.request().postDataJSON();
+  attempts++;
+  const item={index:1,id:payload.questionIds[0],revision:payload.sourceRevisions[0],question:'مقدار ۲ چند است؟'};
+  const manifest={title:payload.title.trim(),publishable:false,answersIncluded:payload.includeAnswers,items:[item]};
+  if(attempts===1)manifest.title='عنوان اشتباه از سرور';
+  if(attempts===2)manifest.answersIncluded=true;
+  if(attempts===3)item.answer='پاسخ ناخواسته';
+  if(attempts===5)item.answer='دو';
+  return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
+   status:'draft_export_only',manifestHash:'a'.repeat(64),manifest
+  })});
+ });
+ await page.goto('/review-console/composer-studio.html');
+ await page.locator('#approvedList button').first().click();
+ const exportButton=page.locator('#exportJsonl'),notice=page.locator('#composerNotice');
+ const fingerprint=page.locator('#examFingerprint');
+ for(let i=0;i<3;i++){
+  await exportButton.click();
+  await expect(notice).toContainText('پاسخ آزمون ناقص است');
+  await expect(fingerprint).toHaveText('شناسه نسخه خروجی پس از ساخت نمایش داده می‌شود.');
+  await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
+  await expect(exportButton).toBeEnabled();
+  expect(downloads).toBe(0);
+ }
+ // The server must also supply an answer for every item when answers were requested.
+ await page.locator('#includeExamAnswers').check();
+ await exportButton.click();
+ await expect(notice).toContainText('پاسخ آزمون ناقص است');
+ await expect(fingerprint).toHaveText('شناسه نسخه خروجی پس از ساخت نمایش داده می‌شود.');
+ expect(downloads).toBe(0);
+ const downloadEvent=page.waitForEvent('download');
+ await exportButton.click();
+ expect((await downloadEvent).suggestedFilename()).toBe('examforge-exam.jsonl');
+ await expect(fingerprint).toContainText('a'.repeat(64));
+ expect(attempts).toBe(5);
 });
