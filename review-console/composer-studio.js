@@ -359,7 +359,9 @@ async function manifest(){
  const exam=data.manifest;
  if(typeof exam.title!=='string'||!exam.title.trim()||!Array.isArray(exam.items)||
     exam.items.length!==state.selected.length||!exam.items.every((item,index)=>
-     item&&item.index===index+1&&typeof item.question==='string'&&item.question.trim()&&
+     item&&item.index===index+1&&item.id===state.selected[index].id&&
+     Number.isSafeInteger(item.revision)&&item.revision===state.selected[index].revision&&
+     typeof item.question==='string'&&item.question.trim()&&
      (!('answer'in item)||typeof item.answer==='string')))
   throw Error('پاسخ آزمون ناقص است؛ هیچ پیش‌نمایش یا خروجی ساخته نشد. دوباره تلاش کن.');
  if(data.manifestHash!==undefined&&!/^[a-f0-9]{64}$/i.test(data.manifestHash))throw Error('شناسه نسخه خروجی نامعتبر است');
