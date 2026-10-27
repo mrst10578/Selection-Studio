@@ -506,13 +506,16 @@ test('transient same-filter refresh failure keeps the last bank and open validat
    {status:200,contentType:'application/json',body:JSON.stringify({questions:[row],nextCursor:null})}:
    {status:503,contentType:'application/json',body:'{"error":"SERVICE_UNAVAILABLE"}'});
  });
- await page.route('**/api/v1/bank/exams/compose',route=>route.fulfill({
-  status:200,contentType:'application/json',body:JSON.stringify({
-   status:'draft_export_only',manifestHash:hash,
-   manifest:{title:'آزمون',publishable:false,answersIncluded:false,
-    items:[{index:1,id:q1,revision:2,question:'سؤال تأییدشده'}]}
-  })
- }));
+ await page.route('**/api/v1/bank/exams/compose',route=>{
+  const payload=route.request().postDataJSON();
+  return route.fulfill({
+   status:200,contentType:'application/json',body:JSON.stringify({
+    status:'draft_export_only',manifestHash:hash,
+    manifest:{title:payload.title.trim(),publishable:false,answersIncluded:false,
+     items:[{index:1,id:q1,revision:2,question:'سؤال تأییدشده'}]}
+   })
+  });
+ });
  await page.goto('/review-console/composer-studio.html');
  const bank=page.locator('#approvedList button'),selected=page.locator('#selectedList .composer-selection');
  await expect(bank).toHaveCount(1);
