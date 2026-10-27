@@ -437,8 +437,14 @@ async function bootstrap(){
   await safe(async()=>{
    const session=await api('/api/session');if(session.role!=='operator')throw Error('ورود به حساب اپراتور لازم است');
    const projects=await api('/api/v1/projects');
+   // Fail closed on malformed successful responses. Never unlock bank search
+   // with a partial project list or leave half-populated options on screen.
+   if(!Array.isArray(projects?.projects)||!projects.projects.every(p=>
+    p&&typeof p.id==='string'&&p.id.trim()&&typeof p.name==='string'&&p.name.trim()))
+    throw Error('فهرست پروژه‌ها نامعتبر است؛ برای تلاش دوباره دکمه بررسی ورود و دسترسی را بزن.');
    const select=$('composerProject');select.replaceChildren(new Option('همه پروژه‌های خودم',''));
-   for(const p of projects.projects||[]){select.add(new Option(p.name,p.id));projectNames.set(p.id,p.name)}
+   projectNames.clear();
+   for(const p of projects.projects){select.add(new Option(p.name,p.id));projectNames.set(p.id,p.name)}
    select.disabled=false;state.ready=true;await loadBank();
   });
  }finally{
