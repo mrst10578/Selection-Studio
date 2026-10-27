@@ -265,6 +265,25 @@ async function loadBank(append=false){
  }
  catch(error){
   if(seq!==state.bankRequestSeq)return;
+  // A 403 can mean the operator's project access was revoked while a bank
+  // request was pending. Never leave previously authorized rows, selections
+  // or project names visible after the server denies bank access.
+  if(error?.status===403){
+   ++state.bankRequestSeq;
+   state.ready=false;state.bank=[];state.selected=[];state.nextCursor=null;
+   state.bankFilterKey='';state.bankLoading=false;state.bankLoadError=true;
+   state.seenBankCursors.clear();state.emptyContinuationPages=0;
+   projectNames.clear();
+   const select=$('composerProject');
+   select.replaceChildren(new Option('دسترسی نیاز به بررسی دارد',''));
+   select.disabled=true;
+   const retry=$('retryComposerBootstrap');
+   retry.hidden=false;retry.disabled=false;
+   render();
+   notice('مجوز مشاهده بانک سؤال تأیید نشد؛ نتایج و انتخاب‌ها پاک شدند. پس از بررسی دسترسی، «بررسی ورود و دسترسی» را بزن.',true);
+   if((focusFromSearch||focusFromMore)&&document.activeElement===document.body)retry.focus();
+   return;
+  }
   // A server-rejected continuation cannot succeed on retry. Keep the existing
   // questions and selections, but require a fresh search for a new cursor.
   const invalidCursor=append&&error?.status===400&&error?.message==='INVALID_CURSOR';
