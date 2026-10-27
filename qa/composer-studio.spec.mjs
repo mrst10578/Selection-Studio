@@ -177,6 +177,68 @@ test('bank pagination stops when a fresh cursor repeats only existing questions'
  expect(cursors).toEqual([null,'cursor-a',null]);
 });
 
+test('a genuinely empty bank continuation can lead to newer questions',async({page})=>{
+ const row=(id,text)=>({id,projectId:P,revision:1,questionText:text,answerText:'پاسخ',sourceNumber:1});
+ const cursors=[];
+ await page.route('**/api/v1/projects',route=>route.fulfill({status:200,contentType:'application/json',
+  body:JSON.stringify({projects:[{id:P,name:'زیست'}]})}));
+ await page.route('**/api/v1/bank/questions**',route=>{
+  const cursor=new URL(route.request().url()).searchParams.get('cursor');
+  cursors.push(cursor);
+  const data=cursor==='cursor-a'?{questions:[],nextCursor:'cursor-b'}:
+   cursor==='cursor-b'?{questions:[row(q2,'سؤال دوم')],nextCursor:null}:
+   {questions:[row(q1,'سؤال اول')],nextCursor:'cursor-a'};
+  return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(data)});
+ });
+ await page.goto('/review-console/composer-studio.html');
+ const bank=page.locator('#approvedList button'),more=page.locator('#loadMoreBank');
+ await expect(bank).toHaveCount(1);
+ await bank.first().click();
+ await more.focus();
+ await page.keyboard.press('Enter');
+ await expect(more).toBeVisible();
+ await expect(more).toBeFocused();
+ await expect(page.locator('#composerNotice')).toContainText('این صفحه سؤال تازه‌ای نداشت');
+ await expect(bank).toHaveCount(1);
+ await more.click();
+ await expect(bank).toHaveCount(2);
+ await expect(bank.nth(1)).toBeFocused();
+ await expect(more).toBeHidden();
+ await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
+ expect(cursors).toEqual([null,'cursor-a','cursor-b']);
+});
+
+test('two consecutive empty bank continuations stop without requesting a third',async({page})=>{
+ const row={id:q1,projectId:P,revision:1,questionText:'سؤال اول',answerText:'پاسخ',sourceNumber:1};
+ const cursors=[];
+ await page.route('**/api/v1/projects',route=>route.fulfill({status:200,contentType:'application/json',
+  body:JSON.stringify({projects:[{id:P,name:'زیست'}]})}));
+ await page.route('**/api/v1/bank/questions**',route=>{
+  const cursor=new URL(route.request().url()).searchParams.get('cursor');
+  cursors.push(cursor);
+  const data=cursor?{questions:[],nextCursor:cursor==='cursor-a'?'cursor-b':'cursor-c'}:
+   {questions:[row],nextCursor:'cursor-a'};
+  return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(data)});
+ });
+ await page.goto('/review-console/composer-studio.html');
+ const bank=page.locator('#approvedList button'),more=page.locator('#loadMoreBank'),search=page.locator('#loadBank');
+ await expect(bank).toHaveCount(1);
+ await bank.first().click();
+ await more.click();
+ await expect(more).toBeVisible();
+ await more.focus();
+ await page.keyboard.press('Enter');
+ await expect(more).toBeHidden();
+ await expect(search).toBeFocused();
+ await expect(page.locator('#composerNotice')).toContainText('دو صفحه پیاپی خالی بود');
+ await expect(bank).toHaveCount(1);
+ await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
+ expect(cursors).toEqual([null,'cursor-a','cursor-b']);
+ await search.click();
+ await expect(more).toBeVisible();
+ expect(cursors).toEqual([null,'cursor-a','cursor-b',null]);
+});
+
 test('repeated pagination cursors stop safely, preserve selection, and reset on search',async({page})=>{
  const row=(id,text)=>({id,projectId:P,revision:1,questionText:text,answerText:'پاسخ',sourceNumber:1});
  const requests=[];
