@@ -573,7 +573,7 @@ test('failed pagination keeps existing questions and restores keyboard focus',as
  await expect(more).toBeFocused();
 });
 
-test('bank pagination authentication failures preserve selection and hide gateway details',async({page})=>{
+test('bank pagination 401 retains draft but 403 clears revoked access without gateway details',async({page})=>{
  const row={id:q1,projectId:P,revision:1,questionText:'سؤال موجود',answerText:'پاسخ',sourceNumber:1};
  let deniedStatus=401,deniedRequests=0;
  await page.route('**/api/v1/projects',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({projects:[{id:P,name:'زیست'}]})}));
@@ -589,7 +589,7 @@ test('bank pagination authentication failures preserve selection and hide gatewa
  const bank=page.locator('#approvedList button'),more=page.locator('#loadMoreBank'),notice=page.locator('#composerNotice');
  await expect(bank).toHaveCount(1);
  await bank.first().click();
- for(const [status,guidance] of [[401,'نشست ورود منقضی شده است'],[403,'این حساب اجازه دسترسی به این بخش را ندارد']]){
+ for(const [status,guidance] of [[401,'نشست ورود منقضی شده است'],[403,'مجوز مشاهده بانک سؤال تأیید نشد']]){
   deniedStatus=status;
   await more.focus();
   await page.keyboard.press('Enter');
@@ -598,11 +598,20 @@ test('bank pagination authentication failures preserve selection and hide gatewa
   await expect(notice).not.toContainText('INTERNAL_SESSION_TOKEN');
   await expect(notice).not.toContainText('PRIVATE_ACCESS_POLICY');
   await expect(notice).not.toContainText('موقتاً ناموفق');
-  await expect(bank).toHaveCount(1);
-  await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
-  await expect(more).toBeVisible();
-  await expect(more).toBeEnabled();
-  await expect(more).toBeFocused();
+  if(status===401){
+   await expect(bank).toHaveCount(1);
+   await expect(page.locator('#selectedList .composer-selection')).toHaveCount(1);
+   await expect(more).toBeVisible();
+   await expect(more).toBeEnabled();
+   await expect(more).toBeFocused();
+  }else{
+   await expect(bank).toHaveCount(0);
+   await expect(page.locator('#selectedList .composer-selection')).toHaveCount(0);
+   await expect(more).toBeHidden();
+   await expect(page.locator('#composerProject')).toBeDisabled();
+   await expect(page.locator('#retryComposerBootstrap')).toBeVisible();
+   await expect(page.locator('#exportJsonl')).toBeDisabled();
+  }
  }
  expect(deniedRequests).toBe(2);
 });
