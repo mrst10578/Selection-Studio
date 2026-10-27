@@ -12,17 +12,31 @@ export function installWindowsMetadataShortcuts({
   const chapterDigit=d=>{
     if(prefix==="1"){
       const n=Number("1"+d); clear();
-      if(n>=10&&n<=chapterMax) commitChapter(n); else toast("فصل فقط ۱ تا ۱۲","error");
+      if(n>=10&&n<=chapterMax) commitChapter(n); else toast("فصل باید بین ۱ تا "+chapterMax+" باشد","error");
       return;
     }
     if(d==="1"&&chapterMax>=10){
-      prefix="1"; timer=setTimeout(()=>{clear();commitChapter(1)},560);
-      toast("فصل ۱ — برای ۱۰/۱۱/۱۲ رقم دوم را بزن","shortcut"); return;
+      const startingFocus=document.activeElement;
+      prefix="1"; timer=setTimeout(()=>{
+        const shouldCommit=enabled()&&document.activeElement===startingFocus&&!isTypingTarget(document.activeElement);
+        clear();
+        if(shouldCommit)commitChapter(1);
+      },560);
+      toast("فصل ۱ — برای ۱۰ تا "+chapterMax+" رقم دوم را بزن","shortcut"); return;
     }
     clear(); commitChapter(Number(d));
   };
   function handler(e){
-    if(!enabled()||isTypingTarget(e.target))return;
+    if(!enabled()||isTypingTarget(e.target)){if(prefix)clear();return}
+    const digit=e.code.match(/^Digit([0-9])$/);
+    // Auto-repeat of Ctrl+1 must not be mistaken for an intentional second digit (11).
+    if(e.repeat&&digit&&e.ctrlKey&&!e.altKey&&!e.shiftKey&&!e.metaKey){e.preventDefault();return}
+    // After Ctrl+1, accept a plain second digit as promised by the on-screen hint.
+    if(prefix==="1"&&digit&&!e.ctrlKey&&!e.altKey&&!e.shiftKey&&!e.metaKey){
+      e.preventDefault();chapterDigit(digit[1]);return;
+    }
+    // A different shortcut cancels the pending chapter rather than committing 1 later.
+    if(prefix&&!(digit&&e.ctrlKey&&!e.altKey&&!e.shiftKey&&!e.metaKey))clear();
     const num=e.code.match(/^Numpad([1-4])$/);
     if(num&&!e.ctrlKey&&!e.altKey&&!e.shiftKey&&!e.metaKey){e.preventDefault();setCorrectOption?.(Number(num[1]));toast("کلید "+num[1],"shortcut");return}
     const f=e.code.match(/^F([1-5])$/);

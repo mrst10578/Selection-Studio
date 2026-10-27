@@ -11,28 +11,31 @@ function openDb(){
 }
 export async function putPreview(key,blob){
   const db=await openDb();
-  await new Promise((resolve,reject)=>{
-    const tx=db.transaction(STORE,"readwrite");
-    tx.objectStore(STORE).put(blob,key);
-    tx.oncomplete=resolve; tx.onerror=()=>reject(tx.error);
-  });
-  db.close();
+  try{
+    await new Promise((resolve,reject)=>{
+      const tx=db.transaction(STORE,"readwrite");
+      tx.objectStore(STORE).put(blob,key);
+      tx.oncomplete=resolve; tx.onerror=()=>reject(tx.error);
+    });
+  }finally{db.close()}
 }
 export async function getPreview(key){
   const db=await openDb();
-  const value=await new Promise((resolve,reject)=>{
-    const tx=db.transaction(STORE,"readonly");
-    const req=tx.objectStore(STORE).get(key);
-    req.onsuccess=()=>resolve(req.result||null); req.onerror=()=>reject(req.error);
-  });
-  db.close(); return value;
+  try{
+    return await new Promise((resolve,reject)=>{
+      const tx=db.transaction(STORE,"readonly");
+      const req=tx.objectStore(STORE).get(key);
+      req.onsuccess=()=>resolve(req.result||null); req.onerror=()=>reject(req.error);
+    });
+  }finally{db.close()}
 }
 export async function deletePreview(key){
   const db=await openDb();
-  await new Promise((resolve,reject)=>{
-    const tx=db.transaction(STORE,"readwrite");
-    tx.objectStore(STORE).delete(key);
-    tx.oncomplete=resolve; tx.onerror=()=>reject(tx.error);
-  });
-  db.close();
+  try{
+    await new Promise((resolve,reject)=>{
+      const tx=db.transaction(STORE,"readwrite");
+      tx.objectStore(STORE).delete(key);
+      tx.oncomplete=resolve; tx.onerror=()=>reject(tx.error);
+    });
+  }finally{db.close()}
 }

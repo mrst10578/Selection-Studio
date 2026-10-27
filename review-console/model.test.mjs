@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {ReviewModel} from "./model.js";
+import {ReviewModel,questionIssues} from "./model.js";
 import {filterTaxonomyEntries} from "../studio/taxonomy-data.js";
 
 const valid={id:"EXAM-Q001",source_question_number:1,subject:"PHY",grade:10,chapter:"01",unit:"01",difficulty:"level_2",correct_option:1,question_regions:[{page:1,bbox_norm:[0,0,1,1]}],answer_regions:[{page:1,bbox_norm:[0,0,1,1]}]};
@@ -31,4 +31,11 @@ test("taxonomy search finds matching unit names and keeps the current selection 
   const entries=[["01",{name_fa:"فصل اول",units:{"01":{name_fa:"گفتار نمونه"}}}],["02",{name_fa:"فصل دوم",units:{"01":{name_fa:"گفتار دیگر"}}}]];
   assert.deepEqual(filterTaxonomyEntries(entries,"نمونه").map(([id])=>id),["01"]);
   assert.deepEqual(filterTaxonomyEntries(entries,"ناموجود","02").map(([id])=>id),["02"]);
+});
+
+test("review validation checks every region of multi-part questions",()=>{
+ const good={...valid,question_regions:[{page:1,bbox_norm:[.1,.1,.4,.4]},{page:2,bbox_norm:[.2,.2,.6,.6]}]};
+ assert.deepEqual(questionIssues(good),[]);
+ assert.ok(questionIssues({...good,question_regions:[...good.question_regions,{page:2,bbox_norm:[.8,.8,.2,.2]}]}).includes("برش سؤال"));
+ assert.ok(questionIssues({...good,answer_regions:[]}).includes("برش پاسخ"));
 });

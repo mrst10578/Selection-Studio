@@ -1,0 +1,58 @@
+# ZH-81 | R2 private asset storage, initial isolated helper
+
+`cloudflare/private-assets.js` implements a constrained, dependency-free server-only R2 helper for private PDF, PNG, JPEG, WebP and small JSON assets.
+
+- Each asset key is namespaced under a **trusted authenticated actor hash**, never a browser-provided path. SHA-256 fingerprints address content and allow repeat uploads to reuse the same private object.
+- Validates declared MIME against magic bytes (or strictly parsed JSON). Caps inputs at 8 MiB; no direct public bucket links, public tokens, or external CDN.
+- `putPrivateAsset`, `readPrivateAsset`, and `privateAssetKey` are **not directly exposed as HTTP APIs**. These functions fail closed when the R2 binding is missing and require server-side identity before use.
+- `tests/private-assets.test.mjs` has three mocked-R2 unit tests: content validation, cross-actor isolation, deduplication and missing-binding failure.
+
+**Not yet operational:** In Cloudflare Zh St #2, account R2 lists return code 10042 (R2 activation required), and private bucket is not provisioned. The helper has not been wired to the authenticated user UI or D1 asset registry; no binding, retention automation, lifecycle, backup, download authorization API or migration has been deployed. Upstream question records remain unchanged. Real PDF and storage billing verification are final acceptance tasks.
+
+This partial source implementation does not justify marking ZH-81 Completed. Production must remain untouched.
+
+## 2026-10-14 infrastructure recheck
+
+The connected Zh2 Cloudflare account still returns API error `10042` (R2 has not been enabled) when listing R2 buckets. The Queues list succeeds but is empty. Pages Preview environment exposes the `SECURITY_DB` binding and the Access/OCR configuration key *names*, but no R2 bucket binding. The private file upload and OCR batch code therefore remain intentionally fail-closed rather than falling back to a public bucket or paid provider. Production bindings and deploy configuration were not changed.
+
+
+## 2026-10-15: storage budgets and operator-controlled tombstones
+
+The private asset API adds conservative, explicit usage caps, independent of R2 provider billing limits:
+
+- 24 active attachments and 64 MiB of logical attachment bytes per project.
+- 96 active attachments and 256 MiB per authenticated actor across their projects.
+- Each upload remains capped at 8 MiB. The D1 mutation **atomically rechecks** all four count/byte caps, rather than trusting a potentially stale preliminary count.
+- A full quota returns HTTP 429 `ASSET_QUOTA_EXCEEDED` before the R2 upload in normal cases. Concurrent race losers may have uploaded an R2 object before the atomic D1 guard rejects it; such objects are not served by the API and still require a future reconciliation sweep.
+- `DELETE /api/v1/projects/:projectId/assets/:digest?role=<role>` only **tombstones** the project metadata. The object is **not** deleted from R2 synchronously, because a content-addressed object may also be referenced by other projects and concurrent uploads. API returns `physicalCleanupPending:true`.
+- Deleting a question PDF that appears in **any saved revision**, including a now-deleted question, is rejected with HTTP 409 `SOURCE_PDF_REFERENCED_BY_QUESTION`. This avoids destroying original evidence and reviewer provenance.
+- The bank UI exposes an explicit per-file removal action with a confirmation prompt, and states clearly that physical cleanup has not yet happened. Role ownership and Cloudflare Access signature checks continue to apply.
+
+**Remaining infrastructure work:** R2 is not enabled on the Zh2 Cloudflare account. A scheduled private-R2 orphan/tombstone cleanup with a concurrency-safe grace period, storage reconciliation, durable upload reservation under repeated concurrency, and live billing/limit observation must be added before production. The local Node tests are not a substitute for authenticated preview E2E. No production deployment or merge is authorized.
+
+Security-audit hardening: authenticated upload, private download, and attachment tombstone now require a successful D1 `security_audit` insertion **before** moving private bytes or changing attachment state. Audit records contain only hashed actor, action, result and project/role; they do not include PDF data, prompts, JWTs, file hashes or email. If audit storage is missing, operations fail closed with 503. Node tests verify all three events and fail-closed uploads.
+
+
+## 2026-10-15 atomic deletion and idempotent re-upload
+
+The source-PDF tombstone now checks historical question revisions **inside the UPDATE statement itself**, not only as an earlier read; this closes the race in which a question revision is saved between the check and deletion. A deterministic test injects a new source-referencing revision at precisely this boundary and verifies HTTP 409 and intact metadata.
+
+Re-uploading a byte-identical, already active project attachment verifies the private R2 object by HEAD and returns a no-op `existing:true` even when the project quota is full. It does not consume a new slot. If the D1 registry exists but the private object has disappeared, the API returns HTTP 503 `ASSET_MISSING_IN_STORAGE` instead of falsely claiming success. A re-upload of a previously **tombstoned** attachment remains subject to quota. This logic is covered by Node regression tests. Physical R2 garbage collection remains intentionally unimplemented and must be designed to respect cross-project deduplication before enabling R2.
+
+
+## 2026-10-15 physical-storage quota hardening
+
+Logical project quotas count *active* attachments. Unlike project metadata quotas, the actor-wide 96-object / 256 MiB ceilings now count **all distinct actor-scoped R2 object keys ever registered**, including soft-deleted/tombstoned rows, because hiding a file from the project does not delete its R2 bytes. A duplicate blob shared across projects/roles counts just once in the actor-wide ledger. D1 checks this both before uploading and atomically in the registration INSERT to close concurrent uploads.
+
+This prevents repeated upload → tombstone cycles from evading actor storage budgets. **A soft delete does not reclaim actual storage or capacity** until an independently validated and concurrency-safe R2 garbage-collection process is implemented. Do not tell operators that merely removing an attachment frees their R2 quota. The conservative behavior deliberately favors bounded costs and historical evidence over automatic physical deletion. Unit tests cover deleted object count and deleted byte limits.
+
+
+## 2026-10-15: R2 is enabled; private Preview bucket created
+
+The account owner activated R2 on Cloudflare **Zh2**. The R2 bucket list then succeeded. Created and independently verified `selection-studio-question-assets-preview` (Standard, West Europe/WEUR) and connected the **Preview only** Pages environment's `QUESTION_ASSETS` R2 binding. The existing Preview D1 `SECURITY_DB` and identity/OCR environment variable names/types remained in place, and Production's bindings remained unchanged.
+
+- Managed public `r2.dev` access explicitly disabled, verified `enabled:false`. No custom public bucket domain exists.
+- The original evidence bucket retains its default 7-day abort of unfinished multipart uploads, **without an automatic expiry rule for completed PDF evidence**. Referenced question files must not silently disappear.
+- R2 usage is not a hard zero-cost guarantee. Keep the app's actor-wide physical-object cap and no-public-URL policy; review actual account billing/usage before opening wider access.
+- Registration, upload/download authorizations and physical presence checks are implemented on the PR branch but cannot be called live until Preview Pages code is deployed. The R2 bucket itself and its Preview binding **are live**.
+- No changes to Production, no PR merge, and no paid OCR inference or uploaded user source data during this provisioning.

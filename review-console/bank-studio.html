@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="fa" dir="rtl" data-theme="dark">
+<head>
+ <meta charset="utf-8">
+ <meta name="viewport" content="width=device-width,initial-scale=1">
+ <meta name="theme-color" content="#0A0E15">
+ <title>بانک پیش‌نویس سؤال | Selection Studio</title>
+ <link rel="stylesheet" href="../studio/design-system.css">
+ <link rel="stylesheet" href="../studio/atelier-ui.css">
+ <link rel="stylesheet" href="./bank-studio.css">
+</head>
+<body class="bank-studio atelier">
+ <header class="bank-header">
+  <div><span class="bank-eyebrow">EXAMFORGE / DRAFT WORKSPACE</span><h1>بانک پیش‌نویس سؤال</h1><p>ثبت نسخه‌دار، بررسی شباهت و نگهداری امن پیش‌نویس‌ها. اینجا چیزی منتشر نمی‌شود.</p></div>
+  <nav aria-label="ناوبری"><a href="../studio/">استودیوی PDF</a><a href="./ocr-studio.html">بازبینی OCR</a><a href="./exam-importer.html">ورود دفترچه</a><a href="./reviewer-studio.html">پنل بازبین</a><a href="./composer-studio.html">آزمون‌ساز</a></nav>
+ </header>
+ <main class="bank-layout">
+  <aside class="bank-panel bank-sidebar" aria-label="پروژه و سؤال‌ها">
+   <h2>پروژه‌ها</h2>
+   <label for="projectSelect">پروژه فعال</label><select id="projectSelect" disabled><option value="">ابتدا وارد شوید</option></select>
+   <div class="bank-actions"><input id="projectName" maxlength="120" placeholder="نام پروژه جدید" aria-label="نام پروژه جدید" disabled><button id="createProject" type="button" disabled>ساخت پروژه</button></div>
+   <h2>سؤال‌های پروژه</h2>
+   <button id="newQuestion" type="button" disabled>+ پیش‌نویس جدید</button>
+   <div id="questionList" class="bank-list"></div>
+   <section aria-labelledby="assetTitle" class="bank-asset-section">
+    <h2 id="assetTitle">فایل‌های مرجع خصوصی</h2>
+    <p class="bank-help">فقط در پروژه فعال ذخیره می‌شوند. سقف هر فایل ۸ مگابایت و سقف پروژه ۲۴ پیوست یا ۶۴ مگابایت است. سقف حساب ۹۶ فایل یکتا یا ۲۵۶ مگابایت است؛ حذف نرم، فضای واقعی را آزاد نمی‌کند. بدون R2 فایلی بارگذاری نمی‌شود.</p>
+    <label for="sourcePdf">PDF دفترچه سؤال</label><input id="sourcePdf" type="file" accept="application/pdf,.pdf" disabled>
+    <label for="answerPdf">PDF پاسخنامه</label><input id="answerPdf" type="file" accept="application/pdf,.pdf" disabled>
+    <label for="figureImage">شکل استخراج‌شده</label><input id="figureImage" type="file" accept="image/png,image/jpeg,image/webp" disabled>
+    <button id="refreshAssets" type="button" disabled>بازخوانی فایل‌های خصوصی</button>
+    <div id="assetList" class="bank-list"></div>
+   </section>
+   <section aria-labelledby="reviewerInviteTitle">
+    <h2 id="reviewerInviteTitle">دعوت بازبین مستقل</h2>
+    <label for="reviewerEmail">ایمیل بازبینِ مجاز در Cloudflare</label>
+    <input type="email" id="reviewerEmail" placeholder="reviewer@example.com" disabled>
+    <div class="bank-actions"><button type="button" id="assignReviewer" disabled>اعطای دسترسی بازبینی</button><button type="button" id="revokeReviewer" disabled>لغو دسترسی بازبین</button></div>
+    <p class="bank-help">فقط ایمیل‌های از پیش مجاز پذیرفته می‌شوند. تأیید توسط خود اپراتور ممکن نیست.</p>
+   </section>
+   <section class="bank-asset-section" aria-labelledby="offlineVaultHeading">
+    <h2 id="offlineVaultHeading">نسخه آفلاین رمزدار</h2>
+    <p class="bank-help">ذخیره محلی فقط با گذرواژه اختصاصی خودت انجام می‌شود. کلید روی سرور یا مرورگر ذخیره نمی‌شود؛ بازیابی هم هیچ تغییر خودکاری در D1 نمی‌دهد.</p>
+    <button type="button" id="saveOfflineEncrypted" disabled>ذخیره رمزدار متن فعلی</button>
+    <button type="button" id="listOfflineEncrypted" disabled>فهرست نسخه‌های آفلاین</button>
+    <div id="offlineEncryptedList" class="bank-list"></div>
+   </section>
+   <p class="bank-help">نمایش فهرست فقط به حساب اپراتور واردشده محدود است. تغییر پروژه، متن ذخیره‌نشده را خودکار ارسال نمی‌کند.</p>
+  </aside>
+  <section class="bank-panel bank-editor" aria-label="ویرایش پیش‌نویس">
+   <div class="bank-heading"><div><span class="bank-eyebrow">VERSIONED D1</span><h2>ویرایش سؤال</h2></div><output id="revision" aria-live="polite">نسخه: -</output></div>
+   <p id="notice" role="status" aria-live="polite">در حال بررسی دسترسی…</p>
+   <label for="questionText">متن سؤال و گزینه‌ها</label>
+   <textarea id="questionText" rows="11" dir="rtl" maxlength="16000" placeholder="متن بررسی‌شده را دستی وارد یا جای‌گذاری کن." disabled></textarea>
+   <label for="answerText">متن پاسخ (اختیاری)</label>
+   <textarea id="answerText" rows="5" dir="rtl" maxlength="16000" disabled></textarea>
+   <label for="sourceDigest">PDF منبع سؤال برای بازبینی</label>
+   <select id="sourceDigest" disabled><option value="">ابتدا PDF سؤال را به پروژه اضافه کن</option></select>
+   <label class="bank-confirm"><input id="operatorConfirmed" type="checkbox" disabled><span>متن سؤال، اعداد، نشانه‌ها، فرمول‌ها و گزینه‌ها را با PDF منبع مطابقت داده‌ام. هر ویرایش بعدی این تأیید را باطل می‌کند.</span></label>
+   <div class="bank-fields"><label>شناسه موضوع<input id="taxonomyId" maxlength="80" placeholder="مثلاً bio_cell" disabled></label><label>نام منبع<input id="sourceLabel" maxlength="160" placeholder="نام دفترچه / صفحه" disabled></label></div>
+   <div class="bank-actions"><button class="bank-primary" id="saveDraft" type="button" disabled>ثبت پیش‌نویس</button><button id="deleteDraft" type="button" disabled>حذف نرم</button><button id="showHistory" type="button" disabled>تاریخچه نسخه‌ها</button></div>
+   <section id="historyPanel" aria-label="تاریخچه تغییرات" hidden><h3>تاریخچه نسخه‌ها</h3><div id="historyList"></div></section>
+  </section>
+  <aside class="bank-panel bank-review" aria-label="پیشنهادهای بررسی">
+   <span class="bank-eyebrow">HUMAN IN THE LOOP</span><h2>بررسی هوشمند</h2>
+   <p>این تحلیل‌ها کاملاً محلی و بدون درخواست پولی هستند. هیچ تشخیصی به‌صورت خودکار تأیید نمی‌شود.</p>
+   <button id="findDuplicates" type="button" disabled>یافتن سؤال‌های مشابه</button>
+   <div id="duplicateList" class="bank-results" aria-live="polite"></div>
+   <button id="suggestCategories" type="button" disabled>پیشنهاد موضوع</button>
+   <div id="categoryList" class="bank-results" aria-live="polite"></div>
+   <label for="secondDraft">مقایسه دستی با خروجی دوم OCR</label>
+   <textarea id="secondDraft" rows="5" dir="rtl" placeholder="متن OCR دوم را دستی جای‌گذاری کن. هیچ مدلی از این صفحه فراخوانی نمی‌شود." disabled></textarea>
+   <button id="compareDrafts" type="button" disabled>مقایسه دو متن</button>
+   <div id="compareResult" class="bank-results" aria-live="polite"></div>
+  </aside>
+ </main>
+ <script type="module" src="./bank-studio.js"></script>
+</body>
+</html>

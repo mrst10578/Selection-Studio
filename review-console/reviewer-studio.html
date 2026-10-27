@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="fa" dir="rtl" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0A0E15">
+<title>بازبینی علمی | Selection Studio</title>
+<link rel="stylesheet" href="../studio/design-system.css">
+<link rel="stylesheet" href="../studio/atelier-ui.css">
+<link rel="stylesheet" href="./bank-studio.css">
+</head>
+<body class="bank-studio atelier">
+<header class="bank-header">
+ <div><span class="bank-eyebrow">EXAMFORGE / REVIEW GATE</span><h1>بازبینی علمی مستقل</h1><p>تأیید نسخه و منبع، پیش از هرگونه انتشار. دسترسی فقط برای بازبین مجاز و منصوب‌شده است.</p></div>
+ <nav aria-label="ناوبری"><a href="./bank-studio.html">بانک پیش‌نویس‌ها</a><a href="../studio/">استودیوی PDF</a><a href="./composer-studio.html">آزمون‌ساز</a></nav>
+</header>
+<main class="bank-layout">
+ <aside class="bank-panel bank-sidebar" aria-label="پروژه‌های ارجاع‌شده">
+  <h2>پروژه‌های ارجاع‌شده</h2>
+  <label for="assignedProjects">پروژه</label><select id="assignedProjects" disabled><option value="">در حال بررسی هویت</option></select>
+  <h2>فهرست بازبینی</h2><div id="reviewQueue" class="bank-list"></div>
+ </aside>
+ <section class="bank-panel bank-editor">
+  <div class="bank-heading"><h2>سؤال و منبع</h2><output id="reviewRevision">نسخه: -</output></div>
+  <p id="reviewNotice" role="status" aria-live="polite">برای ورود، حساب بازبین مجاز لازم است.</p>
+  <label for="reviewQuestion">متن پیش‌نویس سؤال</label><textarea id="reviewQuestion" rows="10" readonly dir="rtl"></textarea>
+  <label for="reviewAnswer">پاسخ ثبت‌شده</label><textarea id="reviewAnswer" rows="4" readonly dir="rtl"></textarea>
+  <div id="reviewSource" class="bank-results"></div>
+  <fieldset id="reviewChecks" disabled>
+   <legend>چک‌لیست مستقل بازبین</legend>
+   <label class="bank-confirm"><input type="checkbox" data-review-check="sourceVerified">PDF اصلی و منشأ سؤال را مستقیماً بررسی کرده‌ام.</label>
+   <label class="bank-confirm"><input type="checkbox" data-review-check="transcriptionVerified">متن فارسی، گزینه‌ها، اعداد، منفی‌ها و فرمول‌ها را با تصویر تطبیق داده‌ام.</label>
+   <label class="bank-confirm"><input type="checkbox" data-review-check="answerVerified">شماره سؤال و پاسخ، کلید و استدلال را بررسی کرده‌ام.</label>
+   <label class="bank-confirm"><input type="checkbox" data-review-check="taxonomyVerified">درس و مبحث علمی صحیح هستند.</label>
+   <label class="bank-confirm"><input type="checkbox" data-review-check="figuresVerified">شکل‌ها و محل استخراج بررسی شده‌اند یا وجود ندارند.</label>
+   <label class="bank-confirm"><input type="checkbox" data-review-check="warningsResolved">تمام هشدارهای بحرانی OCR و اختلاف‌های علمی بررسی و رفع شده‌اند.</label>
+  </fieldset>
+  <div class="bank-actions"><button type="button" id="approveReview" class="bank-primary" disabled>ثبت تأیید علمی</button><button type="button" id="rejectReview" disabled>رد و بازگشت برای اصلاح</button></div>
+ </section>
+ <aside class="bank-panel bank-review" aria-label="تاریخچه تصمیم‌های علمی">
+  <span class="bank-eyebrow">REVISION / HUMAN SIGNOFF</span><h2>تاریخچه تصمیم‌ها</h2>
+  <p>با هر ویرایش، تأیید نسخه قبلی منقضی می‌شود. این صفحه هیچ سؤال یا پاسخی را منتشر نمی‌کند.</p>
+  <div id="reviewHistory" class="bank-results"></div>
+ </aside>
+</main>
+<script type="module" src="./reviewer-studio.js"></script>
+</body>
+</html>

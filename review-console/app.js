@@ -9,12 +9,10 @@ import {TAXONOMY,taxonomySummary} from '../studio/taxonomy-data.js';
 
 const $=value=>String(value).startsWith("#")?document.querySelector(value):document.getElementById(value);
 const ADMIN_SESSION='selection-review-admin-user-v1';
-const ADMIN_USERNAME='admin';
-const ADMIN_PASSWORD='admin';
 let selectedSubject='',selectedOperator='',operatorItems=[],quickIndex=-1,autosaveTimer=null,currentReason='';
 
 function adminUser(){return sessionStorage.getItem(ADMIN_SESSION)||''}
-function reviewer(){return adminUser()||ADMIN_USERNAME}
+function reviewer(){return adminUser()||'operator'}
 
 const api=createLocalReviewApi();
 const model=new ReviewModel(()=>scheduleSave());
@@ -54,37 +52,28 @@ const quickBio=mountBiologyCombinationEditor({
 });
 
 async function showAdmin(){
-  $('#loginView').classList.add('hidden');
-  $('#appView').classList.remove('hidden');
-  resetBrowser();
+ $('#loginView').classList.add('hidden');
+ $('#appView').classList.remove('hidden');
+ resetBrowser();
 }
-function login(event){
-  event?.preventDefault();
-  const user=$('#adminUsername').value.trim(),pass=$('#adminPassword').value;
-  if(user!==ADMIN_USERNAME||pass!==ADMIN_PASSWORD){
-    $('#adminLoginError').textContent='نام کاربری یا رمز عبور اشتباه است.';
-    $('#adminPassword').value='';
-    $('#adminPassword').focus();
-    return;
-  }
-  sessionStorage.setItem(ADMIN_SESSION,user);
-  $('#adminLoginError').textContent='';
-  $('#loginView').classList.add('auth-success');
-  document.querySelector('.login-card')?.classList.add('auth-success');
-  $('#adminUsername').disabled=true;
-  $('#adminPassword').disabled=true;
-  $('#loginBtn').disabled=true;
-  $('#loginBtn').textContent='ورود موفق';
-  setTimeout(showAdmin,180);
+async function login(event){
+ event?.preventDefault();
+ $('#adminLoginError').textContent='در حال بررسی دسترسی Cloudflare Access…';
+ try{
+  const response=await fetch('/api/session',{credentials:'same-origin',cache:'no-store'});
+  if(!response.ok)throw Error(response.status===403?'برای این حساب اجازهٔ مدیریت تعریف نشده است.':'دسترسی Cloudflare Access تأیید نشد.');
+  const identity=await response.json();
+  if(!identity.authenticated||identity.role!=='operator')throw Error('هویت مدیر معتبر نیست.');
+  sessionStorage.setItem(ADMIN_SESSION,identity.email||'operator');
+  await showAdmin();
+ }catch(error){$('#adminLoginError').textContent=error.message||'دسترسی تأیید نشد.'}
 }
 $('#adminLoginForm').addEventListener('submit',login);
-
 function statusClass(s){return s||'pending'}
-
-$('#logoutBtn').onclick=()=>{sessionStorage.removeItem(ADMIN_SESSION);location.reload()};
+$('#logoutBtn').onclick=()=>{sessionStorage.removeItem(ADMIN_SESSION);location.assign('/cdn-cgi/access/logout')};
 $('#refreshBtn').onclick=async()=>{
-  if(selectedSubject)await loadOperators(selectedSubject);
-  if(selectedSubject&&selectedOperator)await openOperator(selectedOperator);
+ if(selectedSubject)await loadOperators(selectedSubject);
+ if(selectedSubject&&selectedOperator)await openOperator(selectedOperator);
 };
 
 function resetBrowser(){
@@ -298,5 +287,4 @@ const palette=createCommandPalette({dialog:$('#commandPalette'),input:$('#comman
 },onQuery:q=>{const m=q.match(/(?:سوال|q|question)?\s*(\d{1,4})/i);if(!m||!model.batch)return[];const n=Number(m[1]),i=model.batch.questions.findIndex(x=>Number(x.source_question_number)===n&&!x.trashed_at);return i<0?[]:[{label:`باز کردن سؤال ${n}`,run:()=>openQuick(i)}]}});
 $('#commandLauncher').onclick=()=>palette.open();
 
-if(adminUser())showAdmin();
-else requestAnimationFrame(()=>$('#adminUsername').focus());
+login();
