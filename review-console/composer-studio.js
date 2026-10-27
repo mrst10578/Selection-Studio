@@ -257,6 +257,11 @@ async function loadBank(append=false){
   // Treat a mixed-project API page as invalid rather than leaking its contents.
   if(project&&result.questions.some(q=>q.projectId!==project))
    throw Error('پاسخ بانک سؤال با پروژه انتخاب‌شده مطابقت ندارد');
+  // The project list is scoped to the signed-in operator. Never display or
+  // select an API row from a project absent from that authorized list,
+  // including when searching across all projects.
+  if(result.questions.some(q=>!projectNames.has(q.projectId)))
+   throw Error('پاسخ بانک سؤال شامل پروژه خارج از دسترسی است');
  }
  catch(error){
   if(seq!==state.bankRequestSeq)return;
