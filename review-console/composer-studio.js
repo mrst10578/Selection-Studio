@@ -118,8 +118,11 @@ function render(){
  const more=$('loadMoreBank');more.hidden=!state.nextCursor;more.disabled=state.bankLoading||!state.nextCursor;
  $('loadBank').disabled=!state.ready||state.bankLoading;
  if(!state.bank.length)available.append(e('p',state.bankLoading?'در حال دریافت سؤال‌ها…':state.bankLoadError?'دریافت سؤال‌ها ناموفق بود؛ برای تلاش دوباره «جست‌وجو و بازخوانی» را بزن.':'سؤال تأییدشده‌ای با این جست‌وجو پیدا نشد.'));
+ // Avoid rescanning up to 100 selected questions for every bank row on each render.
+ // The selection set is recreated after each toggle, so aria-pressed stays current.
+ const selectedIds=new Set(state.selected.map(question=>question.id));
  for(const [index,question] of state.bank.entries()){
-  const selected=state.selected.some(x=>x.id===question.id);
+  const selected=selectedIds.has(question.id);
   // In an all-project search, source numbers alone are ambiguous.
   const projectLabel=$('composerProject').value?'':' · پروژه: '+(projectNames.get(question.projectId)||'نامشخص');
   const row=e('button',(selected?'✓ ':'+ ')+'سؤال '+(question.sourceNumber||'?')+projectLabel+' · '+question.questionText.slice(0,100));
