@@ -1887,4 +1887,41 @@ test.describe('operator bootstrap recovery',()=>{
   expect(projectCalls).toBe(2);
   expect(bankCalls).toBe(1);
  });
+ test('malformed project list keeps bank locked and can recover on manual retry',async({page})=>{
+  let valid=false,projectCalls=0,bankCalls=0;
+  await page.route('**/api/session',route=>route.fulfill({
+   status:200,contentType:'application/json',body:'{"role":"operator"}'
+  }));
+  await page.route('**/api/v1/projects',route=>{
+   projectCalls++;
+   return route.fulfill({status:200,contentType:'application/json',
+    body:JSON.stringify({projects:valid?[{id:P,name:'زیست'}]:[{id:P,name:null}]})});
+  });
+  await page.route('**/api/v1/bank/questions**',route=>{
+   bankCalls++;
+   return route.fulfill({status:200,contentType:'application/json',
+    body:JSON.stringify({questions:[{id:q1,projectId:P,revision:1,questionText:'سؤال آزمایشی'}],nextCursor:null})});
+  });
+  await page.goto('/review-console/composer-studio.html');
+  const retry=page.locator('#retryComposerBootstrap');
+  await expect(page.locator('#composerNotice')).toContainText('فهرست پروژه‌ها نامعتبر است');
+  await expect(retry).toBeVisible();
+  await expect(page.locator('#composerProject')).toBeDisabled();
+  await expect(page.locator('#composerProject option')).toHaveCount(1);
+  await expect(page.locator('#loadBank')).toBeDisabled();
+  await expect(page.locator('#approvedList button')).toHaveCount(0);
+  expect(projectCalls).toBe(1);
+  expect(bankCalls).toBe(0);
+  valid=true;
+  await retry.focus();
+  await page.keyboard.press('Enter');
+  await expect(retry).toBeHidden();
+  await expect(page.locator('#composerProject')).toBeEnabled();
+  await expect(page.locator('#composerProject option')).toHaveCount(2);
+  await expect(page.locator('#approvedList button')).toHaveCount(1);
+  await expect(page.locator('#composerProject')).toBeFocused();
+  expect(projectCalls).toBe(2);
+  expect(bankCalls).toBe(1);
+ });
+
 });
